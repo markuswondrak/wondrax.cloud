@@ -1,0 +1,7 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="512" height="512" rx="100" ry="100" fill="#1e1e1e"/>
+  
+  <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="monospace" font-weight="bold" font-size="280">
+    <tspan fill="#569cd6">&gt;</tspan><tspan fill="#ce9178">_</tspan>
+  </text>
+</svg>
