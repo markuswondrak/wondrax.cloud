@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markus Wondrak | Domain Architect</title>
+    <style>
+        /* CSS Variables for easy maintenance (VS Code Dark Theme Palette) */
+        :root {
+            --bg-color: #1e1e1e;
+            --text-color: #d4d4d4;
+            --heading-color: #569cd6; /* VS Code Blue */
+            --accent-color: #ce9178;  /* VS Code String/Orange */
+            --link-color: #4ec9b0;    /* VS Code Class/Teal */
+            --card-bg: #252526;
+            --border-color: #3e3e42;
+            --font-mono: 'Courier New', Courier, monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* Reset & Base Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-mono);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        a {
+            color: var(--link-color);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        a:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+
+        /* Container */
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Typography */
+        h1, h2, h3 {
+            font-family: var(--font-mono);
+            font-weight: normal;
+        }
+
+        h1 {
+            color: var(--heading-color);
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        h2 {
+            color: var(--heading-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            margin-top: 3rem;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        h3 {
+            color: var(--accent-color);
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        /* Blinking Cursor Animation */
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1em;
+            background-color: var(--text-color);
+            animation: blink 1s step-end infinite;
+            vertical-align: text-bottom;
+            margin-left: 5px;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Header Section */
+        header {
+            text-align: left;
+            margin-bottom: 3rem;
+        }
+
+        .tagline {
+            color: var(--accent-color);
+            font-family: var(--font-mono);
+            font-size: 1.1rem;
+        }
+
+        /* Social Links */
+        .social-links {
+            margin-top: 1rem;
+            font-family: var(--font-mono);
+        }
+
+        .social-links a {
+            margin-right: 1.5rem;
+        }
+
+        /* Projects Grid */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .project-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 4px;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--link-color);
+        }
+
+        .project-link {
+            display: inline-block;
+            margin-top: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 4rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #6e7681;
+            font-family: var(--font-mono);
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 600px) {
+            body {
+                padding: 1.5rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- Header -->
+        <header>
+            <h1>Markus Wondrak</h1>
+            <p class="tagline">&lt;Domain Architect | Software Engineering Enthusiast /&gt;</p>
+            
+            <div class="social-links">
+                <a href="https://github.com/markuswondrak" target="_blank">GitHub</a>
+                <a href="https://www.linkedin.com/in/markus-wondrak-53b1881a3/" target="_blank">LinkedIn</a>
+            </div>
+        </header>
+
+        <!-- About Me -->
+        <section id="about">
+            <h2>// About Me</h2>
+            <p>
+                I am a software engineering enthusiast with a clear mission: making life easier for developers. My path took me from a classic vocational training ('Fachinformatiker') and a Master's degree at Frankfurt University to 9 years in consultancy. Since 2024, I’ve been working as a Domain Architect at a large German bank. I am currently focused on exploring how AI can best assist developers in creating better software.
+            </p>
+            <p>
+                When I’m away from the keyboard, I prioritize my family, reading, playing basketball and watching football.<span class="cursor"></span>
+            </p>
+        </section>
+
+        <!-- Top Projects -->
+        <section id="projects">
+            <h2>// Top Projects</h2>
+            <div class="projects-grid">
+                
+                <!-- Project 1 -->
+                <article class="project-card">
+                    <h3>Finance App</h3>
+                    <p>A modern personal finance tracking application built with Vue.js 3 and Go. Features include wealth tracking, fixed costs management, and financial forecasting with a fintech-inspired dark theme.</p>
+                    <a href="https://github.com/markuswondrak/finance-app" target="_blank" class="project-link">View Repository &rarr;</a>
+                </article>
+
+                <!-- Project 2 -->
+                <article class="project-card">
+                    <h3>Pokemon Collector</h3>
+                    <p>A React-based Pokemon collection organizer. Built to demonstrate the SpecKit development workflow, it features strict TDD, architectural planning, and automated specification-driven implementation.</p>
+                    <a href="https://github.com/markuswondrak/pokemon-collector" target="_blank" class="project-link">View Repository &rarr;</a>
+                </article>
+
+                <!-- Project 3 -->
+                <article class="project-card">
+                    <h3>Faststring</h3>
+                    <p>A high-performance Java library developed during my Master's thesis. It optimizes String and StringBuilder operations by dynamically choosing the best implementation type at runtime. (Didn't work out)</p>
+                    <a href="https://github.com/markuswondrak/faststring" target="_blank" class="project-link">View Repository &rarr;</a>
+                </article>
+
+                <!-- Project 4 -->
+                <article class="project-card">
+                    <h3>Wondrax Platform</h3>
+                    <p>Coming soon.</p>
+                    <span class="project-link" style="color: #6e7681; cursor: not-allowed;">In Progress...</span>
+                </article>
+
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>&copy; 2026 Markus Wondrak. Built with &lt;3 and HTML.</p>
+        </footer>
+
+    </div>
+
+</body>
+</html>
