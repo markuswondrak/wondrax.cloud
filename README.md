@@ -28,7 +28,7 @@ Create a personal portfolio homepage for **Markus Wondrak**. The site will be ho
 **2. About Me:**
 Please format this text to be easy to read (perhaps 2 short paragraphs):
 
-> "I am a software engineering enthusiast with a clear mission: making life easier for developers. My path took me from a classic vocational training ('Fachinformatiker') and a Master's degree at Frankfurt University to 9 years in consultancy. Since 2024, I’ve been working as a Domain Architect at a large German bank. I am currently focused on exploring how AI can best assist developers in creating better software.
+> "I am a software engineering enthusiast with a clear mission: making life easier for developers and producing good quality software. My path took me from a classic vocational training ('Fachinformatiker') and a Master's degree at Frankfurt University to 9 years in consultancy. Since 2024, I’ve been working as a Domain Architect at a large German bank. I am currently focused on exploring how AI can best assist developers in creating better software.
 > When I’m away from the keyboard, I prioritize my family, reading, playing basketball and watching football."
 
 **3. Social Links:**
