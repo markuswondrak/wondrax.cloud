@@ -43,6 +43,9 @@ Create a clean grid or card layout for these projects:
 * *Description:* A modern personal finance tracking application built with Vue.js 3 and Go. Features include wealth tracking, fixed costs management, and financial forecasting with a fintech-inspired dark theme.
 * *Link:* [https://github.com/markuswondrak/finance-app](https://github.com/markuswondrak/finance-app)
 
+* **Wondrax Platform**
+* *Description:* A self-hosted infrastructure solution designed to automate containerized application hosting on a single VM. It combines automated deployments, and shared database to provide a low-maintenance, production-ready environment.
+* *Link:* Coming Soon.
 
 * **Pokemon Collector**
 * *Description:* A React-based Pokemon collection organizer. Built to demonstrate the SpecKit development workflow, it features strict TDD, architectural planning, and automated specification-driven implementation.
@@ -52,13 +55,6 @@ Create a clean grid or card layout for these projects:
 * **Faststring**
 * *Description:* My Master's thesis project featuring an algorithm to exchange arbitrary types in Java bytecode. It identifies safe boundaries to seamlessly convert legacy data structures at runtime.
 * *Link:* [https://github.com/markuswondrak/faststring](https://github.com/markuswondrak/faststring)
-
-
-* **Wondrax Platform**
-* *Description:* Coming soon.
-* *Link:* #
-
-
 
 **Technical Implementation:**
 
