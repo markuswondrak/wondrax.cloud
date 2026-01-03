@@ -50,7 +50,7 @@ Create a clean grid or card layout for these projects:
 
 
 * **Faststring**
-* *Description:* A high-performance Java library developed during my Master's thesis. It optimizes String and StringBuilder operations by dynamically choosing the best implementation type at runtime. (Didn't work out)
+* *Description:* My Master's thesis project featuring an algorithm to exchange arbitrary types in Java bytecode. It identifies safe boundaries to seamlessly convert legacy data structures at runtime.
 * *Link:* [https://github.com/markuswondrak/faststring](https://github.com/markuswondrak/faststring)
 
 
@@ -66,6 +66,7 @@ Create a clean grid or card layout for these projects:
 * Use CSS variables for colors (so I can easily tweak them later).
 * Add a blinking cursor at the end of the bio paragraph. 
 * Ensure all external links open in a new tab (`target="_blank"`).
+* Use the `favicon_cursor.png` as the favicon for this page. 
 
 **Output:**
 Please provide the full code for `index.html`.
