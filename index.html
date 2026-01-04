@@ -60,6 +60,23 @@
             margin-bottom: var(--spacing-xl);
             padding-bottom: var(--spacing-lg);
             border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: var(--spacing-lg);
+        }
+
+        .header-text {
+            flex: 1;
+        }
+
+        .profile-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 2px solid var(--accent-blue);
+            object-fit: cover;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
         .name {
@@ -260,6 +277,17 @@
                 padding: var(--spacing-lg) var(--spacing-sm);
             }
 
+            header {
+                flex-direction: column-reverse;
+                align-items: flex-start;
+                gap: var(--spacing-md);
+            }
+
+            .profile-image {
+                width: 100px;
+                height: 100px;
+            }
+
             .social-links {
                 flex-direction: column;
             }
@@ -277,8 +305,11 @@
 <body>
     <div class="container">
         <header>
-            <h1 class="name">Markus Wondrak</h1>
-            <p class="tagline">Domain Architect<span class="separator">|</span>Software Engineering Enthusiast</p>
+            <div class="header-text">
+                <h1 class="name">Markus Wondrak</h1>
+                <p class="tagline">Domain Architect<span class="separator">|</span>Software Engineering Enthusiast</p>
+            </div>
+            <img src="me.png" alt="Markus Wondrak" class="profile-image">
         </header>
 
         <section class="section">
