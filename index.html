@@ -8,7 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="favicon_cursor.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;1,9..40,300&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;1,9..40,300&family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             /* Left panel — warm, human */
@@ -35,6 +35,7 @@
             --serif: 'Cormorant Garamond', Georgia, serif;
             --sans:  'DM Sans', system-ui, sans-serif;
             --mono:  'IBM Plex Mono', monospace;
+            --tech:  'Space Grotesk', system-ui, sans-serif;
             --ease:  cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
@@ -274,14 +275,12 @@
         .projects {
             display: flex;
             flex-direction: column;
-            gap: 1px;
-            background: var(--r-border);
+            gap: 0.75rem;
             border-radius: 10px;
-            overflow: hidden;
         }
 
         .projects--featured {
-            border-top: 1px solid var(--r-accent);
+            border-top: none;
         }
 
         .projects + .projects {
@@ -293,12 +292,14 @@
             display: block;
             padding: 1.75rem 2rem;
             background: var(--r-surface);
+            border: 1px solid rgba(255, 255, 255, 0.05);
             overflow: hidden;
-            transition: background 0.3s var(--ease);
+            transition: background 0.3s var(--ease), border-color 0.3s var(--ease);
         }
 
         .project:hover {
             background: #16161F;
+            border-color: rgba(255, 255, 255, 0.1);
         }
 
         .project canvas {
@@ -316,12 +317,14 @@
 
         /* ─── Featured cards ─── */
         .project--featured {
-            background: var(--r-surface-f);
+            background: linear-gradient(135deg, rgba(18, 18, 21, 1) 0%, rgba(17, 17, 24, 1) 100%);
             padding: 2.25rem 2.25rem 2.25rem;
+            border-color: rgba(255, 255, 255, 0.08);
         }
 
         .project--featured:hover {
-            background: #14142A;
+            background: linear-gradient(135deg, rgba(20, 20, 30, 1) 0%, rgba(19, 19, 32, 1) 100%);
+            border-color: rgba(255, 255, 255, 0.12);
         }
 
         /* Ambient glow behind the visual */
@@ -422,10 +425,10 @@
         }
 
         .project__name {
-            font-family: var(--serif);
+            font-family: var(--tech);
             font-size: 1.25rem;
             font-weight: 600;
-            color: var(--r-text-strong);
+            color: #FFFFFF;
             line-height: 1.2;
             letter-spacing: -0.01em;
             display: inline-flex;
@@ -435,6 +438,7 @@
 
         .project--featured .project__name {
             font-size: 1.4rem;
+            font-weight: 700;
         }
 
         .project__name .arrow {
@@ -464,7 +468,7 @@
         .project__desc {
             font-size: 0.78rem;
             font-weight: 300;
-            color: var(--r-text);
+            color: #94A3B8;
             line-height: 1.75;
             max-width: 48ch;
         }
