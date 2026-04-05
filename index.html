@@ -129,6 +129,27 @@
             min-height: 0;
         }
 
+        .left__name-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .left__avatar {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            object-position: center center;
+            border-radius: 4px;
+            flex-shrink: 0;
+            align-self: flex-start;
+            image-rendering: pixelated;
+            border: 1.5px solid rgba(26, 23, 20, 0.55);
+            box-shadow: 2px 2px 0 rgba(26, 23, 20, 0.12);
+        }
+
         .left__name {
             font-family: var(--serif);
             font-size: clamp(2.2rem, 3.5vw, 3rem);
@@ -136,7 +157,6 @@
             color: var(--l-text);
             line-height: 1.0;
             letter-spacing: -0.025em;
-            margin-bottom: 0.5rem;
         }
 
         .left__role {
@@ -281,6 +301,7 @@
 
         .projects--featured {
             border-top: none;
+            gap: 2.5rem;
         }
 
         .projects + .projects {
@@ -478,6 +499,149 @@
         }
 
         /* =====================================================
+           ASYMMETRIC PROJECT LAYOUT
+        ===================================================== */
+
+        /* ─── BriefCheck doc visual ─── */
+        .project__doc-visual {
+            position: absolute;
+            right: 1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.85;
+            pointer-events: none;
+        }
+
+        /* ─── Hero card (BriefCheck) — legacy, unused ─── */
+        .project__preview {
+            position: relative;
+            height: 200px;
+            background: rgba(9, 9, 12, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s var(--ease);
+        }
+
+        .project__preview::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: linear-gradient(to bottom, transparent, rgba(18, 18, 24, 0.55));
+            pointer-events: none;
+        }
+
+        .project--hero:hover .project__preview {
+            background: rgba(11, 11, 16, 0.95);
+        }
+
+        .project--hero .project__body {
+            padding: 2rem 2.5rem 2.25rem;
+        }
+
+        .project--hero .project__name {
+            font-size: 1.6rem;
+        }
+
+        .project--hero .project__desc {
+            max-width: 54ch;
+        }
+
+        /* ─── Secondary card (AgentMux) ─── */
+        .project-secondary-wrap {
+            display: flex;
+            align-items: stretch;
+            gap: 2.5rem;
+        }
+
+        .project--secondary {
+            flex: 0 0 50%;
+            min-width: 0;
+        }
+
+        .project--secondary .project__desc {
+            max-width: 30ch;
+        }
+
+        .project__visual-outside {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-height: 260px;
+            opacity: 0.85;
+            pointer-events: none;
+        }
+
+        /* ─── Deployment number label ─── */
+        .project__number {
+            font-family: var(--mono);
+            font-size: 0.55rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--r-text-dim);
+            margin-bottom: 0.85rem;
+        }
+
+        /* ─── Tech tag pills ─── */
+        .project__tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 1.1rem;
+        }
+
+        .project__tag {
+            font-family: var(--mono);
+            font-size: 0.52rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--r-text-dim);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            padding: 0.28rem 0.6rem;
+            border-radius: 2px;
+            transition: color 0.2s var(--ease), border-color 0.2s var(--ease);
+        }
+
+        .project:hover .project__tag {
+            color: var(--r-text);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        /* ─── CTA line ─── */
+        .project__cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: var(--mono);
+            font-size: 0.58rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--r-text-dim);
+            margin-top: 1.5rem;
+            padding-bottom: 1px;
+            border-bottom: 1px solid transparent;
+            transition: color 0.2s var(--ease), border-color 0.2s var(--ease);
+        }
+
+        .project:hover .project__cta {
+            color: var(--r-text-strong);
+            border-color: var(--r-text-dim);
+        }
+
+        /* ─── 3-column grid for regular cards ─── */
+        .projects--grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        /* =====================================================
            FOOTER
         ===================================================== */
         .right__footer {
@@ -535,18 +699,42 @@
                 right: 0.75rem;
             }
 
+            .project--secondary {
+                flex: 0 0 100%;
+            }
+
+            .project-secondary-wrap {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0;
+            }
+
+            .project__visual-outside {
+                display: none;
+            }
+
             .project__glow {
                 width: 200px;
                 height: 200px;
+            }
+
+            .projects--grid {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
 
         @media (max-width: 520px) {
             .left__content { padding: 0.25rem 1.25rem 1.75rem; }
             .left__name { font-size: 2.1rem; }
+            .left__avatar { width: 60px; height: 60px; }
             .right { padding: 2rem 1.25rem 3.5rem; }
             .project { padding: 1.5rem 1.25rem; }
             .project--featured { padding: 1.75rem 1.25rem; }
+            .project.project--hero { padding: 0; }
+
+            .project__preview {
+                height: 150px;
+            }
 
             .project__visual {
                 display: none;
@@ -554,6 +742,14 @@
 
             .project--featured .project__desc {
                 max-width: none;
+            }
+
+            .project--hero .project__desc {
+                max-width: none;
+            }
+
+            .projects--grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -567,7 +763,10 @@
                 <canvas id="networkCanvas"></canvas>
             </div>
             <div class="left__content">
-                <h1 class="left__name">Markus<br>Wondrak</h1>
+                <div class="left__name-row">
+                    <h1 class="left__name">Markus<br>Wondrak</h1>
+                    <img src="me.png" alt="Markus Wondrak" class="left__avatar">
+                </div>
                 <p class="left__role">Domain Architect &nbsp;·&nbsp; Software Engineering</p>
                 <div class="left__bio">
                     <p>Software engineering enthusiast with a clear mission: making life easier for developers and producing good-quality software.</p>
@@ -605,88 +804,108 @@
             <!-- FEATURED -->
             <div class="projects projects--featured">
 
-                <!-- AgentMux -->
-                <a href="https://github.com/markuswondrak/AgentMux/" target="_blank" rel="noopener noreferrer" class="project project--featured">
-                    <div class="project__glow"></div>
-                    <!-- Network hub visual -->
-                    <svg class="project__visual" width="220" height="190" viewBox="0 0 220 190" fill="none">
-                        <!-- Concentric range rings -->
-                        <circle cx="130" cy="95" r="72" stroke="rgba(80,120,195,0.06)" stroke-width="0.5" stroke-dasharray="3 7"/>
-                        <circle cx="130" cy="95" r="42" stroke="rgba(80,120,195,0.1)" stroke-width="0.5" stroke-dasharray="2 5"/>
-                        <!-- Connection lines (behind nodes) -->
-                        <line x1="130" y1="95" x2="82" y2="52" stroke="rgba(80,120,195,0.14)" stroke-width="0.7"/>
-                        <line x1="130" y1="95" x2="178" y2="48" stroke="rgba(80,120,195,0.14)" stroke-width="0.7"/>
-                        <line x1="130" y1="95" x2="188" y2="110" stroke="rgba(80,120,195,0.14)" stroke-width="0.7"/>
-                        <line x1="130" y1="95" x2="158" y2="155" stroke="rgba(80,120,195,0.14)" stroke-width="0.7"/>
-                        <line x1="130" y1="95" x2="75" y2="140" stroke="rgba(80,120,195,0.14)" stroke-width="0.7"/>
-                        <line x1="130" y1="95" x2="70" y2="88" stroke="rgba(80,120,195,0.14)" stroke-width="0.7"/>
-                        <!-- Inter-node connections (dashed) -->
-                        <line x1="82" y1="52" x2="178" y2="48" stroke="rgba(80,120,195,0.07)" stroke-width="0.5" stroke-dasharray="3 4"/>
-                        <line x1="188" y1="110" x2="158" y2="155" stroke="rgba(80,120,195,0.07)" stroke-width="0.5" stroke-dasharray="3 4"/>
-                        <line x1="75" y1="140" x2="70" y2="88" stroke="rgba(80,120,195,0.07)" stroke-width="0.5" stroke-dasharray="3 4"/>
-                        <!-- Central hub -->
-                        <circle cx="130" cy="95" r="7" stroke="rgba(80,120,195,0.35)" stroke-width="1.2" fill="rgba(80,120,195,0.06)"/>
-                        <circle cx="130" cy="95" r="2.5" fill="rgba(80,120,195,0.45)"/>
-                        <!-- Satellite nodes (pulsing) -->
-                        <circle cx="82"  cy="52"  r="3" fill="rgba(80,120,195,0.25)" class="node-pulse node-pulse-d1"/>
-                        <circle cx="178" cy="48"  r="3" fill="rgba(80,120,195,0.25)" class="node-pulse node-pulse-d2"/>
-                        <circle cx="188" cy="110" r="3" fill="rgba(80,120,195,0.25)" class="node-pulse node-pulse-d3"/>
-                        <circle cx="158" cy="155" r="3" fill="rgba(80,120,195,0.25)" class="node-pulse node-pulse-d4"/>
-                        <circle cx="75"  cy="140" r="3" fill="rgba(80,120,195,0.25)" class="node-pulse node-pulse-d5"/>
-                        <circle cx="70"  cy="88"  r="3" fill="rgba(80,120,195,0.25)" class="node-pulse node-pulse-d6"/>
-                        <!-- Tiny secondary dots -->
-                        <circle cx="105" cy="68" r="1.2" fill="rgba(80,120,195,0.15)" class="node-pulse node-pulse-d3"/>
-                        <circle cx="160" cy="78" r="1.2" fill="rgba(80,120,195,0.15)" class="node-pulse node-pulse-d5"/>
-                        <circle cx="155" cy="128" r="1.2" fill="rgba(80,120,195,0.15)" class="node-pulse node-pulse-d1"/>
-                    </svg>
-                    <div class="project__inner">
-                        <div class="project__badge">Featured</div>
-                        <div class="project__header">
-                            <span class="project__name">AgentMux <span class="arrow">&#8599;</span></span>
-                            <span class="project__tech">Agentic &middot; Orchestration</span>
-                        </div>
-                        <p class="project__desc">A multiplexing layer for agentic workflows — routes and coordinates tasks across multiple AI agents, enabling parallel execution and complex multi-agent orchestration patterns.</p>
-                    </div>
-                </a>
-
-                <!-- briefcheck.app -->
+                <!-- briefcheck.app — hero -->
                 <a href="https://briefcheck.app/" target="_blank" rel="noopener noreferrer" class="project project--featured">
                     <div class="project__glow"></div>
-                    <!-- Document structure visual -->
-                    <svg class="project__visual" width="200" height="190" viewBox="0 0 200 190" fill="none">
-                        <!-- Back document -->
-                        <rect x="22" y="30" width="95" height="125" rx="3" stroke="rgba(80,120,195,0.1)" stroke-width="0.7" transform="rotate(-5 70 92)"/>
-                        <!-- Mid document -->
-                        <rect x="38" y="20" width="95" height="125" rx="3" stroke="rgba(80,120,195,0.16)" stroke-width="0.7" transform="rotate(2 86 82)"/>
-                        <!-- Front document -->
-                        <rect x="55" y="28" width="95" height="125" rx="3" stroke="rgba(80,120,195,0.28)" stroke-width="0.9" fill="rgba(80,120,195,0.02)"/>
-                        <!-- Text lines on front doc -->
-                        <line x1="68" y1="52" x2="128" y2="52" stroke="rgba(80,120,195,0.2)" stroke-width="2" stroke-linecap="round"/>
-                        <line x1="68" y1="66" x2="136" y2="66" stroke="rgba(80,120,195,0.12)" stroke-width="1.2" stroke-linecap="round"/>
-                        <line x1="68" y1="78" x2="124" y2="78" stroke="rgba(80,120,195,0.12)" stroke-width="1.2" stroke-linecap="round"/>
-                        <line x1="68" y1="90" x2="132" y2="90" stroke="rgba(80,120,195,0.12)" stroke-width="1.2" stroke-linecap="round"/>
-                        <line x1="68" y1="102" x2="110" y2="102" stroke="rgba(80,120,195,0.12)" stroke-width="1.2" stroke-linecap="round"/>
-                        <!-- Checkmark -->
-                        <polyline points="72,125 84,137 110,108" stroke="rgba(90,190,140,0.4)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="check-glow"/>
-                        <!-- Floating accent dots -->
-                        <circle cx="165" cy="40" r="2" fill="rgba(80,120,195,0.15)" class="node-pulse node-pulse-d2"/>
-                        <circle cx="172" cy="95" r="1.5" fill="rgba(80,120,195,0.1)" class="node-pulse node-pulse-d4"/>
-                        <circle cx="160" cy="150" r="1.8" fill="rgba(80,120,195,0.12)" class="node-pulse node-pulse-d6"/>
-                        <circle cx="30" cy="165" r="1.5" fill="rgba(80,120,195,0.08)" class="node-pulse node-pulse-d1"/>
-                    </svg>
                     <div class="project__inner">
-                        <div class="project__badge">Featured</div>
+                        <div class="project__number">Deployment // 01</div>
                         <div class="project__header">
                             <span class="project__name">BriefCheck App <span class="arrow">&#8599;</span></span>
                             <span class="project__tech">AI &middot; Product</span>
                         </div>
                         <p class="project__desc">AI-powered letter analysis that helps you understand bureaucratic correspondence from authorities, digitizes documents, and delivers clear action recommendations — fast, secure, and simple.</p>
+                        <div class="project__tags">
+                            <span class="project__tag">AI</span>
+                            <span class="project__tag">Document Analysis</span>
+                            <span class="project__tag">NLP</span>
+                        </div>
+                        <span class="project__cta">Visit briefcheck.app &nbsp;→</span>
+                    </div>
+                    <div class="project__doc-visual">
+                        <!-- Document structure visual -->
+                        <svg width="160" height="150" viewBox="0 0 200 190" fill="none">
+                            <!-- Back document -->
+                            <rect x="22" y="30" width="95" height="125" rx="3" stroke="rgba(80,120,195,0.2)" stroke-width="0.9" transform="rotate(-5 70 92)"/>
+                            <!-- Mid document -->
+                            <rect x="38" y="20" width="95" height="125" rx="3" stroke="rgba(80,120,195,0.32)" stroke-width="0.9" transform="rotate(2 86 82)"/>
+                            <!-- Front document -->
+                            <rect x="55" y="28" width="95" height="125" rx="3" stroke="rgba(80,120,195,0.55)" stroke-width="1.1" fill="rgba(80,120,195,0.05)"/>
+                            <!-- Text lines on front doc -->
+                            <line x1="68" y1="52" x2="128" y2="52" stroke="rgba(80,120,195,0.38)" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="68" y1="66" x2="136" y2="66" stroke="rgba(80,120,195,0.25)" stroke-width="1.2" stroke-linecap="round"/>
+                            <line x1="68" y1="78" x2="124" y2="78" stroke="rgba(80,120,195,0.25)" stroke-width="1.2" stroke-linecap="round"/>
+                            <line x1="68" y1="90" x2="132" y2="90" stroke="rgba(80,120,195,0.25)" stroke-width="1.2" stroke-linecap="round"/>
+                            <line x1="68" y1="102" x2="110" y2="102" stroke="rgba(80,120,195,0.25)" stroke-width="1.2" stroke-linecap="round"/>
+                            <!-- Checkmark -->
+                            <polyline points="72,125 84,137 110,108" stroke="rgba(90,190,140,0.7)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="check-glow"/>
+                            <!-- Floating accent dots -->
+                            <circle cx="165" cy="40" r="2" fill="rgba(80,120,195,0.28)" class="node-pulse node-pulse-d2"/>
+                            <circle cx="172" cy="95" r="1.5" fill="rgba(80,120,195,0.2)" class="node-pulse node-pulse-d4"/>
+                            <circle cx="160" cy="150" r="1.8" fill="rgba(80,120,195,0.22)" class="node-pulse node-pulse-d6"/>
+                            <circle cx="30" cy="165" r="1.5" fill="rgba(80,120,195,0.15)" class="node-pulse node-pulse-d1"/>
+                        </svg>
                     </div>
                 </a>
+
+                <!-- AgentMux — secondary (50%, visual outside) -->
+                <div class="project-secondary-wrap">
+                    <a href="https://github.com/markuswondrak/AgentMux/" target="_blank" rel="noopener noreferrer" class="project project--featured project--secondary">
+                        <div class="project__glow"></div>
+                        <div class="project__inner">
+                            <div class="project__number">Deployment // 02</div>
+                            <div class="project__header">
+                                <span class="project__name">AgentMux <span class="arrow">&#8599;</span></span>
+                                <span class="project__tech">Python &middot; tmux &middot; Multi-Agent</span>
+                            </div>
+                            <p class="project__desc">Orchestrates a full PM → Architect → Code → Review pipeline across Claude, Codex, and Gemini — injected via tmux, not the API. Reuses your existing subscriptions. No per-token costs.</p>
+                        </div>
+                    </a>
+                    <!-- Process-chain visual — outside the card -->
+                    <div class="project__visual-outside">
+                        <svg height="100%" width="auto" viewBox="0 0 180 230" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+                            <!-- Vertical pipeline: PM → ARCHITECT → CODE → REVIEW → DONE -->
+                            <!-- Step 1: PM -->
+                            <rect x="35" y="10" width="50" height="26" rx="2" stroke="rgba(80,120,195,0.55)" stroke-width="1" fill="rgba(80,120,195,0.07)"/>
+                            <text x="60" y="27" text-anchor="middle" fill="rgba(140,160,220,0.85)" font-size="9" letter-spacing="1" font-family="monospace">PM</text>
+                            <!-- Arrow down -->
+                            <line x1="60" y1="36" x2="60" y2="48" stroke="rgba(80,120,195,0.35)" stroke-width="1"/>
+                            <polygon points="56,47 60,54 64,47" fill="rgba(80,120,195,0.35)"/>
+                            <!-- Step 2: ARCHITECT -->
+                            <rect x="8" y="54" width="104" height="26" rx="2" stroke="rgba(80,120,195,0.55)" stroke-width="1" fill="rgba(80,120,195,0.07)"/>
+                            <text x="60" y="71" text-anchor="middle" fill="rgba(140,160,220,0.85)" font-size="9" letter-spacing="1" font-family="monospace">ARCHITECT</text>
+                            <!-- Arrow down -->
+                            <line x1="60" y1="80" x2="60" y2="92" stroke="rgba(80,120,195,0.35)" stroke-width="1"/>
+                            <polygon points="56,91 60,98 64,91" fill="rgba(80,120,195,0.35)"/>
+                            <!-- Step 3: CODE -->
+                            <rect x="35" y="98" width="50" height="26" rx="2" stroke="rgba(80,120,195,0.65)" stroke-width="1" fill="rgba(80,120,195,0.1)"/>
+                            <text x="60" y="115" text-anchor="middle" fill="rgba(140,160,220,0.95)" font-size="9" letter-spacing="1" font-family="monospace">CODE</text>
+                            <!-- Arrow down -->
+                            <line x1="60" y1="124" x2="60" y2="136" stroke="rgba(80,120,195,0.35)" stroke-width="1"/>
+                            <polygon points="56,135 60,142 64,135" fill="rgba(80,120,195,0.35)"/>
+                            <!-- Step 4: REVIEW -->
+                            <rect x="14" y="142" width="92" height="26" rx="2" stroke="rgba(80,120,195,0.55)" stroke-width="1" fill="rgba(80,120,195,0.07)"/>
+                            <text x="60" y="159" text-anchor="middle" fill="rgba(140,160,220,0.85)" font-size="9" letter-spacing="1" font-family="monospace">REVIEW</text>
+                            <!-- Green arrow to DONE -->
+                            <line x1="60" y1="168" x2="60" y2="180" stroke="rgba(90,190,140,0.5)" stroke-width="1"/>
+                            <polygon points="56,179 60,186 64,179" fill="rgba(90,190,140,0.5)"/>
+                            <!-- Step 5: DONE -->
+                            <rect x="25" y="186" width="70" height="26" rx="2" stroke="rgba(90,190,140,0.65)" stroke-width="1" fill="rgba(90,190,140,0.07)"/>
+                            <text x="60" y="203" text-anchor="middle" fill="rgba(140,220,175,0.9)" font-size="9" letter-spacing="1" font-family="monospace">DONE</text>
+                            <!-- Provider labels on the right -->
+                            <text x="120" y="71" fill="rgba(80,120,195,0.5)" font-size="7.5" font-family="monospace" letter-spacing="0.5">claude</text>
+                            <text x="120" y="115" fill="rgba(80,120,195,0.5)" font-size="7.5" font-family="monospace" letter-spacing="0.5">codex</text>
+                            <text x="120" y="159" fill="rgba(80,120,195,0.5)" font-size="7.5" font-family="monospace" letter-spacing="0.5">gemini</text>
+                            <!-- Connector lines to labels -->
+                            <line x1="112" y1="67" x2="118" y2="67" stroke="rgba(80,120,195,0.25)" stroke-width="0.8" stroke-dasharray="2 2"/>
+                            <line x1="85" y1="111" x2="118" y2="111" stroke="rgba(80,120,195,0.25)" stroke-width="0.8" stroke-dasharray="2 2"/>
+                            <line x1="106" y1="155" x2="118" y2="155" stroke="rgba(80,120,195,0.25)" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        </svg>
+                    </div>
+                </div>
             </div>
 
             <!-- REGULAR -->
-            <div class="projects" style="margin-top: 2.5rem">
+            <div class="projects projects--grid" style="margin-top: 2.5rem">
                 <a href="https://github.com/markuswondrak/finance-app" target="_blank" rel="noopener noreferrer" class="project" data-seed="7">
                     <canvas></canvas>
                     <div class="project__inner">
@@ -706,17 +925,6 @@
                             <span class="project__tech">Infrastructure</span>
                         </div>
                         <p class="project__desc">Self-hosted infrastructure automating containerised application deployment on a single VM. Automated pipelines, shared database — low-maintenance and production-ready.</p>
-                    </div>
-                </a>
-
-                <a href="https://github.com/markuswondrak/pokemon-collector" target="_blank" rel="noopener noreferrer" class="project" data-seed="59">
-                    <canvas></canvas>
-                    <div class="project__inner">
-                        <div class="project__header">
-                            <span class="project__name">Pokemon Collector <span class="arrow">&#8599;</span></span>
-                            <span class="project__tech">React</span>
-                        </div>
-                        <p class="project__desc">React-based collection organiser built to demonstrate the SpecKit development workflow — strict TDD, architectural planning, and specification-driven implementation.</p>
                     </div>
                 </a>
 
