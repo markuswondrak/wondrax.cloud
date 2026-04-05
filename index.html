@@ -45,6 +45,7 @@
         }
 
         html {
+            font-size: 110%;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
@@ -113,6 +114,12 @@
             pointer-events: none;
         }
 
+        .left__photo canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
         .left__content {
             flex: 1;
             padding: 0.25rem 2.75rem 2.5rem;
@@ -148,6 +155,10 @@
             color: var(--l-text-dim);
             flex: 1;
             overflow: hidden;
+        }
+
+        .left__bio p + p {
+            margin-top: 0.75rem;
         }
 
         .cursor {
@@ -549,14 +560,16 @@
         <!-- ── LEFT: THE HUMAN ── -->
         <aside class="left">
             <div class="left__photo">
-                <img src="me.png" alt="Markus Wondrak" loading="eager">
+                <canvas id="networkCanvas"></canvas>
             </div>
             <div class="left__content">
                 <h1 class="left__name">Markus<br>Wondrak</h1>
                 <p class="left__role">Domain Architect &nbsp;·&nbsp; Software Engineering</p>
-                <p class="left__bio">
-                    Software engineering enthusiast with a clear mission: making life easier for developers and producing good-quality software. Domain Architect at a large German bank, with 9 years in consultancy and an M.Sc. from Frankfurt University. Currently deep in agentic coding and the toolchain around it.<span class="cursor"></span>
-                </p>
+                <div class="left__bio">
+                    <p>Software engineering enthusiast with a clear mission: making life easier for developers and producing good-quality software.</p>
+                    <p>After studying computer science, I spent 9 years in consulting before becoming a Domain Architect at a major German bank, supporting their digital transformation.</p>
+                    <p>Currently deep in agentic coding and the toolchain around it &#8212; exploring how these tools integrate into software development and reshape the industry.<span class="cursor"></span></p>
+                </div>
                 <div class="left__divider"></div>
                 <ul class="left__links">
                     <li>
@@ -660,10 +673,10 @@
                     <div class="project__inner">
                         <div class="project__badge">Featured</div>
                         <div class="project__header">
-                            <span class="project__name">briefcheck.app <span class="arrow">&#8599;</span></span>
+                            <span class="project__name">BriefCheck App <span class="arrow">&#8599;</span></span>
                             <span class="project__tech">AI &middot; Product</span>
                         </div>
-                        <p class="project__desc">AI-powered brief analysis that transforms vague requirements into structured, actionable specifications. Surfaces ambiguities and validates completeness before development begins.</p>
+                        <p class="project__desc">AI-powered letter analysis that helps you understand bureaucratic correspondence from authorities, digitizes documents, and delivers clear action recommendations — fast, secure, and simple.</p>
                     </div>
                 </a>
             </div>
@@ -893,6 +906,133 @@
                 graphs.forEach(function (g) { g.resize(); });
             }, 180);
         });
+    })();
+
+    /* ── Constellation / neural network for left panel ── */
+
+    (function () {
+        'use strict';
+
+        var canvas = document.getElementById('networkCanvas');
+        if (!canvas) return;
+
+        var ctx = canvas.getContext('2d');
+        var width, height;
+        var particles = [];
+
+        var CONFIG = {
+            numParticles: 140,
+            linkDistance: 120,
+            particleBaseSpeed: 0.4,
+            mouseInteractionRadius: 120,
+            mouseRepulsionForce: 0.8,
+            particleColor: 'rgba(30, 28, 25, 0.55)',
+            lineR: 30,
+            lineG: 28,
+            lineB: 25,
+            lineBaseAlpha: 0.2,
+        };
+
+        var mouse = { x: -9999, y: -9999 };
+
+        function resize() {
+            var dpr = window.devicePixelRatio || 1;
+            var container = canvas.parentElement;
+            width = container.offsetWidth;
+            height = container.offsetHeight;
+            if (width === 0 || height === 0) return;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function Particle() {
+            this.x = Math.random() * width;
+            this.y = Math.random() * height;
+            this.vx = (Math.random() - 0.5) * CONFIG.particleBaseSpeed;
+            this.vy = (Math.random() - 0.5) * CONFIG.particleBaseSpeed;
+            this.radius = Math.random() * 1.2 + 0.5;
+        }
+
+        Particle.prototype.update = function () {
+            this.x += this.vx;
+            this.y += this.vy;
+
+            if (this.x < 0 || this.x > width) this.vx *= -1;
+            if (this.y < 0 || this.y > height) this.vy *= -1;
+
+            var dx = this.x - mouse.x;
+            var dy = this.y - mouse.y;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < CONFIG.mouseInteractionRadius && dist > 0) {
+                var force = (CONFIG.mouseInteractionRadius - dist) / CONFIG.mouseInteractionRadius;
+                this.x += (dx / dist) * force * CONFIG.mouseRepulsionForce;
+                this.y += (dy / dist) * force * CONFIG.mouseRepulsionForce;
+            }
+        };
+
+        Particle.prototype.draw = function () {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = CONFIG.particleColor;
+            ctx.fill();
+        };
+
+        function init() {
+            resize();
+            particles = [];
+            for (var i = 0; i < CONFIG.numParticles; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+
+            for (var i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+
+                for (var j = i + 1; j < particles.length; j++) {
+                    var p1 = particles[i];
+                    var p2 = particles[j];
+                    var dx = p1.x - p2.x;
+                    var dy = p1.y - p2.y;
+                    var dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < CONFIG.linkDistance) {
+                        var opacity = (1 - dist / CONFIG.linkDistance) * CONFIG.lineBaseAlpha;
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.strokeStyle = 'rgba(' + CONFIG.lineR + ',' + CONFIG.lineG + ',' + CONFIG.lineB + ',' + opacity + ')';
+                        ctx.lineWidth = 0.5;
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', function () {
+            resize();
+        });
+
+        canvas.parentElement.addEventListener('mousemove', function (e) {
+            var rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+        });
+
+        canvas.parentElement.addEventListener('mouseleave', function () {
+            mouse.x = -9999;
+            mouse.y = -9999;
+        });
+
+        init();
+        animate();
     })();
     </script>
 </body>
