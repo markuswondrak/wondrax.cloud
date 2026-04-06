@@ -77,7 +77,7 @@
             top: 0;
             height: 100vh;
             background: var(--l-bg);
-            overflow: hidden;
+            overflow: clip;
             display: flex;
             flex-direction: column;
             animation: enterLeft 0.7s var(--ease) both;
@@ -124,7 +124,7 @@
 
         .left__content {
             flex: 1;
-            padding: 0.25rem 2.75rem 2.5rem;
+            padding: 0.75rem 2.75rem 2.5rem;
             display: flex;
             flex-direction: column;
             min-height: 0;
@@ -146,21 +146,12 @@
             position: relative;
         }
 
-        .left__avatar-frame::before {
-            content: '';
+        .left__avatar-corners {
             position: absolute;
-            inset: -4px;
+            inset: -6px;
             pointer-events: none;
-            background:
-                linear-gradient(currentColor, currentColor) top left    / 9px 0.5px no-repeat,
-                linear-gradient(currentColor, currentColor) top left    / 0.5px 9px no-repeat,
-                linear-gradient(currentColor, currentColor) top right   / 9px 0.5px no-repeat,
-                linear-gradient(currentColor, currentColor) top right   / 0.5px 9px no-repeat,
-                linear-gradient(currentColor, currentColor) bottom left  / 9px 0.5px no-repeat,
-                linear-gradient(currentColor, currentColor) bottom left  / 0.5px 9px no-repeat,
-                linear-gradient(currentColor, currentColor) bottom right / 9px 0.5px no-repeat,
-                linear-gradient(currentColor, currentColor) bottom right / 0.5px 9px no-repeat;
-            color: rgba(90, 90, 100, 0.5);
+            z-index: 1;
+            overflow: visible;
         }
 
         .left__avatar {
@@ -805,6 +796,12 @@
                 <div class="left__name-row">
                     <h1 class="left__name">Markus<br>Wondrak</h1>
                     <span class="left__avatar-frame">
+                        <svg class="left__avatar-corners" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M0 16 L0 0 L16 0"   stroke="rgba(50,45,40,0.65)" stroke-width="1.5" fill="none" stroke-linecap="square" stroke-linejoin="miter" vector-effect="non-scaling-stroke"/>
+                            <path d="M84 0 L100 0 L100 16"  stroke="rgba(50,45,40,0.65)" stroke-width="1.5" fill="none" stroke-linecap="square" stroke-linejoin="miter" vector-effect="non-scaling-stroke"/>
+                            <path d="M0 84 L0 100 L16 100"  stroke="rgba(50,45,40,0.65)" stroke-width="1.5" fill="none" stroke-linecap="square" stroke-linejoin="miter" vector-effect="non-scaling-stroke"/>
+                            <path d="M84 100 L100 100 L100 84" stroke="rgba(50,45,40,0.65)" stroke-width="1.5" fill="none" stroke-linecap="square" stroke-linejoin="miter" vector-effect="non-scaling-stroke"/>
+                        </svg>
                         <img src="me.png" alt="Markus Wondrak" class="left__avatar">
                     </span>
                 </div>
@@ -863,7 +860,7 @@
                     </div>
                     <div class="project__doc-visual">
                         <!-- Abstract document skeleton with AI entity bounding boxes -->
-                        <svg width="190" height="210" viewBox="0 0 190 210" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg width="260" height="290" viewBox="0 0 190 210" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <defs>
                                 <linearGradient id="docFade" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="0%" stop-color="white" stop-opacity="1"/>
@@ -878,50 +875,50 @@
                             <g mask="url(#fadeMask)">
                                 <!-- Document outline -->
                                 <rect x="18" y="14" width="148" height="188" rx="4"
-                                    stroke="rgba(80,120,195,0.55)" stroke-width="1.2"
-                                    fill="rgba(80,120,195,0.05)"/>
+                                    stroke="rgba(100,145,235,0.8)" stroke-width="1.4"
+                                    fill="rgba(80,120,195,0.1)"/>
 
                                 <!-- Bold title bar -->
-                                <rect x="30" y="30" width="80" height="6" rx="1.5" fill="rgba(80,120,195,0.55)"/>
+                                <rect x="30" y="30" width="80" height="6" rx="1.5" fill="rgba(100,145,235,0.8)"/>
 
                                 <!-- Subheader line -->
-                                <rect x="30" y="43" width="55" height="3.5" rx="1" fill="rgba(80,120,195,0.3)"/>
+                                <rect x="30" y="43" width="55" height="3.5" rx="1" fill="rgba(100,145,235,0.5)"/>
 
                                 <!-- Divider -->
-                                <line x1="30" y1="54" x2="158" y2="54" stroke="rgba(80,120,195,0.18)" stroke-width="0.8"/>
+                                <line x1="30" y1="54" x2="158" y2="54" stroke="rgba(100,145,235,0.3)" stroke-width="0.8"/>
 
                                 <!-- Body text rows -->
-                                <rect x="30" y="63" width="112" height="3" rx="1" fill="rgba(80,120,195,0.28)"/>
-                                <rect x="30" y="72" width="96" height="3" rx="1" fill="rgba(80,120,195,0.22)"/>
-                                <rect x="30" y="81" width="118" height="3" rx="1" fill="rgba(80,120,195,0.22)"/>
-                                <rect x="30" y="90" width="78" height="3" rx="1" fill="rgba(80,120,195,0.22)"/>
+                                <rect x="30" y="63" width="112" height="3" rx="1" fill="rgba(100,145,235,0.5)"/>
+                                <rect x="30" y="72" width="96" height="3" rx="1" fill="rgba(100,145,235,0.4)"/>
+                                <rect x="30" y="81" width="118" height="3" rx="1" fill="rgba(100,145,235,0.4)"/>
+                                <rect x="30" y="90" width="78" height="3" rx="1" fill="rgba(100,145,235,0.4)"/>
 
                                 <!-- Entity box: NAME (row 1) -->
                                 <rect x="30" y="60" width="52" height="9" rx="1.5"
-                                    stroke="rgba(100,160,255,0.65)" stroke-width="0.9"
-                                    fill="rgba(80,120,195,0.08)"/>
+                                    stroke="rgba(130,185,255,0.9)" stroke-width="1"
+                                    fill="rgba(80,120,195,0.15)"/>
                                 <text x="30" y="57.5" font-family="monospace" font-size="5.5"
-                                    fill="rgba(120,175,255,0.75)" letter-spacing="0.06em">NAME</text>
+                                    fill="rgba(160,205,255,0.95)" letter-spacing="0.06em">NAME</text>
 
                                 <!-- Entity box: DATE (row 3) -->
                                 <rect x="84" y="78" width="38" height="9" rx="1.5"
-                                    stroke="rgba(120,200,170,0.6)" stroke-width="0.9"
-                                    fill="rgba(90,190,140,0.06)"/>
+                                    stroke="rgba(120,210,175,0.85)" stroke-width="1"
+                                    fill="rgba(90,190,140,0.12)"/>
                                 <text x="84" y="75.5" font-family="monospace" font-size="5.5"
-                                    fill="rgba(120,200,170,0.8)" letter-spacing="0.06em">DATE</text>
+                                    fill="rgba(140,220,185,0.95)" letter-spacing="0.06em">DATE</text>
 
                                 <!-- Entity box: AMT (row 4) -->
                                 <rect x="30" y="87" width="32" height="9" rx="1.5"
-                                    stroke="rgba(200,160,100,0.55)" stroke-width="0.9"
-                                    fill="rgba(200,160,100,0.05)"/>
+                                    stroke="rgba(220,175,110,0.8)" stroke-width="1"
+                                    fill="rgba(200,160,100,0.1)"/>
                                 <text x="30" y="84.5" font-family="monospace" font-size="5.5"
-                                    fill="rgba(200,160,100,0.75)" letter-spacing="0.06em">AMT</text>
+                                    fill="rgba(230,185,120,0.95)" letter-spacing="0.06em">AMT</text>
 
                                 <!-- Trailing rows fading out -->
-                                <rect x="30" y="104" width="102" height="3" rx="1" fill="rgba(80,120,195,0.16)"/>
-                                <rect x="30" y="113" width="88" height="3" rx="1" fill="rgba(80,120,195,0.12)"/>
-                                <rect x="30" y="122" width="110" height="3" rx="1" fill="rgba(80,120,195,0.1)"/>
-                                <rect x="30" y="131" width="70" height="3" rx="1" fill="rgba(80,120,195,0.07)"/>
+                                <rect x="30" y="104" width="102" height="3" rx="1" fill="rgba(100,145,235,0.3)"/>
+                                <rect x="30" y="113" width="88" height="3" rx="1" fill="rgba(100,145,235,0.22)"/>
+                                <rect x="30" y="122" width="110" height="3" rx="1" fill="rgba(100,145,235,0.16)"/>
+                                <rect x="30" y="131" width="70" height="3" rx="1" fill="rgba(100,145,235,0.1)"/>
                             </g>
                         </svg>
                     </div>
@@ -1213,8 +1210,8 @@
         var particles = [];
 
         var CONFIG = {
-            numParticles: 140,
-            linkDistance: 120,
+            numParticles: 220,
+            linkDistance: 150,
             particleBaseSpeed: 0.4,
             mouseInteractionRadius: 120,
             mouseRepulsionForce: 0.8,
