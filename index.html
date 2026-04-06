@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Markus Wondrak — Domain Architect & Software Engineering Enthusiast">
     <title>Markus Wondrak</title>
-    <link rel="icon" type="image/svg+xml" href="favicon_cursor.svg">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;1,9..40,300&family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -28,8 +28,8 @@
             --r-text-strong: #DEDED8;
             --r-text-dim:    #52526A;
             --r-border:      #1C1C26;
-            --r-accent:      #6080BE;
-            --r-accent-dim:  rgba(80, 110, 190, 0.12);
+            --r-accent:      #5070A0;
+            --r-accent-dim:  #1A2030;
 
             /* Shared */
             --serif: 'Cormorant Garamond', Georgia, serif;
@@ -327,14 +327,15 @@
             display: block;
             padding: 1.75rem 2rem;
             background: var(--r-surface);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--r-border);
             overflow: hidden;
-            transition: background 0.3s var(--ease), border-color 0.3s var(--ease);
+            transition: background 0.3s var(--ease), border-color 0.3s var(--ease), box-shadow 0.3s var(--ease);
         }
 
         .project:hover {
             background: #16161F;
-            border-color: rgba(255, 255, 255, 0.1);
+            border-color: #282836;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.35);
         }
 
         .project canvas {
@@ -352,33 +353,14 @@
 
         /* ─── Featured cards ─── */
         .project--featured {
-            background: linear-gradient(135deg, rgba(18, 18, 21, 1) 0%, rgba(17, 17, 24, 1) 100%);
+            background: #131318;
             padding: 2.25rem 2.25rem 2.25rem;
-            border-color: rgba(255, 255, 255, 0.08);
+            border-color: var(--r-border);
         }
 
         .project--featured:hover {
-            background: linear-gradient(135deg, rgba(20, 20, 30, 1) 0%, rgba(19, 19, 32, 1) 100%);
-            border-color: rgba(255, 255, 255, 0.12);
-        }
-
-        /* Ambient glow behind the visual */
-        .project__glow {
-            position: absolute;
-            right: -4%;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 320px;
-            height: 320px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(75, 110, 190, 0.06) 0%, transparent 65%);
-            pointer-events: none;
-            z-index: 0;
-            transition: opacity 0.5s var(--ease);
-        }
-
-        .project--featured:hover .project__glow {
-            background: radial-gradient(circle, rgba(75, 110, 190, 0.1) 0%, transparent 65%);
+            background: #16161e;
+            border-color: #282836;
         }
 
         /* SVG visual decoration */
@@ -389,43 +371,12 @@
             transform: translateY(-50%);
             pointer-events: none;
             z-index: 1;
-            opacity: 0.65;
-            transition: opacity 0.4s var(--ease), transform 0.4s var(--ease);
+            opacity: 0.7;
+            transition: opacity 0.3s var(--ease);
         }
 
         .project--featured:hover .project__visual {
-            opacity: 1;
-            transform: translateY(-50%) scale(1.04);
-        }
-
-        /* SVG node pulse animation */
-        @keyframes nodePulse {
-            0%, 100% { opacity: 0.25; r: 3; }
-            50%      { opacity: 0.55; r: 3.8; }
-        }
-
-        @keyframes nodePulseSm {
-            0%, 100% { opacity: 0.18; }
-            50%      { opacity: 0.4; }
-        }
-
-        @keyframes checkGlow {
-            0%, 100% { opacity: 0.3; }
-            50%      { opacity: 0.55; }
-        }
-
-        .node-pulse {
-            animation: nodePulse 3.2s ease-in-out infinite;
-        }
-        .node-pulse-d1 { animation-delay: 0s; }
-        .node-pulse-d2 { animation-delay: 0.5s; }
-        .node-pulse-d3 { animation-delay: 1.0s; }
-        .node-pulse-d4 { animation-delay: 1.5s; }
-        .node-pulse-d5 { animation-delay: 2.0s; }
-        .node-pulse-d6 { animation-delay: 2.5s; }
-
-        .check-glow {
-            animation: checkGlow 3s ease-in-out infinite;
+            opacity: 0.9;
         }
 
         /* Featured badge */
@@ -602,29 +553,17 @@
             margin-bottom: 0.85rem;
         }
 
-        /* ─── Tech tag pills ─── */
-        .project__tags {
+        /* Grid cards: tech sits at bottom-right */
+        .projects--grid .project__inner {
             display: flex;
-            flex-wrap: wrap;
-            gap: 0.4rem;
-            margin-top: 1.1rem;
+            flex-direction: column;
+            height: 100%;
         }
 
-        .project__tag {
-            font-family: var(--mono);
-            font-size: 0.52rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--r-text-dim);
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            padding: 0.28rem 0.6rem;
-            border-radius: 2px;
-            transition: color 0.2s var(--ease), border-color 0.2s var(--ease);
-        }
-
-        .project:hover .project__tag {
-            color: var(--r-text);
-            border-color: rgba(255, 255, 255, 0.12);
+        .projects--grid .project__tech {
+            margin-top: auto;
+            padding-top: 1.1rem;
+            text-align: right;
         }
 
         /* ─── CTA line ─── */
@@ -649,17 +588,18 @@
         }
 
         .project__cta--btn {
-            color: rgba(160, 185, 240, 0.9);
-            background: rgba(80, 120, 195, 0.1);
-            border: 1px solid rgba(80, 120, 195, 0.3);
-            border-bottom: 1px solid rgba(80, 120, 195, 0.3);
-            padding: 0.5rem 1rem;
+            color: #c8d8f8;
+            background: rgba(80, 120, 195, 0.22);
+            border: 1px solid rgba(80, 120, 195, 0.55);
+            border-bottom: 1px solid rgba(80, 120, 195, 0.55);
+            padding: 0.55rem 1.25rem;
             border-radius: 3px;
+            letter-spacing: 0.07em;
         }
         .project:hover .project__cta--btn {
-            background: rgba(80, 120, 195, 0.2);
-            border-color: rgba(80, 120, 195, 0.55);
-            border-bottom-color: rgba(80, 120, 195, 0.55);
+            background: rgba(80, 120, 195, 0.35);
+            border-color: rgba(100, 145, 230, 0.8);
+            border-bottom-color: rgba(100, 145, 230, 0.8);
             color: #fff;
         }
 
@@ -729,6 +669,14 @@
                 right: 0.75rem;
             }
 
+            .project__doc-visual {
+                display: none;
+            }
+
+            .project--featured .project__desc {
+                max-width: none;
+            }
+
             .project--secondary {
                 flex: 0 0 100%;
             }
@@ -741,11 +689,6 @@
 
             .project__visual-outside {
                 display: none;
-            }
-
-            .project__glow {
-                width: 200px;
-                height: 200px;
             }
 
             .projects--grid {
@@ -809,7 +752,7 @@
                 <div class="left__bio">
                     <p>Software engineering enthusiast with a clear mission: making life easier for developers and producing good-quality software.</p>
                     <p>After studying computer science, I spent 9 years in consulting before becoming a Domain Architect at a major German bank, supporting their digital transformation.</p>
-                    <p>Currently deep in agentic coding and the toolchain around it &#8212; exploring how these tools integrate into software development and reshape the industry.<span class="cursor"></span></p>
+                    <p>Currently deep in agentic coding and the toolchain around it &#8212; exploring how these tools integrate into software development and reshape the industry.</p>
                 </div>
                 <div class="left__divider"></div>
                 <ul class="left__links">
@@ -844,7 +787,6 @@
 
                 <!-- briefcheck.app — hero -->
                 <a href="https://briefcheck.app/" target="_blank" rel="noopener noreferrer" class="project project--featured">
-                    <div class="project__glow"></div>
                     <div class="project__inner">
                         <div class="project__number">Selected Work // 01</div>
                         <div class="project__header">
@@ -875,50 +817,50 @@
                             <g mask="url(#fadeMask)">
                                 <!-- Document outline -->
                                 <rect x="18" y="14" width="148" height="188" rx="4"
-                                    stroke="rgba(100,145,235,0.8)" stroke-width="1.4"
-                                    fill="rgba(80,120,195,0.1)"/>
+                                    stroke="#3D5280" stroke-width="1.4"
+                                    fill="#161E30"/>
 
                                 <!-- Bold title bar -->
-                                <rect x="30" y="30" width="80" height="6" rx="1.5" fill="rgba(100,145,235,0.8)"/>
+                                <rect x="30" y="30" width="80" height="6" rx="1.5" fill="#3D5280"/>
 
                                 <!-- Subheader line -->
-                                <rect x="30" y="43" width="55" height="3.5" rx="1" fill="rgba(100,145,235,0.5)"/>
+                                <rect x="30" y="43" width="55" height="3.5" rx="1" fill="#2A3A58"/>
 
                                 <!-- Divider -->
-                                <line x1="30" y1="54" x2="158" y2="54" stroke="rgba(100,145,235,0.3)" stroke-width="0.8"/>
+                                <line x1="30" y1="54" x2="158" y2="54" stroke="#222E46" stroke-width="0.8"/>
 
                                 <!-- Body text rows -->
-                                <rect x="30" y="63" width="112" height="3" rx="1" fill="rgba(100,145,235,0.5)"/>
-                                <rect x="30" y="72" width="96" height="3" rx="1" fill="rgba(100,145,235,0.4)"/>
-                                <rect x="30" y="81" width="118" height="3" rx="1" fill="rgba(100,145,235,0.4)"/>
-                                <rect x="30" y="90" width="78" height="3" rx="1" fill="rgba(100,145,235,0.4)"/>
+                                <rect x="30" y="63" width="112" height="3" rx="1" fill="#2A3A58"/>
+                                <rect x="30" y="72" width="96" height="3" rx="1" fill="#222E46"/>
+                                <rect x="30" y="81" width="118" height="3" rx="1" fill="#222E46"/>
+                                <rect x="30" y="90" width="78" height="3" rx="1" fill="#222E46"/>
 
                                 <!-- Entity box: NAME (row 1) -->
                                 <rect x="30" y="60" width="52" height="9" rx="1.5"
-                                    stroke="rgba(130,185,255,0.9)" stroke-width="1"
-                                    fill="rgba(80,120,195,0.15)"/>
+                                    stroke="#4A6898" stroke-width="1"
+                                    fill="#1C2A40"/>
                                 <text x="30" y="57.5" font-family="monospace" font-size="5.5"
-                                    fill="rgba(160,205,255,0.95)" letter-spacing="0.06em">NAME</text>
+                                    fill="#7A9CC8" letter-spacing="0.06em">NAME</text>
 
                                 <!-- Entity box: DATE (row 3) -->
                                 <rect x="84" y="78" width="38" height="9" rx="1.5"
-                                    stroke="rgba(120,210,175,0.85)" stroke-width="1"
-                                    fill="rgba(90,190,140,0.12)"/>
+                                    stroke="#3A7060" stroke-width="1"
+                                    fill="#162820"/>
                                 <text x="84" y="75.5" font-family="monospace" font-size="5.5"
-                                    fill="rgba(140,220,185,0.95)" letter-spacing="0.06em">DATE</text>
+                                    fill="#5A9878" letter-spacing="0.06em">DATE</text>
 
                                 <!-- Entity box: AMT (row 4) -->
                                 <rect x="30" y="87" width="32" height="9" rx="1.5"
-                                    stroke="rgba(220,175,110,0.8)" stroke-width="1"
-                                    fill="rgba(200,160,100,0.1)"/>
+                                    stroke="#7A5A30" stroke-width="1"
+                                    fill="#281E0E"/>
                                 <text x="30" y="84.5" font-family="monospace" font-size="5.5"
-                                    fill="rgba(230,185,120,0.95)" letter-spacing="0.06em">AMT</text>
+                                    fill="#A07840" letter-spacing="0.06em">AMT</text>
 
                                 <!-- Trailing rows fading out -->
-                                <rect x="30" y="104" width="102" height="3" rx="1" fill="rgba(100,145,235,0.3)"/>
-                                <rect x="30" y="113" width="88" height="3" rx="1" fill="rgba(100,145,235,0.22)"/>
-                                <rect x="30" y="122" width="110" height="3" rx="1" fill="rgba(100,145,235,0.16)"/>
-                                <rect x="30" y="131" width="70" height="3" rx="1" fill="rgba(100,145,235,0.1)"/>
+                                <rect x="30" y="104" width="102" height="3" rx="1" fill="#1E2A40"/>
+                                <rect x="30" y="113" width="88" height="3" rx="1" fill="#1A2438"/>
+                                <rect x="30" y="122" width="110" height="3" rx="1" fill="#161E30"/>
+                                <rect x="30" y="131" width="70" height="3" rx="1" fill="#121828"/>
                             </g>
                         </svg>
                     </div>
@@ -927,7 +869,6 @@
                 <!-- AgentMux — secondary (50%, visual outside) -->
                 <div class="project-secondary-wrap">
                     <a href="https://github.com/markuswondrak/AgentMux/" target="_blank" rel="noopener noreferrer" class="project project--featured project--secondary">
-                        <div class="project__glow"></div>
                         <div class="project__inner">
                             <div class="project__number">Selected Work // 02</div>
                             <div class="project__header">
@@ -942,40 +883,40 @@
                         <svg height="100%" width="auto" viewBox="0 0 180 230" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
                             <!-- Vertical pipeline: PM → ARCHITECT → CODE → REVIEW → DONE -->
                             <!-- Step 1: PM -->
-                            <rect x="35" y="10" width="50" height="26" rx="2" stroke="rgba(80,120,195,0.55)" stroke-width="1" fill="rgba(80,120,195,0.07)"/>
-                            <text x="60" y="27" text-anchor="middle" fill="rgba(140,160,220,0.85)" font-size="9" letter-spacing="1" font-family="monospace">PM</text>
+                            <rect x="35" y="10" width="50" height="26" rx="2" stroke="#2E3D60" stroke-width="1" fill="#14192A"/>
+                            <text x="60" y="27" text-anchor="middle" fill="#5A70A0" font-size="9" letter-spacing="1" font-family="monospace">PM</text>
                             <!-- Arrow down -->
-                            <line x1="60" y1="36" x2="60" y2="48" stroke="rgba(80,120,195,0.35)" stroke-width="1"/>
-                            <polygon points="56,47 60,54 64,47" fill="rgba(80,120,195,0.35)"/>
+                            <line x1="60" y1="36" x2="60" y2="48" stroke="#2A3858" stroke-width="1"/>
+                            <polygon points="56,47 60,54 64,47" fill="#2A3858"/>
                             <!-- Step 2: ARCHITECT -->
-                            <rect x="8" y="54" width="104" height="26" rx="2" stroke="rgba(80,120,195,0.55)" stroke-width="1" fill="rgba(80,120,195,0.07)"/>
-                            <text x="60" y="71" text-anchor="middle" fill="rgba(140,160,220,0.85)" font-size="9" letter-spacing="1" font-family="monospace">ARCHITECT</text>
+                            <rect x="8" y="54" width="104" height="26" rx="2" stroke="#2E3D60" stroke-width="1" fill="#14192A"/>
+                            <text x="60" y="71" text-anchor="middle" fill="#5A70A0" font-size="9" letter-spacing="1" font-family="monospace">ARCHITECT</text>
                             <!-- Arrow down -->
-                            <line x1="60" y1="80" x2="60" y2="92" stroke="rgba(80,120,195,0.35)" stroke-width="1"/>
-                            <polygon points="56,91 60,98 64,91" fill="rgba(80,120,195,0.35)"/>
+                            <line x1="60" y1="80" x2="60" y2="92" stroke="#2A3858" stroke-width="1"/>
+                            <polygon points="56,91 60,98 64,91" fill="#2A3858"/>
                             <!-- Step 3: CODE -->
-                            <rect x="35" y="98" width="50" height="26" rx="2" stroke="rgba(80,120,195,0.65)" stroke-width="1" fill="rgba(80,120,195,0.1)"/>
-                            <text x="60" y="115" text-anchor="middle" fill="rgba(140,160,220,0.95)" font-size="9" letter-spacing="1" font-family="monospace">CODE</text>
+                            <rect x="35" y="98" width="50" height="26" rx="2" stroke="#3A4E78" stroke-width="1" fill="#181E2E"/>
+                            <text x="60" y="115" text-anchor="middle" fill="#6A80B8" font-size="9" letter-spacing="1" font-family="monospace">CODE</text>
                             <!-- Arrow down -->
-                            <line x1="60" y1="124" x2="60" y2="136" stroke="rgba(80,120,195,0.35)" stroke-width="1"/>
-                            <polygon points="56,135 60,142 64,135" fill="rgba(80,120,195,0.35)"/>
+                            <line x1="60" y1="124" x2="60" y2="136" stroke="#2A3858" stroke-width="1"/>
+                            <polygon points="56,135 60,142 64,135" fill="#2A3858"/>
                             <!-- Step 4: REVIEW -->
-                            <rect x="14" y="142" width="92" height="26" rx="2" stroke="rgba(80,120,195,0.55)" stroke-width="1" fill="rgba(80,120,195,0.07)"/>
-                            <text x="60" y="159" text-anchor="middle" fill="rgba(140,160,220,0.85)" font-size="9" letter-spacing="1" font-family="monospace">REVIEW</text>
+                            <rect x="14" y="142" width="92" height="26" rx="2" stroke="#2E3D60" stroke-width="1" fill="#14192A"/>
+                            <text x="60" y="159" text-anchor="middle" fill="#5A70A0" font-size="9" letter-spacing="1" font-family="monospace">REVIEW</text>
                             <!-- Green arrow to DONE -->
-                            <line x1="60" y1="168" x2="60" y2="180" stroke="rgba(90,190,140,0.5)" stroke-width="1"/>
-                            <polygon points="56,179 60,186 64,179" fill="rgba(90,190,140,0.5)"/>
+                            <line x1="60" y1="168" x2="60" y2="180" stroke="#2E5A48" stroke-width="1"/>
+                            <polygon points="56,179 60,186 64,179" fill="#2E5A48"/>
                             <!-- Step 5: DONE -->
-                            <rect x="25" y="186" width="70" height="26" rx="2" stroke="rgba(90,190,140,0.65)" stroke-width="1" fill="rgba(90,190,140,0.07)"/>
-                            <text x="60" y="203" text-anchor="middle" fill="rgba(140,220,175,0.9)" font-size="9" letter-spacing="1" font-family="monospace">DONE</text>
+                            <rect x="25" y="186" width="70" height="26" rx="2" stroke="#2E5A48" stroke-width="1" fill="#131E1A"/>
+                            <text x="60" y="203" text-anchor="middle" fill="#4A8868" font-size="9" letter-spacing="1" font-family="monospace">DONE</text>
                             <!-- Provider labels on the right -->
-                            <text x="120" y="71" fill="rgba(80,120,195,0.5)" font-size="7.5" font-family="monospace" letter-spacing="0.5">claude</text>
-                            <text x="120" y="115" fill="rgba(80,120,195,0.5)" font-size="7.5" font-family="monospace" letter-spacing="0.5">codex</text>
-                            <text x="120" y="159" fill="rgba(80,120,195,0.5)" font-size="7.5" font-family="monospace" letter-spacing="0.5">gemini</text>
+                            <text x="120" y="71" fill="#3A5080" font-size="7.5" font-family="monospace" letter-spacing="0.5">claude</text>
+                            <text x="120" y="115" fill="#3A5080" font-size="7.5" font-family="monospace" letter-spacing="0.5">codex</text>
+                            <text x="120" y="159" fill="#3A5080" font-size="7.5" font-family="monospace" letter-spacing="0.5">gemini</text>
                             <!-- Connector lines to labels -->
-                            <line x1="112" y1="67" x2="118" y2="67" stroke="rgba(80,120,195,0.25)" stroke-width="0.8" stroke-dasharray="2 2"/>
-                            <line x1="85" y1="111" x2="118" y2="111" stroke="rgba(80,120,195,0.25)" stroke-width="0.8" stroke-dasharray="2 2"/>
-                            <line x1="106" y1="155" x2="118" y2="155" stroke="rgba(80,120,195,0.25)" stroke-width="0.8" stroke-dasharray="2 2"/>
+                            <line x1="112" y1="67" x2="118" y2="67" stroke="#222E44" stroke-width="0.8" stroke-dasharray="2 2"/>
+                            <line x1="85" y1="111" x2="118" y2="111" stroke="#222E44" stroke-width="0.8" stroke-dasharray="2 2"/>
+                            <line x1="106" y1="155" x2="118" y2="155" stroke="#222E44" stroke-width="0.8" stroke-dasharray="2 2"/>
                         </svg>
                     </div>
                 </div>
@@ -988,9 +929,9 @@
                     <div class="project__inner">
                         <div class="project__header">
                             <span class="project__name">Finance App <span class="arrow">&#8599;</span></span>
-                            <span class="project__tech">Vue.js &middot; Go</span>
                         </div>
                         <p class="project__desc">Modern personal finance tracking with wealth management, fixed cost analysis, and financial forecasting. Fintech-inspired dark theme.</p>
+                        <span class="project__tech">Vue.js &middot; Go</span>
                     </div>
                 </a>
 
@@ -999,9 +940,9 @@
                     <div class="project__inner">
                         <div class="project__header">
                             <span class="project__name">Wondrax Platform <span class="arrow">&#8599;</span></span>
-                            <span class="project__tech">Infrastructure</span>
                         </div>
                         <p class="project__desc">Self-hosted infrastructure automating containerised application deployment on a single VM. Automated pipelines, shared database — low-maintenance and production-ready.</p>
+                        <span class="project__tech">Infrastructure</span>
                     </div>
                 </a>
 
@@ -1010,9 +951,9 @@
                     <div class="project__inner">
                         <div class="project__header">
                             <span class="project__name">Faststring <span class="arrow">&#8599;</span></span>
-                            <span class="project__tech">Java &middot; Bytecode</span>
                         </div>
                         <p class="project__desc">Master's thesis: an algorithm that exchanges arbitrary types in Java bytecode at runtime. Identifies safe boundaries to seamlessly convert legacy data structures without recompilation.</p>
+                        <span class="project__tech">Java &middot; Bytecode</span>
                     </div>
                 </a>
             </div>
@@ -1324,5 +1265,6 @@
         animate();
     })();
     </script>
+
 </body>
 </html>
