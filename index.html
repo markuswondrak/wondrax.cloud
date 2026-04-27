@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Markus Wondrak — Domain Architect & Software Engineering Enthusiast">
+    <meta name="description" content="Markus Wondrak, Domain Architect &amp; Software Engineering at Heart">
     <title>Markus Wondrak</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;1,9..40,300&family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Spectral:ital,wght@0,300;0,400;0,600;0,700;1,300&display=swap" rel="stylesheet">
     <style>
         :root {
             /* Left panel — warm, human */
@@ -32,10 +32,8 @@
             --r-accent-dim:  #1A2030;
 
             /* Shared */
-            --serif: 'Cormorant Garamond', Georgia, serif;
-            --sans:  'DM Sans', system-ui, sans-serif;
-            --mono:  'IBM Plex Mono', monospace;
-            --tech:  'Space Grotesk', system-ui, sans-serif;
+            --serif: 'Spectral', Georgia, serif;
+            --mono:  'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
             --ease:  cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
@@ -52,7 +50,7 @@
         }
 
         body {
-            font-family: var(--sans);
+            font-family: var(--mono);
             background: var(--r-bg);
             color: var(--r-text);
         }
@@ -167,10 +165,11 @@
         .left__name {
             font-family: var(--serif);
             font-size: clamp(2.2rem, 3.5vw, 3rem);
-            font-weight: 600;
+            font-weight: 700;
             color: var(--l-text);
             line-height: 1.0;
-            letter-spacing: -0.025em;
+            letter-spacing: -0.02em;
+            text-wrap: balance;
         }
 
         .left__role {
@@ -184,8 +183,9 @@
         }
 
         .left__bio {
-            font-size: 0.8rem;
-            font-weight: 300;
+            font-family: var(--serif);
+            font-size: 0.85rem;
+            font-weight: 400;
             line-height: 1.85;
             color: var(--l-text-dim);
             flex: 1;
@@ -411,12 +411,12 @@
         }
 
         .project__name {
-            font-family: var(--tech);
+            font-family: var(--mono);
             font-size: 1.25rem;
             font-weight: 600;
-            color: #FFFFFF;
+            color: oklch(98% 0.006 250);
             line-height: 1.2;
-            letter-spacing: -0.01em;
+            letter-spacing: 0;
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
@@ -452,15 +452,16 @@
         }
 
         .project__desc {
-            font-size: 0.78rem;
-            font-weight: 300;
+            font-size: 0.85rem;
+            font-weight: 400;
             color: #94A3B8;
-            line-height: 1.75;
-            max-width: 48ch;
+            line-height: 1.85;
+            letter-spacing: 0.01em;
+            max-width: 56ch;
         }
 
         .project--featured .project__desc {
-            max-width: 44ch;
+            max-width: 52ch;
         }
 
         /* =====================================================
@@ -530,7 +531,7 @@
         }
 
         .project--secondary .project__desc {
-            max-width: 30ch;
+            max-width: 36ch;
         }
 
 .project__visual-outside {
@@ -773,11 +774,11 @@
                         <img src="me.png" alt="Markus Wondrak" class="left__avatar">
                     </span>
                 </div>
-                <p class="left__role">Domain Architect &nbsp;·&nbsp; Software Engineering</p>
+                <p class="left__role">Domain Architect &nbsp;·&nbsp; Software Engineering at Heart</p>
                 <div class="left__bio">
                     <p>Software engineering enthusiast with a clear mission: making life easier for developers and producing good-quality software.</p>
                     <p>After studying computer science, I spent 9 years in consulting before becoming a Domain Architect at a major German bank, supporting their digital transformation.</p>
-                    <p>Currently deep in agentic coding and the toolchain around it &#8212; exploring how these tools integrate into software development and reshape the industry.</p>
+                    <p>Currently deep in agentic coding and the toolchain around it: exploring how these tools integrate into software development and reshape the industry.</p>
                 </div>
                 <div class="left__divider"></div>
                 <ul class="left__links">
@@ -817,7 +818,7 @@
                         <div class="project__header">
                             <span class="project__name">BriefCheck App <span class="arrow">&#8599;</span></span>
                                         </div>
-                        <p class="project__desc">AI-powered letter analysis that helps you understand bureaucratic correspondence from authorities, digitizes documents, and delivers clear action recommendations — fast, secure, and simple.</p>
+                        <p class="project__desc">AI-powered letter analysis that helps you understand bureaucratic correspondence from authorities, digitizes documents, and delivers clear action recommendations: fast, secure, and simple.</p>
                         <div class="project__tags">
                             <span class="project__tag">AI</span>
                             <span class="project__tag">Document Analysis</span>
@@ -900,7 +901,7 @@
                                 <span class="project__name">AgentMux <span class="arrow">&#8599;</span></span>
                                 <span class="project__tech">Python &middot; tmux &middot; Multi-Agent</span>
                             </div>
-                            <p class="project__desc">Orchestrates a full PM → Architect → Code → Review pipeline across Claude, Codex, and Gemini — injected via tmux, not the API. Reuses your existing subscriptions. No per-token costs.</p>
+                            <p class="project__desc">Orchestrates a full PM → Architect → Code → Review pipeline across Claude, Codex, and Gemini, injected via tmux, not the API. Reuses your existing subscriptions. No per-token costs.</p>
                         </div>
                     </a>
                     <!-- Process-chain visual — outside the card -->
@@ -966,7 +967,7 @@
                         <div class="project__header">
                             <span class="project__name">Wondrax Platform <span class="arrow">&#8599;</span></span>
                         </div>
-                        <p class="project__desc">Self-hosted infrastructure automating containerised application deployment on a single VM. Automated pipelines, shared database — low-maintenance and production-ready.</p>
+                        <p class="project__desc">Self-hosted infrastructure automating containerised application deployment on a single VM. Automated pipelines, shared database; low-maintenance and production-ready.</p>
                         <span class="project__tech">Infrastructure</span>
                     </div>
                 </a>
