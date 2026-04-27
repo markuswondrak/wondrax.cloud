@@ -259,14 +259,16 @@
             position: absolute;
             left: 0;
             bottom: -1px;
-            width: 0;
+            width: 100%;
             height: 1px;
             background: currentColor;
-            transition: width 0.25s var(--ease);
+            transform: scaleX(0);
+            transform-origin: left center;
+            transition: transform 0.25s var(--ease);
         }
 
         .left__link:hover .left__link-text::after {
-            width: 100%;
+            transform: scaleX(1);
         }
 
         /* =====================================================
@@ -753,6 +755,13 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            .left  { animation: none; }
+            .right { animation: none; }
+            .cursor { animation: none; opacity: 1; }
+            .left__link-text::after { transition: none; }
+        }
     </style>
 </head>
 <body>
@@ -995,6 +1004,8 @@
     (function () {
         'use strict';
 
+        var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
         /* ── Node graph for regular project cards ── */
 
         function seededRand(seed) {
@@ -1127,6 +1138,7 @@
 
         NodeGraph.prototype.show = function () {
             this.target = 1;
+            if (prefersReducedMotion) { this.progress = 1; this.draw(); return; }
             if (!this.rafId) {
                 var self = this;
                 this.rafId = requestAnimationFrame(function () { self.tick(); });
@@ -1135,6 +1147,7 @@
 
         NodeGraph.prototype.hide = function () {
             this.target = 0;
+            if (prefersReducedMotion) { this.progress = 0; this.draw(); return; }
             if (!this.rafId) {
                 var self = this;
                 this.rafId = requestAnimationFrame(function () { self.tick(); });
@@ -1170,6 +1183,8 @@
 
     (function () {
         'use strict';
+
+        var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         var canvas = document.getElementById('networkCanvas');
         if (!canvas) return;
@@ -1271,23 +1286,25 @@
                     }
                 }
             }
-            requestAnimationFrame(animate);
+            if (!prefersReducedMotion) requestAnimationFrame(animate);
         }
 
         window.addEventListener('resize', function () {
             resize();
         });
 
-        canvas.parentElement.addEventListener('mousemove', function (e) {
-            var rect = canvas.getBoundingClientRect();
-            mouse.x = e.clientX - rect.left;
-            mouse.y = e.clientY - rect.top;
-        });
+        if (!prefersReducedMotion) {
+            canvas.parentElement.addEventListener('mousemove', function (e) {
+                var rect = canvas.getBoundingClientRect();
+                mouse.x = e.clientX - rect.left;
+                mouse.y = e.clientY - rect.top;
+            });
 
-        canvas.parentElement.addEventListener('mouseleave', function () {
-            mouse.x = -9999;
-            mouse.y = -9999;
-        });
+            canvas.parentElement.addEventListener('mouseleave', function () {
+                mouse.x = -9999;
+                mouse.y = -9999;
+            });
+        }
 
         init();
         animate();
