@@ -159,7 +159,7 @@
             height: 100%;
             object-fit: cover;
             object-position: center center;
-            image-rendering: pixelated;
+            image-rendering: auto;
             filter: grayscale(100%) contrast(1.1) brightness(0.88);
         }
 
@@ -338,7 +338,7 @@
         .project:hover {
             background: #16161F;
             border-color: #282836;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+            box-shadow: 0 6px 24px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.2);
         }
 
         .project canvas {
@@ -565,6 +565,10 @@
             height: 100%;
         }
 
+        .projects--grid .project__number {
+            margin-bottom: 0.5rem;
+        }
+
         .projects--grid .project__tech {
             margin-top: auto;
             padding-top: 1.1rem;
@@ -630,7 +634,7 @@
             background: rgba(80, 120, 195, 0.35);
             border-color: rgba(100, 145, 230, 0.8);
             border-bottom-color: rgba(100, 145, 230, 0.8);
-            color: #fff;
+            color: oklch(98% 0.006 250);
         }
 
         /* ─── 3-column grid for regular cards ─── */
@@ -964,6 +968,7 @@
                 <a href="https://github.com/markuswondrak/finance-app" target="_blank" rel="noopener noreferrer" class="project" data-seed="7">
 
                     <div class="project__inner">
+                        <div class="project__number">// 03</div>
                         <div class="project__header">
                             <span class="project__name">Finance App <span class="arrow">&#8599;</span></span>
                         </div>
@@ -975,6 +980,7 @@
                 <a href="https://github.com/markuswondrak/wondrax-plattform" target="_blank" rel="noopener noreferrer" class="project" data-seed="31">
 
                     <div class="project__inner">
+                        <div class="project__number">// 04</div>
                         <div class="project__header">
                             <span class="project__name">Wondrax Platform <span class="arrow">&#8599;</span></span>
                         </div>
@@ -986,6 +992,7 @@
                 <a href="https://github.com/markuswondrak/faststring" target="_blank" rel="noopener noreferrer" class="project" data-seed="89">
 
                     <div class="project__inner">
+                        <div class="project__number">// 05</div>
                         <div class="project__header">
                             <span class="project__name">Faststring <span class="arrow">&#8599;</span></span>
                         </div>
