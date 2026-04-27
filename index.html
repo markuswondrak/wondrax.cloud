@@ -8,7 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Spectral:ital,wght@0,300;0,400;0,600;0,700;1,300&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Libre+Franklin:wght@300;400;500;600&family=Spectral:wght@600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             /* Left panel — warm, human */
@@ -33,6 +33,7 @@
 
             /* Shared */
             --serif: 'Spectral', Georgia, serif;
+            --sans:  'Libre Franklin', 'Liberation Sans', system-ui, sans-serif;
             --mono:  'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
             --ease:  cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
@@ -50,7 +51,7 @@
         }
 
         body {
-            font-family: var(--mono);
+            font-family: var(--sans);
             background: var(--r-bg);
             color: var(--r-text);
         }
@@ -164,11 +165,11 @@
 
         .left__name {
             font-family: var(--serif);
-            font-size: clamp(2.2rem, 3.5vw, 3rem);
+            font-size: clamp(2.8rem, 4.5vw, 4rem);
             font-weight: 700;
             color: var(--l-text);
-            line-height: 1.0;
-            letter-spacing: -0.02em;
+            line-height: 0.92;
+            letter-spacing: -0.03em;
             text-wrap: balance;
         }
 
@@ -183,10 +184,10 @@
         }
 
         .left__bio {
-            font-family: var(--serif);
-            font-size: 0.85rem;
+            font-family: var(--sans);
+            font-size: 0.875rem;
             font-weight: 400;
-            line-height: 1.85;
+            line-height: 1.75;
             color: var(--l-text-dim);
             flex: 1;
             overflow: hidden;
@@ -452,16 +453,17 @@
         }
 
         .project__desc {
-            font-size: 0.85rem;
+            font-family: var(--sans);
+            font-size: 0.9rem;
             font-weight: 400;
-            color: #94A3B8;
-            line-height: 1.85;
-            letter-spacing: 0.01em;
-            max-width: 56ch;
+            color: var(--r-text);
+            line-height: 1.75;
+            letter-spacing: 0;
+            max-width: 62ch;
         }
 
         .project--featured .project__desc {
-            max-width: 52ch;
+            max-width: 58ch;
         }
 
         /* =====================================================
@@ -531,7 +533,7 @@
         }
 
         .project--secondary .project__desc {
-            max-width: 36ch;
+            max-width: 40ch;
         }
 
 .project__visual-outside {
@@ -675,7 +677,7 @@
 
 
             .left__name {
-                font-size: 2.5rem;
+                font-size: 3rem;
             }
 
             .left__links {
@@ -724,7 +726,7 @@
 
         @media (max-width: 520px) {
             .left__content { padding: 0.25rem 1.25rem 1.75rem; }
-            .left__name { font-size: 2.1rem; }
+            .left__name { font-size: 2.4rem; }
             .left__avatar-frame { width: 60px; height: 60px; }
             .right { padding: 2rem 1.25rem 3.5rem; }
             .project { padding: 1.5rem 1.25rem; }
