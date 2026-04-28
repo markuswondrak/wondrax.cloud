@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Writing by Markus Wondrak — thoughts on agentic coding, software architecture, and building meaningful tools.">
+    <title>Writing — Markus Wondrak</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Libre+Franklin:wght@300;400;500;600&family=Spectral:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:          #F3EFE6;
+            --bg-hover:    #EDE8DC;
+            --text:        #1A1714;
+            --text-dim:    #7C766E;
+            --text-faint:  #B0A89E;
+            --border:      #DDD8CE;
+            --link:        #6B5A3A;
+            --link-hover:  #1A1714;
+
+            --serif: 'Spectral', Georgia, serif;
+            --sans:  'Libre Franklin', 'Liberation Sans', system-ui, sans-serif;
+            --mono:  'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+            --ease:  cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 110%;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text-dim);
+        }
+
+        a { color: inherit; text-decoration: none; }
+
+        /* ── Skip link ── */
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: 1rem;
+            z-index: 100;
+            padding: 0.6rem 1.2rem;
+            background: var(--link);
+            color: var(--bg);
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+            border-radius: 0 0 4px 4px;
+            transition: top 0.15s var(--ease);
+        }
+
+        .skip-link:focus { top: 0; }
+
+        /* ── Page shell ── */
+        .page {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 4rem 2rem 6rem;
+            animation: fadeIn 0.6s var(--ease) both;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Header ── */
+        .header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1.5rem;
+            margin-bottom: 4rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header__name {
+            font-family: var(--serif);
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.02em;
+            transition: color 0.2s var(--ease);
+        }
+
+        .header__name:hover {
+            color: var(--link);
+        }
+
+        .header__name:focus-visible {
+            outline: 2px solid var(--link);
+            outline-offset: 4px;
+            border-radius: 2px;
+        }
+
+        .header__nav {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .header__nav-item {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-faint);
+            transition: color 0.2s var(--ease);
+        }
+
+        a.header__nav-item:hover {
+            color: var(--link-hover);
+        }
+
+        a.header__nav-item:focus-visible {
+            outline: 2px solid var(--link);
+            outline-offset: 4px;
+            border-radius: 2px;
+        }
+
+        .header__nav-item--active {
+            color: var(--text-dim);
+        }
+
+        .header__nav-dot {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: var(--border);
+        }
+
+        /* ── Page title ── */
+        .page-title {
+            font-family: var(--serif);
+            font-size: clamp(2.4rem, 5vw, 3.2rem);
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.05;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.6rem;
+        }
+
+        .page-subtitle {
+            font-family: var(--sans);
+            font-size: 0.9rem;
+            color: var(--text-faint);
+            line-height: 1.6;
+            max-width: 48ch;
+            margin-bottom: 3rem;
+        }
+
+        /* ── Article list ── */
+        .articles {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .article {
+            display: block;
+            padding: 1.75rem 1.25rem;
+            margin: 0 -1.25rem;
+            border-bottom: 1px solid var(--border);
+            border-radius: 3px;
+            transition: background 0.2s var(--ease);
+        }
+
+        .article:first-child {
+            border-top: 1px solid var(--border);
+        }
+
+        .article:hover {
+            background: var(--bg-hover);
+        }
+
+        .article:focus-visible {
+            outline: 2px solid var(--link);
+            outline-offset: -2px;
+        }
+
+        .article__meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .article__date {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-faint);
+        }
+
+        .article__time {
+            font-family: var(--mono);
+            font-size: 0.575rem;
+            letter-spacing: 0.04em;
+            color: var(--text-faint);
+            opacity: 0.7;
+        }
+
+        .article__title {
+            font-family: var(--serif);
+            font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.2;
+            letter-spacing: -0.01em;
+            margin-bottom: 0.4rem;
+            transition: color 0.2s var(--ease);
+        }
+
+        .article:hover .article__title {
+            color: var(--link);
+        }
+
+        .article__excerpt {
+            font-family: var(--sans);
+            font-size: 0.875rem;
+            color: var(--text-dim);
+            line-height: 1.75;
+            max-width: 58ch;
+        }
+
+        .article__tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            margin-top: 0.85rem;
+        }
+
+        .article__tag {
+            font-family: var(--mono);
+            font-size: 0.55rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-faint);
+            border: 1px solid var(--border);
+            padding: 0.2rem 0.5rem;
+            border-radius: 2px;
+            transition: border-color 0.2s var(--ease), color 0.2s var(--ease);
+        }
+
+        .article:hover .article__tag {
+            border-color: #C8C0B4;
+            color: var(--text-dim);
+        }
+
+        /* ── Footer ── */
+        .footer {
+            margin-top: 4rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border);
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            color: var(--text-faint);
+            letter-spacing: 0.04em;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 520px) {
+            .page {
+                padding: 2.5rem 1.25rem 4rem;
+            }
+
+            .header {
+                margin-bottom: 2.5rem;
+            }
+
+            .page-title {
+                font-size: 2.2rem;
+            }
+
+            .article {
+                padding: 1.5rem 0.75rem;
+                margin: 0 -0.75rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .page { animation: none; }
+        }
+    </style>
+</head>
+<body>
+    <a href="#writing" class="skip-link">Skip to writing</a>
+    <div class="page">
+
+        <header class="header">
+            <a href="index.html" class="header__name">Markus Wondrak</a>
+            <nav class="header__nav" aria-label="Site navigation">
+                <a href="index.html" class="header__nav-item">Projects</a>
+                <span class="header__nav-dot" aria-hidden="true"></span>
+                <span class="header__nav-item header__nav-item--active" aria-current="page">Writing</span>
+            </nav>
+        </header>
+
+        <main id="writing">
+            <h1 class="page-title">Writing</h1>
+            <p class="page-subtitle">Thoughts on agentic coding, software architecture, and building tools that matter.</p>
+
+            <div class="articles">
+
+                <article class="article" tabindex="0">
+                    <div class="article__meta">
+                        <time class="article__date" datetime="2026-04-22">22 Apr 2026</time>
+                        <span class="article__time">8 min read</span>
+                    </div>
+                    <h2 class="article__title">How Agentic Coding Is Reshaping Software Development</h2>
+                    <p class="article__excerpt">The shift from copilot-style autocomplete to fully autonomous coding agents changes what it means to be a developer. After months of deep integration, here's what actually works, what doesn't, and where this is heading.</p>
+                    <div class="article__tags">
+                        <span class="article__tag">Agentic Coding</span>
+                        <span class="article__tag">AI</span>
+                        <span class="article__tag">Developer Experience</span>
+                    </div>
+                </article>
+
+                <article class="article" tabindex="0">
+                    <div class="article__meta">
+                        <time class="article__date" datetime="2026-03-15">15 Mar 2026</time>
+                        <span class="article__time">12 min read</span>
+                    </div>
+                    <h2 class="article__title">Architecture Decisions at Scale: Lessons from Banking</h2>
+                    <p class="article__excerpt">Domain architecture in enterprise environments is less about picking the right framework and more about navigating organizational complexity. Patterns and anti-patterns from years of digital transformation in a major German bank.</p>
+                    <div class="article__tags">
+                        <span class="article__tag">Architecture</span>
+                        <span class="article__tag">Enterprise</span>
+                        <span class="article__tag">Domain-Driven Design</span>
+                    </div>
+                </article>
+
+                <article class="article" tabindex="0">
+                    <div class="article__meta">
+                        <time class="article__date" datetime="2026-02-08">08 Feb 2026</time>
+                        <span class="article__time">6 min read</span>
+                    </div>
+                    <h2 class="article__title">Building BriefCheck: From Zero to Product</h2>
+                    <p class="article__excerpt">The technical story of building an AI-powered document analysis tool from scratch. How NLP pipelines, prompt engineering, and a relentless focus on user clarity turned a weekend prototype into a shipped product.</p>
+                    <div class="article__tags">
+                        <span class="article__tag">BriefCheck</span>
+                        <span class="article__tag">NLP</span>
+                        <span class="article__tag">Product</span>
+                    </div>
+                </article>
+
+            </div>
+        </main>
+
+        <footer class="footer">&copy; 2026 Markus Wondrak</footer>
+
+    </div>
+</body>
+</html>
