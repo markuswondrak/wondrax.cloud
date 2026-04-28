@@ -668,6 +668,69 @@
         }
 
         /* =====================================================
+           LEFT NAV
+        ===================================================== */
+        .left__nav {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .left__nav-item {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--l-text-faint);
+            transition: color 0.2s var(--ease);
+        }
+
+        .left__nav-item--active {
+            color: var(--l-text-dim);
+        }
+
+        a.left__nav-item {
+            color: var(--l-link);
+            position: relative;
+        }
+
+        a.left__nav-item::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -2px;
+            width: 100%;
+            height: 1px;
+            background: currentColor;
+            transform: scaleX(0);
+            transform-origin: left center;
+            transition: transform 0.25s var(--ease);
+        }
+
+        a.left__nav-item:hover {
+            color: var(--l-link-hover);
+        }
+
+        a.left__nav-item:hover::after {
+            transform: scaleX(1);
+        }
+
+        a.left__nav-item:focus-visible {
+            outline: 2px solid var(--l-link);
+            outline-offset: 4px;
+            border-radius: 2px;
+        }
+
+        .left__nav-dot {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: var(--l-border);
+            flex-shrink: 0;
+        }
+
+        /* =====================================================
            FOOTER
         ===================================================== */
         .right__footer {
@@ -817,6 +880,11 @@
                     </span>
                 </div>
                 <p class="left__role">Domain Architect &nbsp;·&nbsp; Software Engineering at Heart</p>
+                <nav class="left__nav" aria-label="Site navigation">
+                    <span class="left__nav-item left__nav-item--active">Projects</span>
+                    <span class="left__nav-dot" aria-hidden="true"></span>
+                    <a href="blog.html" class="left__nav-item">Writing</a>
+                </nav>
                 <div class="left__bio">
                     <p>Software engineering enthusiast with a clear mission: making life easier for developers and producing good-quality software.</p>
                     <p>After studying computer science, I spent 9 years in consulting before becoming a Domain Architect at a major German bank, supporting their digital transformation.</p>
