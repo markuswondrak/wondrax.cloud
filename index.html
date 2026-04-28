@@ -30,6 +30,7 @@
             --r-border:      #1C1C26;
             --r-accent:      #5070A0;
             --r-accent-dim:  #1A2030;
+            --r-text-bright: #F8F8FC;
 
             /* Shared */
             --serif: 'Spectral', Georgia, serif;
@@ -68,7 +69,7 @@
             z-index: 100;
             padding: 0.6rem 1.2rem;
             background: var(--r-accent);
-            color: oklch(98% 0.006 250);
+            color: var(--r-text-bright);
             font-family: var(--mono);
             font-size: 0.7rem;
             letter-spacing: 0.05em;
@@ -348,7 +349,6 @@
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
-            border-radius: 10px;
         }
 
         .projects--featured {
@@ -452,7 +452,7 @@
             font-family: var(--mono);
             font-size: 1.25rem;
             font-weight: 600;
-            color: oklch(98% 0.006 250);
+            color: var(--r-text-bright);
             line-height: 1.2;
             letter-spacing: 0;
             display: inline-flex;
@@ -515,46 +515,6 @@
             transform: translateY(-50%);
             opacity: 0.85;
             pointer-events: none;
-        }
-
-        /* ─── Hero card (BriefCheck) — legacy, unused ─── */
-        .project__preview {
-            position: relative;
-            height: 200px;
-            background: rgba(9, 9, 12, 0.95);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.3s var(--ease);
-        }
-
-        .project__preview::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 70px;
-            background: linear-gradient(to bottom, transparent, rgba(18, 18, 24, 0.55));
-            pointer-events: none;
-        }
-
-        .project--hero:hover .project__preview {
-            background: rgba(11, 11, 16, 0.95);
-        }
-
-        .project--hero .project__body {
-            padding: 2rem 2.5rem 2.25rem;
-        }
-
-        .project--hero .project__name {
-            font-size: 1.6rem;
-        }
-
-        .project--hero .project__desc {
-            max-width: 54ch;
         }
 
         /* ─── Secondary card (AgentMux) ─── */
@@ -669,7 +629,7 @@
             background: rgba(80, 120, 195, 0.35);
             border-color: rgba(100, 145, 230, 0.8);
             border-bottom-color: rgba(100, 145, 230, 0.8);
-            color: oklch(98% 0.006 250);
+            color: var(--r-text-bright);
         }
 
         /* ─── Asymmetric grid for regular cards ─── */
@@ -816,21 +776,12 @@
             .right { padding: 2rem 1.25rem 3.5rem; }
             .project { padding: 1.5rem 1.25rem; }
             .project--featured { padding: 1.75rem 1.25rem; }
-            .project.project--hero { padding: 0; }
-
-            .project__preview {
-                height: 150px;
-            }
 
             .project__visual {
                 display: none;
             }
 
             .project--featured .project__desc {
-                max-width: none;
-            }
-
-            .project--hero .project__desc {
                 max-width: none;
             }
         }
