@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GitHub&#x27;s Spec Kit promises structured SDLC automation for agentic coding. After a second evaluation, here&#x27;s what improved — and three enterprise gaps that still remain.">
+    <title>Re-evaluating GitHub&#x27;s Spec Kit: Structured SDLC Automation — Markus Wondrak</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Libre+Franklin:wght@300;400;500;600&family=Spectral:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:          #F3EFE6;
+            --bg-hover:    #EDE8DC;
+            --text:        #1A1714;
+            --text-dim:    #7C766E;
+            --text-faint:  #B0A89E;
+            --border:      #DDD8CE;
+            --link:        #6B5A3A;
+            --link-hover:  #1A1714;
+
+            --serif: 'Spectral', Georgia, serif;
+            --sans:  'Libre Franklin', 'Liberation Sans', system-ui, sans-serif;
+            --mono:  'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+            --ease:  cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 110%;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text-dim);
+        }
+
+        a { color: var(--link); text-decoration: none; }
+        a:hover { color: var(--link-hover); }
+
+        /* ── Skip link ── */
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: 1rem;
+            z-index: 100;
+            padding: 0.6rem 1.2rem;
+            background: var(--link);
+            color: var(--bg);
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+            border-radius: 0 0 4px 4px;
+            transition: top 0.15s var(--ease);
+        }
+
+        .skip-link:focus { top: 0; }
+
+        /* ── Page shell ── */
+        .page {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 4rem 2rem 6rem;
+            animation: fadeIn 0.6s var(--ease) both;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Header ── */
+        .header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1.5rem;
+            margin-bottom: 4rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header__name {
+            font-family: var(--serif);
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.02em;
+            transition: color 0.2s var(--ease);
+        }
+
+        .header__name:hover { color: var(--link); }
+
+        .header__nav {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .header__nav-item {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-faint);
+            transition: color 0.2s var(--ease);
+        }
+
+        a.header__nav-item:hover { color: var(--link-hover); }
+
+        .header__nav-item--active { color: var(--text-dim); }
+
+        .header__nav-dot {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: var(--border);
+        }
+
+        /* ── Article header ── */
+        .article-header {
+            margin-bottom: 3rem;
+        }
+
+        .article-header__back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-faint);
+            margin-bottom: 2rem;
+            transition: color 0.2s var(--ease);
+        }
+
+        .article-header__back:hover { color: var(--link); }
+
+        .article-header__meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .article-header__date {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-faint);
+        }
+
+        .article-header__time {
+            font-family: var(--mono);
+            font-size: 0.575rem;
+            letter-spacing: 0.04em;
+            color: var(--text-faint);
+            opacity: 0.7;
+        }
+
+        .article-header__title {
+            font-family: var(--serif);
+            font-size: clamp(2rem, 4.5vw, 2.8rem);
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.75rem;
+        }
+
+        .article-header__tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            margin-top: 1rem;
+        }
+
+        .article-header__tag {
+            font-family: var(--mono);
+            font-size: 0.55rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-faint);
+            border: 1px solid var(--border);
+            padding: 0.2rem 0.5rem;
+            border-radius: 2px;
+        }
+
+        /* ── Article body ── */
+        .article-body {
+            font-family: var(--sans);
+            font-size: 0.95rem;
+            color: var(--text-dim);
+            line-height: 1.8;
+        }
+
+        .article-body p {
+            margin-bottom: 1.5rem;
+            max-width: 65ch;
+        }
+
+        .article-body h2 {
+            font-family: var(--serif);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.01em;
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .article-body h3 {
+            font-family: var(--serif);
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-top: 2rem;
+            margin-bottom: 0.75rem;
+            line-height: 1.3;
+        }
+
+        .article-body strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .article-body em {
+            font-style: italic;
+        }
+
+        .article-body ul, .article-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+        }
+
+        .article-body li {
+            margin-bottom: 0.4rem;
+            max-width: 65ch;
+        }
+
+        .article-body blockquote {
+            border-left: 2px solid var(--border);
+            padding-left: 1.25rem;
+            margin: 1.5rem 0;
+            color: var(--text-faint);
+            font-style: italic;
+        }
+
+        .article-body code {
+            font-family: var(--mono);
+            font-size: 0.8em;
+            background: var(--bg-hover);
+            padding: 0.15rem 0.35rem;
+            border-radius: 3px;
+            color: var(--text);
+        }
+
+        .article-body pre {
+            background: #1A1714;
+            color: #D4D0C8;
+            padding: 1.25rem 1.5rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+
+        .article-body pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+            font-size: inherit;
+        }
+
+        .article-body hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2.5rem 0;
+        }
+
+        .article-body a {
+            color: var(--link);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            text-decoration-color: var(--border);
+            transition: text-decoration-color 0.2s var(--ease);
+        }
+
+        .article-body a:hover {
+            text-decoration-color: var(--link);
+        }
+
+        /* ── Footnotes ── */
+        .article-body .footnote-ref {
+            font-size: 0.75em;
+            vertical-align: super;
+            line-height: 0;
+            text-decoration: none;
+        }
+
+        .article-body .footnote {
+            font-size: 0.8rem;
+            color: var(--text-faint);
+            line-height: 1.6;
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+        }
+
+        .article-body .footnote ol {
+            padding-left: 1.25rem;
+        }
+
+        .article-body .footnote li {
+            margin-bottom: 0.5rem;
+        }
+
+        .article-body .footnote p {
+            margin-bottom: 0.25rem;
+        }
+
+        /* ── Footer ── */
+        .footer {
+            margin-top: 4rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border);
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            color: var(--text-faint);
+            letter-spacing: 0.04em;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 520px) {
+            .page {
+                padding: 2.5rem 1.25rem 4rem;
+            }
+
+            .header {
+                margin-bottom: 2.5rem;
+            }
+
+            .article-header__title {
+                font-size: 1.8rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .page { animation: none; }
+        }
+    </style>
+</head>
+<body>
+    <a href="#article" class="skip-link">Skip to article</a>
+    <div class="page">
+
+        <header class="header">
+            <a href="../index.html" class="header__name">Markus Wondrak</a>
+            <nav class="header__nav" aria-label="Site navigation">
+                <a href="../index.html" class="header__nav-item">Projects</a>
+                <span class="header__nav-dot" aria-hidden="true"></span>
+                <a href="../blog.html" class="header__nav-item header__nav-item--active">Writing</a>
+            </nav>
+        </header>
+
+        <main id="article">
+            <div class="article-header">
+                <a href="../blog.html" class="article-header__back">← Back to Writing</a>
+                <div class="article-header__meta">
+                    <time class="article-header__date" datetime="2026-04-15">15 Apr 2026</time>
+                    <span class="article-header__time">12 min read</span>
+                </div>
+                <h1 class="article-header__title">Re-evaluating GitHub&#x27;s Spec Kit: Structured SDLC Automation</h1>
+                <div class="article-header__tags">
+                    <span class="article-header__tag">Agentic Coding</span>
+                    <span class="article-header__tag">Spec Kit</span>
+                    <span class="article-header__tag">Architecture</span>
+                    <span class="article-header__tag">Enterprise</span>
+                </div>
+            </div>
+
+            <div class="article-body">
+                <p>I haven&rsquo;t written a line of code by hand in months. What I do instead is describe systems — their behavior, their boundaries, their constraints — and watch agents translate that into working software. They coordinate across repositories, generate migration scripts, work through large codebases with a degree of continuity that would have been difficult to believe a few years ago. The machinery works. The harder question is what keeps it coherent when the scope expands: when sessions restart, when a sequence of agent calls is supposed to share a consistent model of what it is building, when the plan that made sense at the start silently becomes something else. That is what structural workflow tooling is meant to solve. And it is exactly where most implementations break down.</p>
+<p>What most people try first is better prompting. You describe the phases in the system message, tell the agent where it is in the workflow. It holds for short, contained tasks. Anything spanning multiple subsystems or several sessions breaks. Context doesn&rsquo;t survive session boundaries. Agents drift. The plan that made sense at the start becomes something else by the end, because nothing in the tooling prevents an agent from deciding planning is done and jumping straight to implementation.</p>
+<p><strong>GitHub&rsquo;s Spec Kit</strong> is the most visible attempt to solve this with formal structure. The idea: make the development process a sequence of defined phases, each requiring a human review before moving forward, with a formal spec as the primary artifact of the whole project.</p>
+<p>I evaluated Spec Kit in November 2025. Let&rsquo;s have a look how it developed and if we can use it in enterprise scale.</p>
+<hr />
+<h2 id="what-spec-kit-is">What Spec Kit Is</h2>
+<p><strong>GitHub&rsquo;s Spec Kit</strong> is an open-source framework for <em>Spec-Driven Development (SDD)</em>. The core idea is that specifications become the primary artifact of the development process. Before any code is written, the workflow moves through structured phases:</p>
+<ol>
+<li><strong>Constitution</strong> — define the project&rsquo;s core principles and architectural constraints</li>
+<li><strong>Specify</strong> — write a formal spec capturing intent, requirements, and scope</li>
+<li><strong>Plan</strong> — decompose the spec into an implementation plan</li>
+<li><strong>Tasks</strong> — break the plan into discrete, executable tasks</li>
+<li><strong>Implement</strong> — execute the tasks using AI agents</li>
+<li><strong>PR</strong> — validate, review, and merge</li>
+</ol>
+<p>Each phase gates the next. As the Spec Kit authors have described it, SDD is intended as the antidote to unstructured AI coding: a way to get agents to produce reliable, intent-aligned software rather than guessing their way toward a result.<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup></p>
+<p>Each gate forces the workflow to pause and verify that intent was understood correctly before moving forward. In a free-form chat session, an agent can — and often will — skip from a vague requirement directly to implementation. Here, the spec is reviewed before planning begins; the plan is reviewed before tasks are assigned. These are natural stopping points that wouldn&rsquo;t otherwise exist, and in AI-assisted development they matter precisely because nothing else creates them.</p>
+<p>Treating the spec as the primary artifact — rather than something produced after the fact — reinforces this. It forces teams to articulate <em>what</em> the software should do and <em>why</em> before addressing <em>how</em>. For teams working across multiple sessions or onboarding new members mid-project, the spec becomes the authoritative record of what was actually decided. Code can drift; a spec written before implementation begins is the closest thing to captured intent.</p>
+<hr />
+<h2 id="whats-improved">What&rsquo;s Improved</h2>
+<p>The most significant changes since my original evaluation are the extension system and the separately introduced preset system. Together they make the framework considerably more adaptable to enterprise contexts.</p>
+<p><strong>Extensions</strong> are distributed as ZIP archives with an <code>extension.yml</code> manifest. Teams can define custom slash commands for agents, hook into named lifecycle points — triggering custom logic before or after any core phase — and introduce entirely new phases that aren&rsquo;t part of the default workflow.<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup> A compliance review step, a Jira sync, or an autonomous documentation pass can be added as an extension without touching core files.</p>
+<p><strong>Presets</strong> address a different layer: standardizing templates and commands across teams. A preset packages overrides for specs, plans, tasks, and agent instructions with explicit priority ordering. When Spec Kit resolves a template, it walks a four-layer resolution stack — project-local overrides first, then installed presets by priority, then extension-provided templates, then core templates.<sup id="fnref:8"><a class="footnote-ref" href="#fn:8">8</a></sup> An organization can ship a compliance or domain-specific preset once and apply it across every project without forking the repository.</p>
+<p>These are real improvements — they extend the surface area of what teams can do with Spec Kit without modifying its core. What they do not touch is the underlying execution model. And that is where the framework&rsquo;s enterprise limitations live. Three of them matter.</p>
+<hr />
+<h2 id="no-state-machine">No State Machine</h2>
+<p>Spec Kit describes a workflow, but does not enforce one. To see why that matters, look at what the specify agent is actually instructed to do.<sup id="fnref:9"><a class="footnote-ref" href="#fn:9">9</a></sup> Before writing a single line of spec, it must:</p>
+<ul>
+<li>check for pre-execution extension hooks and conditionally execute them</li>
+<li>handle branch creation</li>
+<li>generate the spec directory and file path</li>
+<li>load the correct template</li>
+<li>write a quality checklist to disk</li>
+</ul>
+<p>After completing the spec, it must run a quality validation pass and then check for post-execution hooks. The agent is not a specification writer. It is a specification writer that also happens to be responsible for infrastructure setup, lifecycle orchestration, and quality assurance.</p>
+<p>This is not a quirk of the specify command. It is a structural consequence of encoding runtime behavior in agent prompts. In a properly orchestrated system, lifecycle mechanics — hook execution, directory setup, state validation — are handled by the runtime before the agent is ever called. The agent receives its task cleanly scoped. Whether a hook ran is not up to the agent to interpret; the runtime executed it and passed the result. In Spec Kit, these responsibilities have been pushed into the agent&rsquo;s context. The agent reads them, decides what to do with each one, and proceeds. That is a pull model: the agent interprets events rather than receiving their effects.</p>
+<p>The same structural problem applies to phase transitions. The mechanism is Markdown files provided as context: the agent reads the current phase documentation and is expected to follow the process from there. There is no tooling that validates whether prior phases were completed, rejects invalid transitions, or signals a constraint violation.</p>
+<p>Visual Studio Magazine&rsquo;s September 2025 coverage noted that the framework requires agents to follow the process by convention rather than being constrained by the tooling.<sup id="fnref:4"><a class="footnote-ref" href="#fn:4">4</a></sup></p>
+<p>In my view, determinism in an agent pipeline means one specific thing: given a valid workflow state and a valid input, only valid transitions are possible, and the runtime rejects everything else. This is not a property of LLM output — it is a property of the execution environment. Spec Kit provides no such guarantee. An agent can read the spec phase, declare itself done, and proceed directly to implementation without completing planning. Nothing in the tooling prevents it.</p>
+<p>There is a cost to the convention model beyond correctness. Without enforced state, every agent call must carry enough workflow context for the agent to orient itself: current phase, completed phases, applicable rules, transition criteria. With a state machine managing transitions externally, each call receives only the instructions scoped to the current state. The system prompt gets shorter, which means cheaper and less susceptible to instruction decay toward the end of a long context window.</p>
+<p>The process documentation in Spec Kit is good. But for enterprise use — high-stakes changes, auditable execution, reproducible runs — documentation plus agent compliance is not a substitute for enforced state transitions. Convention breaks down under time pressure, at scale, or when agents encounter conflicting context. A state machine does not rely on compliance.</p>
+<p>(Side note: this enforcement gap was the primary reason I built <a href="https://github.com/markuswondrak/AgentMux">AgentMux</a>, an orchestration pipeline built around an explicit state machine with role-scoped agent calls.)</p>
+<hr />
+<h2 id="no-distribution-layer">No Distribution Layer</h2>
+<p>Spec Kit follows the standard library model: projects adopt a version, updates are available when needed, and nothing forces a change. Extensions ship as ZIP archives into <code>.specify/</code>, and <code>specify extension update</code> is the CLI command to pull in a new version — per-project, opt-in. Core workflow commands update the same way: <code>specify init --here --force</code> refreshes the pipeline templates, with the known caveat that <code>--force</code> overwrites <code>constitution.md</code> and requires a manual backup first.<sup id="fnref:10"><a class="footnote-ref" href="#fn:10">10</a></sup> That is a rough edge. It is not a broken model. Libraries don&rsquo;t push upgrades either.</p>
+<p>The deeper problem is where Spec Kit as a whole fits — or doesn&rsquo;t — in the ecosystem forming around agentic context engineering. Microsoft&rsquo;s APM<sup id="fnref:7"><a class="footnote-ref" href="#fn:7">7</a></sup> is the closest thing to a standard dependency manager for AI agent configuration: declare dependencies in <code>apm.yml</code>, lock versions in <code>apm.lock.yaml</code>, install with one command. It distributes instructions, skills, prompts, hooks, plugins, and MCP servers following shared conventions built on AGENTS.md, the Agent Skills specification, and the Model Context Protocol. Copilot, Claude Code, Cursor, and other agent environments can all consume the same APM package. It&rsquo;s actively maintained, covers the major coding agents, and includes enterprise-grade governance tooling — policy enforcement, supply-chain auditing, org-wide version control.</p>
+<p>Neither Spec Kit&rsquo;s core framework nor its extension format maps to any of those primitives. The core framework relies on standalone CLI commands like <code>specify init</code> to pull templates, while an extension is a ZIP archive containing custom slash commands and phase-scoping logic. Commands like <code>apm install spec-kit</code> or <code>apm install spec-kit-extension</code> don&rsquo;t exist, and not simply because no one has built the bridge. There is no schema in APM — or anywhere else — for declaring what an &ldquo;agentic workflow framework&rdquo; or its extensions actually are. The tooling category is real; the standard that would describe it hasn&rsquo;t been defined yet.</p>
+<p>This is the actual governance gap. When an organization adopts MCP servers through APM, policy enforcement, version pinning, supply-chain auditing, and org-wide rollout come with it. When an organization adopts Spec Kit extensions, none of that infrastructure is available — not because Spec Kit made a poor choice, but because the category it belongs to sits outside what the ecosystem has standardized. Until that changes, enterprise governance of Spec Kit deployments is a bespoke engineering problem for each team.</p>
+<p>The first two gaps are structural — each has a clear engineering answer. The third is different. It goes to the question of what Spec Kit fundamentally believes a spec <em>is</em>.</p>
+<hr />
+<h2 id="the-spec-lifecycle-problem">The Spec Lifecycle Problem</h2>
+<p>The most significant unresolved question in the framework has been active in the community since I first evaluated the project (<a href="https://github.com/github/spec-kit/discussions/152">Discussion #152</a>, <a href="https://github.com/github/spec-kit/issues/1100">Issue #1100</a><sup id="fnref:3"><a class="footnote-ref" href="#fn:3">3</a></sup>).</p>
+<p>The issue is not brownfield codebases per se — it is Spec Kit&rsquo;s implicit model for what a spec <em>is</em> over time. Currently, each spec is essentially a diff artifact: it captures the intended change from the current state of the codebase to the desired target state. A branch is created per spec, and the spec lives for the duration of that change request. Once the feature merges, the spec becomes a historical artifact.</p>
+<p>This is what Birgitta Böckeler, after reviewing multiple SDD tools at ThoughtWorks, classifies as <em>spec-first</em> — the spec is used for the task and then effectively abandoned.<sup id="fnref:5"><a class="footnote-ref" href="#fn:5">5</a></sup> The article identifies two more advanced models: <em>spec-anchored</em> (the spec is retained and updated as the feature evolves) and <em>spec-as-source</em> (the spec is the primary artifact, with code generated from it). Böckeler observes that Spec Kit &ldquo;is still what I would call spec-first only, not spec-anchored over time,&rdquo; and that Discussion #152 reflects this confusion.</p>
+<p>The problem with a pure spec-first model is that specs accumulate as a historical record without ever consolidating into a living description of what the system currently does. My own preference is to progressively integrate feature specs into a persistent product documentation layer — a maintained model of current system behavior that agents and team members can reference as a reliable source of truth. But the community has not reached consensus on this either.</p>
+<p>Spec Kit needs to make a deliberate choice here: commit to one of these models, document it clearly, or offer explicit configuration for teams to choose their own approach. The current ambiguity leaves teams without guidance on how to manage specs over the lifetime of a project.</p>
+<p>It is worth noting that the community has already started filling this gap. The <a href="https://github.com/stn1slv/spec-kit-archive"><code>spec-kit-archive</code></a> extension<sup id="fnref:6"><a class="footnote-ref" href="#fn:6">6</a></sup> adds a <code>/speckit.archive.run</code> command that runs after a PR merges, consolidating feature-level specs, plans, and technical debt notes into the project&rsquo;s canonical memory at <code>.specify/memory/</code>. Its author describes it as the &ldquo;Outer Loop&rdquo; of a Double-Loop Parity model — exactly the spec-anchored direction that Discussion #152 has been asking for. That a workaround extension is needed to bridge this gap is telling in itself: it confirms both that the demand is real and that the core framework has not yet taken responsibility for it.</p>
+<hr />
+<h2 id="conclusion">Conclusion</h2>
+<p>Spec Kit has matured. The extension system is a real architectural step forward, and the phase-gated workflow brings structure that free-form chat development lacks. The foundation is solid enough to build on.</p>
+<p>The question is whether Spec Kit will own these gaps or leave them to community extensions and convention. Owning them means enforced state transitions, a distribution layer with governance, and a declared lifecycle model. That is what enterprise readiness actually requires. The direction is right. The remaining work is specific.</p>
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p>Den Delimarsky, &ldquo;What&rsquo;s The Deal With GitHub Spec Kit,&rdquo; den.dev, 2025. <a href="https://den.dev/blog/github-spec-kit/">https://den.dev/blog/github-spec-kit/</a>&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+<li id="fn:2">
+<p>GitHub, &ldquo;Extension API Reference — github/spec-kit,&rdquo; github.com. <a href="https://github.com/github/spec-kit/blob/main/extensions/EXTENSION-API-REFERENCE.md">https://github.com/github/spec-kit/blob/main/extensions/EXTENSION-API-REFERENCE.md</a>&#160;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+</li>
+<li id="fn:3">
+<p>GitHub, &ldquo;Feature Request: Support Module-Level Persistent Specs,&rdquo; github/spec-kit Issue #1100. <a href="https://github.com/github/spec-kit/issues/1100">https://github.com/github/spec-kit/issues/1100</a>&#160;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 3 in the text">&#8617;</a></p>
+</li>
+<li id="fn:4">
+<p>Visual Studio Magazine, &ldquo;GitHub Spec Kit Experiment: &lsquo;A Lot of Questions&rsquo;,&rdquo; September 2025. <a href="https://visualstudiomagazine.com/articles/2025/09/16/github-spec-kit-experiment-a-lot-of-questions.aspx">https://visualstudiomagazine.com/articles/2025/09/16/github-spec-kit-experiment-a-lot-of-questions.aspx</a>&#160;<a class="footnote-backref" href="#fnref:4" title="Jump back to footnote 4 in the text">&#8617;</a></p>
+</li>
+<li id="fn:5">
+<p>Birgitta Böckeler, &ldquo;Understanding Spec-Driven-Development: Kiro, spec-kit, and Tessl,&rdquo; martinfowler.com, October 2025. <a href="https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html">https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html</a>&#160;<a class="footnote-backref" href="#fnref:5" title="Jump back to footnote 5 in the text">&#8617;</a></p>
+</li>
+<li id="fn:6">
+<p>Stanislav Deviatov, &ldquo;spec-kit-archive,&rdquo; GitHub, 2025. <a href="https://github.com/stn1slv/spec-kit-archive">https://github.com/stn1slv/spec-kit-archive</a>&#160;<a class="footnote-backref" href="#fnref:6" title="Jump back to footnote 6 in the text">&#8617;</a></p>
+</li>
+<li id="fn:7">
+<p>Microsoft, &ldquo;APM — Dependency Manager for AI Agent Configuration,&rdquo; GitHub, 2025. <a href="https://github.com/microsoft/apm">https://github.com/microsoft/apm</a>&#160;<a class="footnote-backref" href="#fnref:7" title="Jump back to footnote 7 in the text">&#8617;</a></p>
+</li>
+<li id="fn:8">
+<p>GitHub, &ldquo;Preset System Architecture — github/spec-kit,&rdquo; github.com. <a href="https://github.com/github/spec-kit/blob/main/presets/ARCHITECTURE.md">https://github.com/github/spec-kit/blob/main/presets/ARCHITECTURE.md</a>&#160;<a class="footnote-backref" href="#fnref:8" title="Jump back to footnote 8 in the text">&#8617;</a></p>
+</li>
+<li id="fn:9">
+<p>GitHub, &ldquo;specify command — github/spec-kit,&rdquo; github.com. <a href="https://github.com/github/spec-kit/blob/main/templates/commands/specify.md">https://github.com/github/spec-kit/blob/main/templates/commands/specify.md</a>&#160;<a class="footnote-backref" href="#fnref:9" title="Jump back to footnote 9 in the text">&#8617;</a></p>
+</li>
+<li id="fn:10">
+<p>GitHub, &ldquo;Upgrade Guide — github/spec-kit,&rdquo; github.com. <a href="https://github.com/github/spec-kit/blob/main/docs/upgrade.md">https://github.com/github/spec-kit/blob/main/docs/upgrade.md</a>&#160;<a class="footnote-backref" href="#fnref:10" title="Jump back to footnote 10 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
+            </div>
+        </main>
+
+        <footer class="footer">&copy; 2026 Markus Wondrak</footer>
+
+    </div>
+</body>
+</html>
