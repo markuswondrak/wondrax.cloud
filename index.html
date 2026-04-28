@@ -59,6 +59,41 @@
         a { color: inherit; text-decoration: none; }
 
         /* =====================================================
+           ACCESSIBILITY
+        ===================================================== */
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: 1rem;
+            z-index: 100;
+            padding: 0.6rem 1.2rem;
+            background: var(--r-accent);
+            color: oklch(98% 0.006 250);
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+            border-radius: 0 0 4px 4px;
+            transition: top 0.15s var(--ease);
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
+
+        .project:focus-visible {
+            outline: 2px solid var(--r-accent);
+            outline-offset: 2px;
+            background: #16161F;
+            border-color: #282836;
+        }
+
+        .left__link:focus-visible {
+            outline: 2px solid var(--l-link);
+            outline-offset: 4px;
+            border-radius: 2px;
+        }
+
+        /* =====================================================
            SPLIT LAYOUT
         ===================================================== */
         .layout {
@@ -809,6 +844,7 @@
     </style>
 </head>
 <body>
+    <a href="#projects" class="skip-link">Skip to projects</a>
     <div class="layout">
 
         <!-- ── LEFT: THE HUMAN ── -->
@@ -839,19 +875,19 @@
                 <ul class="left__links">
                     <li>
                         <a href="https://github.com/markuswondrak" target="_blank" rel="noopener noreferrer" class="left__link">
-                            <svg viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
                             <span class="left__link-text">github.com/markuswondrak</span>
                         </a>
                     </li>
                     <li>
                         <a href="https://www.linkedin.com/in/markus-wondrak-53b1881a3/" target="_blank" rel="noopener noreferrer" class="left__link">
-                            <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
                             <span class="left__link-text">linkedin.com/in/markus-wondrak</span>
                         </a>
                     </li>
                     <li>
                         <a href="https://wondrax-solutions.com" target="_blank" rel="noopener noreferrer" class="left__link">
-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm7.931 9h-2.764a14.67 14.67 0 0 0-1.792-6.243A8.013 8.013 0 0 1 19.931 11zM12.53 4.027c1.035 1.364 2.427 3.78 2.627 6.973H9.03c.139-2.596.994-5.028 2.451-6.974.172-.01.344-.026.519-.026.179 0 .354.016.53.027zm-3.842.2A14.696 14.696 0 0 0 6.64 11H3.069a8.01 8.01 0 0 1 5.619-6.773zM3.069 13h3.568a14.64 14.64 0 0 0 1.762 6.168A8.008 8.008 0 0 1 3.069 13zm4.917 6.207A14.655 14.655 0 0 1 9.03 13h6.127a14.6 14.6 0 0 1-1.982 6.113c-.177.012-.355.02-.535.02-.202 0-.4-.01-.597-.025zm4.955.042A14.689 14.689 0 0 0 14.978 13h2.753a8.007 8.007 0 0 1-4.79 6.249z"/></svg>
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm7.931 9h-2.764a14.67 14.67 0 0 0-1.792-6.243A8.013 8.013 0 0 1 19.931 11zM12.53 4.027c1.035 1.364 2.427 3.78 2.627 6.973H9.03c.139-2.596.994-5.028 2.451-6.974.172-.01.344-.026.519-.026.179 0 .354.016.53.027zm-3.842.2A14.696 14.696 0 0 0 6.64 11H3.069a8.01 8.01 0 0 1 5.619-6.773zM3.069 13h3.568a14.64 14.64 0 0 0 1.762 6.168A8.008 8.008 0 0 1 3.069 13zm4.917 6.207A14.655 14.655 0 0 1 9.03 13h6.127a14.6 14.6 0 0 1-1.982 6.113c-.177.012-.355.02-.535.02-.202 0-.4-.01-.597-.025zm4.955.042A14.689 14.689 0 0 0 14.978 13h2.753a8.007 8.007 0 0 1-4.79 6.249z"/></svg>
                             <span class="left__link-text">wondrax-solutions.com</span>
                         </a>
                     </li>
@@ -860,8 +896,8 @@
         </aside>
 
         <!-- ── RIGHT: THE MACHINE ── -->
-        <main class="right">
-            <div class="right__label">Projects</div>
+        <main class="right" id="projects">
+            <h2 class="right__label">Projects</h2>
 
             <!-- FEATURED -->
             <div class="projects projects--featured">
@@ -871,7 +907,7 @@
                     <div class="project__inner">
                         <div class="project__number">Selected Work // 01</div>
                         <div class="project__header">
-                            <span class="project__name">BriefCheck App <span class="arrow">&#8599;</span></span>
+                            <span class="project__name">BriefCheck App <span class="arrow" aria-hidden="true">&#8599;</span></span>
                                         </div>
                         <p class="project__desc">AI-powered letter analysis that helps you understand bureaucratic correspondence from authorities, digitizes documents, and delivers clear action recommendations: fast, secure, and simple.</p>
                         <div class="project__tags">
@@ -881,7 +917,7 @@
                         </div>
                         <span class="project__cta project__cta--btn">Visit briefcheck.app &nbsp;→</span>
                     </div>
-                    <div class="project__doc-visual">
+                    <div class="project__doc-visual" aria-hidden="true">
                         <!-- Abstract document skeleton with AI entity bounding boxes -->
                         <svg width="260" height="290" viewBox="0 0 190 210" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <defs>
@@ -953,14 +989,14 @@
                         <div class="project__inner">
                             <div class="project__number">Selected Work // 02</div>
                             <div class="project__header">
-                                <span class="project__name">AgentMux <span class="arrow">&#8599;</span></span>
+                                <span class="project__name">AgentMux <span class="arrow" aria-hidden="true">&#8599;</span></span>
                                 <span class="project__tech">Python &middot; tmux &middot; Multi-Agent</span>
                             </div>
                             <p class="project__desc">Orchestrates a full PM → Architect → Code → Review pipeline across Claude, Codex, and Gemini, injected via tmux, not the API. Reuses your existing subscriptions. No per-token costs.</p>
                         </div>
                     </a>
                     <!-- Process-chain visual — outside the card -->
-                    <div class="project__visual-outside">
+                    <div class="project__visual-outside" aria-hidden="true">
                         <svg height="100%" width="auto" viewBox="0 0 180 230" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
                             <!-- Vertical pipeline: PM → ARCHITECT → CODE → REVIEW → DONE -->
                             <!-- Step 1: PM -->
@@ -1010,7 +1046,7 @@
                     <div class="project__inner">
                         <div class="project__number">// 03</div>
                         <div class="project__header">
-                            <span class="project__name">Finance App <span class="arrow">&#8599;</span></span>
+                            <span class="project__name">Finance App <span class="arrow" aria-hidden="true">&#8599;</span></span>
                         </div>
                         <p class="project__desc">Modern personal finance tracking with wealth management, fixed cost analysis, and financial forecasting. Fintech-inspired dark theme.</p>
                         <span class="project__tech">Vue.js &middot; Go</span>
@@ -1022,7 +1058,7 @@
                     <div class="project__inner">
                         <div class="project__number">// 04</div>
                         <div class="project__header">
-                            <span class="project__name">Wondrax Platform <span class="arrow">&#8599;</span></span>
+                            <span class="project__name">Wondrax Platform <span class="arrow" aria-hidden="true">&#8599;</span></span>
                         </div>
                         <p class="project__desc">Self-hosted infrastructure automating containerised application deployment on a single VM. Automated pipelines, shared database; low-maintenance and production-ready.</p>
                         <span class="project__tech">Infrastructure</span>
@@ -1034,7 +1070,7 @@
                     <div class="project__inner">
                         <div class="project__number">// 05</div>
                         <div class="project__header">
-                            <span class="project__name">Faststring <span class="arrow">&#8599;</span></span>
+                            <span class="project__name">Faststring <span class="arrow" aria-hidden="true">&#8599;</span></span>
                         </div>
                         <p class="project__desc">Master's thesis: an algorithm that exchanges arbitrary types in Java bytecode at runtime. Identifies safe boundaries to seamlessly convert legacy data structures without recompilation.</p>
                         <span class="project__tech">Java &middot; Bytecode</span>
