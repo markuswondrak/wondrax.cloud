@@ -26,6 +26,25 @@ MD_CONFIG = {
     "toc": {"permalink": False},
 }
 
+MERMAID_FENCE_RE = re.compile(r"```mermaid\s*\r?\n([\s\S]*?)\r?\n```", re.IGNORECASE)
+
+
+def preprocess_mermaid_fences(markdown_text: str) -> str:
+    """Convert ```mermaid fenced blocks into Mermaid HTML containers.
+
+    We do this before markdown conversion so `codehilite` won't wrap/escape the
+    diagram source, and so the template's Mermaid runtime can render it.
+    """
+
+    def _replace(match: re.Match) -> str:
+        source = match.group(1).strip("\n")
+        # Mermaid reads the element text; HTML escaping is safe and prevents
+        # accidental HTML injection inside the diagram container.
+        safe = html.escape(source, quote=False)
+        return f'\n<div class="mermaid">\n{safe}\n</div>\n'
+
+    return MERMAID_FENCE_RE.sub(_replace, markdown_text)
+
 
 def parse_article(filepath: str) -> dict | None:
     """Parse a markdown file with YAML frontmatter."""
@@ -90,6 +109,7 @@ def parse_article(filepath: str) -> dict | None:
 
 def render_markdown(text: str) -> str:
     """Convert markdown to HTML."""
+    text = preprocess_mermaid_fences(text)
     md = markdown.Markdown(extensions=MD_EXTENSIONS, extension_configs=MD_CONFIG)
     return md.convert(text)
 

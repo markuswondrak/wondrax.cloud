@@ -285,6 +285,28 @@
             font-size: inherit;
         }
 
+        /* Mermaid (overrides dark `pre` code-block chrome) */
+        .article-body pre.mermaid {
+            background: var(--bg-hover);
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+        }
+
+        .article-body div.mermaid {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .article-body .mermaid svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
         .article-body hr {
             border: none;
             border-top: 1px solid var(--border);
@@ -380,7 +402,7 @@
             <div class="article-header">
                 <a href="../blog.html" class="article-header__back">← Back to Writing</a>
                 <div class="article-header__meta">
-                    <time class="article-header__date" datetime="2026-04-15">15 Apr 2026</time>
+                    <time class="article-header__date" datetime="2026-04-26">26 Apr 2026</time>
                     <span class="article-header__time">12 min read</span>
                 </div>
                 <h1 class="article-header__title">Re-evaluating GitHub&#x27;s Spec Kit: Structured SDLC Automation</h1>
@@ -495,5 +517,25 @@
         <footer class="footer">&copy; 2026 Markus Wondrak</footer>
 
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#EDE8DC',
+                primaryTextColor: '#1A1714',
+                primaryBorderColor: '#DDD8CE',
+                lineColor: '#7C766E',
+                secondaryColor: '#F3EFE6',
+                tertiaryColor: '#F3EFE6',
+                fontFamily: "'Libre Franklin', 'Liberation Sans', system-ui, sans-serif"
+            },
+            flowchart: { useMaxWidth: true },
+            sequence: { useMaxWidth: true },
+            c4: { useMaxWidth: true }
+        });
+        mermaid.run().catch(function (err) { console.error('Mermaid:', err); });
+    </script>
 </body>
 </html>

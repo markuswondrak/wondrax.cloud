@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Agentic coding scales output — and, without the right context layer, scales misalignment at the same rate. arc42&#x27;s twelve structured sections already satisfy most of what agents need from documentation. The missing piece is not a new framework: it&#x27;s putting the documentation in the repository, as Markdown files, where agents can actually find it.">
+    <title>From Wiki to Source: How arc42 Becomes the Context Layer for AI Agents — Markus Wondrak</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Libre+Franklin:wght@300;400;500;600&family=Spectral:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:          #F3EFE6;
+            --bg-hover:    #EDE8DC;
+            --text:        #1A1714;
+            --text-dim:    #7C766E;
+            --text-faint:  #B0A89E;
+            --border:      #DDD8CE;
+            --link:        #6B5A3A;
+            --link-hover:  #1A1714;
+
+            --serif: 'Spectral', Georgia, serif;
+            --sans:  'Libre Franklin', 'Liberation Sans', system-ui, sans-serif;
+            --mono:  'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+            --ease:  cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 110%;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text-dim);
+        }
+
+        a { color: var(--link); text-decoration: none; }
+        a:hover { color: var(--link-hover); }
+
+        /* ── Skip link ── */
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: 1rem;
+            z-index: 100;
+            padding: 0.6rem 1.2rem;
+            background: var(--link);
+            color: var(--bg);
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+            border-radius: 0 0 4px 4px;
+            transition: top 0.15s var(--ease);
+        }
+
+        .skip-link:focus { top: 0; }
+
+        /* ── Page shell ── */
+        .page {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 4rem 2rem 6rem;
+            animation: fadeIn 0.6s var(--ease) both;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Header ── */
+        .header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1.5rem;
+            margin-bottom: 4rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header__name {
+            font-family: var(--serif);
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.02em;
+            transition: color 0.2s var(--ease);
+        }
+
+        .header__name:hover { color: var(--link); }
+
+        .header__nav {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .header__nav-item {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-faint);
+            transition: color 0.2s var(--ease);
+        }
+
+        a.header__nav-item:hover { color: var(--link-hover); }
+
+        .header__nav-item--active { color: var(--text-dim); }
+
+        .header__nav-dot {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: var(--border);
+        }
+
+        /* ── Article header ── */
+        .article-header {
+            margin-bottom: 3rem;
+        }
+
+        .article-header__back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-faint);
+            margin-bottom: 2rem;
+            transition: color 0.2s var(--ease);
+        }
+
+        .article-header__back:hover { color: var(--link); }
+
+        .article-header__meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .article-header__date {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-faint);
+        }
+
+        .article-header__time {
+            font-family: var(--mono);
+            font-size: 0.575rem;
+            letter-spacing: 0.04em;
+            color: var(--text-faint);
+            opacity: 0.7;
+        }
+
+        .article-header__title {
+            font-family: var(--serif);
+            font-size: clamp(2rem, 4.5vw, 2.8rem);
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.75rem;
+        }
+
+        .article-header__tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            margin-top: 1rem;
+        }
+
+        .article-header__tag {
+            font-family: var(--mono);
+            font-size: 0.55rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-faint);
+            border: 1px solid var(--border);
+            padding: 0.2rem 0.5rem;
+            border-radius: 2px;
+        }
+
+        /* ── Article body ── */
+        .article-body {
+            font-family: var(--sans);
+            font-size: 0.95rem;
+            color: var(--text-dim);
+            line-height: 1.8;
+        }
+
+        .article-body p {
+            margin-bottom: 1.5rem;
+            max-width: 65ch;
+        }
+
+        .article-body h2 {
+            font-family: var(--serif);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.01em;
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .article-body h3 {
+            font-family: var(--serif);
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-top: 2rem;
+            margin-bottom: 0.75rem;
+            line-height: 1.3;
+        }
+
+        .article-body strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .article-body em {
+            font-style: italic;
+        }
+
+        .article-body ul, .article-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+        }
+
+        .article-body li {
+            margin-bottom: 0.4rem;
+            max-width: 65ch;
+        }
+
+        .article-body blockquote {
+            border-left: 2px solid var(--border);
+            padding-left: 1.25rem;
+            margin: 1.5rem 0;
+            color: var(--text-faint);
+            font-style: italic;
+        }
+
+        .article-body code {
+            font-family: var(--mono);
+            font-size: 0.8em;
+            background: var(--bg-hover);
+            padding: 0.15rem 0.35rem;
+            border-radius: 3px;
+            color: var(--text);
+        }
+
+        .article-body pre {
+            background: #1A1714;
+            color: #D4D0C8;
+            padding: 1.25rem 1.5rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+
+        .article-body pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+            font-size: inherit;
+        }
+
+        /* Mermaid (overrides dark `pre` code-block chrome) */
+        .article-body pre.mermaid {
+            background: var(--bg-hover);
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+        }
+
+        .article-body div.mermaid {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .article-body .mermaid svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .article-body hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2.5rem 0;
+        }
+
+        .article-body a {
+            color: var(--link);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            text-decoration-color: var(--border);
+            transition: text-decoration-color 0.2s var(--ease);
+        }
+
+        .article-body a:hover {
+            text-decoration-color: var(--link);
+        }
+
+        /* ── Footnotes ── */
+        .article-body .footnote-ref {
+            font-size: 0.75em;
+            vertical-align: super;
+            line-height: 0;
+            text-decoration: none;
+        }
+
+        .article-body .footnote {
+            font-size: 0.8rem;
+            color: var(--text-faint);
+            line-height: 1.6;
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+        }
+
+        .article-body .footnote ol {
+            padding-left: 1.25rem;
+        }
+
+        .article-body .footnote li {
+            margin-bottom: 0.5rem;
+        }
+
+        .article-body .footnote p {
+            margin-bottom: 0.25rem;
+        }
+
+        /* ── Footer ── */
+        .footer {
+            margin-top: 4rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border);
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            color: var(--text-faint);
+            letter-spacing: 0.04em;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 520px) {
+            .page {
+                padding: 2.5rem 1.25rem 4rem;
+            }
+
+            .header {
+                margin-bottom: 2.5rem;
+            }
+
+            .article-header__title {
+                font-size: 1.8rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .page { animation: none; }
+        }
+    </style>
+</head>
+<body>
+    <a href="#article" class="skip-link">Skip to article</a>
+    <div class="page">
+
+        <header class="header">
+            <a href="../index.html" class="header__name">Markus Wondrak</a>
+            <nav class="header__nav" aria-label="Site navigation">
+                <a href="../index.html" class="header__nav-item">Projects</a>
+                <span class="header__nav-dot" aria-hidden="true"></span>
+                <a href="../blog.html" class="header__nav-item header__nav-item--active">Writing</a>
+            </nav>
+        </header>
+
+        <main id="article">
+            <div class="article-header">
+                <a href="../blog.html" class="article-header__back">← Back to Writing</a>
+                <div class="article-header__meta">
+                    <time class="article-header__date" datetime="2026-04-30">30 Apr 2026</time>
+                    
+                </div>
+                <h1 class="article-header__title">From Wiki to Source: How arc42 Becomes the Context Layer for AI Agents</h1>
+                <div class="article-header__tags">
+                    <span class="article-header__tag">Agentic Coding</span>
+                    <span class="article-header__tag">arc42</span>
+                    <span class="article-header__tag">Architecture</span>
+                    <span class="article-header__tag">Documentation</span>
+                </div>
+            </div>
+
+            <div class="article-body">
+                <p>An agent gets a straightforward ticket: &ldquo;Display the available overdraft limit on the mobile banking dashboard.&rdquo; It does what any good engineer would — it looks for existing patterns. It explores the AccountOrchestration API, spots dozens of existing synchronous REST calls to the CoreBanking_Legacy endpoint, and replicates the pattern to fetch the overdraft data. The code is clean, the unit tests pass, and the agent opens a Pull Request.</p>
+<p>Twenty minutes later, a senior engineer rejects it.</p>
+<p>What the agent never knew — because it wasn&rsquo;t written anywhere in the code — is that the legacy core banking API cannot handle the mobile app&rsquo;s peak traffic volume. The architecture board decided three months ago that all new mobile read-requests must route through the new asynchronous caching layer. The agent didn&rsquo;t fail. It optimized for what was explicit: the most prevalent orchestration pattern in the repository. But in the absence of architectural context, the agent&rsquo;s speed just generated technical debt that a human reviewer had to catch.</p>
+<p>That rejection wasn&rsquo;t an edge case — it&rsquo;s what happens whenever throughput, compliance, or architecture lives only in meetings and chat, while the repo stays the only artifact the agent can trust. Agentic coding scales output. If the only legible context is the repository, it also scales misalignment. Agents optimize for what is explicit, not what is intended.</p>
+<p>The instinctive industry response is Spec-Driven Development — shifting the source of truth away from code into natural-language specifications, and letting agents generate the implementation.</p>
+<p>The distinction that matters is between Code as Truth of State — what the system actually does — and Documentation as Truth of Intent — what it is allowed to do. The agent in this scenario had perfect knowledge of the first and none of the second.</p>
+<hr />
+<h2 id="the-source-of-truth-is-source-code">The Source of Truth Is Source Code</h2>
+<p>Code is the only thing that executes. Tests validate its behavior. Deployment confirms it. No document can contradict what the machine does. When a specification says one thing and the code does another, the specification is stale. The code runs.</p>
+<p>This is not a philosophical position — it is a technical one. A spec cannot be compiled, tested, or deployed. A diagram cannot have a bug. The moment any artifact other than the code is treated as authoritative, you introduce a synchronization problem you can never fully close.</p>
+<p>Spec-Driven Development misunderstands this. Tools like <a href="https://aws.amazon.com/documentation-overview/kiro/">Kiro</a>, <a href="https://github.github.com/spec-kit/">spec-kit</a>, and <a href="https://tessl.io">Tessl</a> propose that specifications become the primary artifact — that code is generated <em>from</em> the spec, and that the spec is what you change when the system needs to change. The parallel to Model-Driven Architecture is instructive: MDA made the same argument two decades ago, with similar promises about abstraction and generation.<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup><sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup> The approaches differ in important ways—MDA used formal DSLs and deterministic transformations; SDD uses natural language and non-deterministic LLMs. SDD is also more iterative, allowing refinement rather than requiring complete specifications upfront. The distinction matters: tools like Tessl attempt to make the specification formally verifiable or executable — which partially addresses the synchronization problem MDA never solved. The claim here is not that SDD is identical to MDA. Both share the same foundational bet, that shifting complexity into a less precise medium — whether a formal DSL or natural language — eliminates it rather than relocates it. That bet has not paid off yet at scale, in either generation. Natural language is less precise than code. And unlike MDA&rsquo;s deterministic compiler, SDD&rsquo;s LLM-based generation introduces a new kind of unpredictability that MDA never had to account for.</p>
+<p>Beyond the technical problem is a structural one. SDD specs start at the feature level — they describe <em>what</em> to build, not <em>why</em>. Without anchoring to business objectives, OKRs, or architectural constraints, agents generate technically correct but strategically irrelevant code. When Birgitta Böckeler evaluated Kiro for a trivial, isolated bug fix, the tool generated four user stories with sixteen acceptance criteria.<sup id="fnref2:2"><a class="footnote-ref" href="#fn:2">2</a></sup> A sledgehammer for a nail. Because the spec doesn&rsquo;t know why the feature matters, neither does the agent. The result is reactive engineering — significant development capacity spent on features whose value was never validated.</p>
+<p>Recognizing code as the source of truth is not the same as claiming code is self-explanatory. Code tells you what the system does. It does not tell you why decisions were made, what constraints apply, or what the architecture forbids. Those are distinct claims — and conflating them is what SDD exploits. The problem is that code is a poor map of its own context. Expecting an agent to derive system architecture purely from source code is like expecting a database to perform a complex query without an index: it forces a massive, expensive full-table scan of the entire repository. The agent must search and pattern-match across the codebase just to discover what the system considers &ldquo;normal.&rdquo;</p>
+<hr />
+<h2 id="what-documentation-still-must-do">What Documentation Still Must Do</h2>
+<p>To say that code is the absolute truth is not a claim about its readability; it simply acknowledges that code is the only artifact that executes. But parsing this absolute truth from scratch every time is fundamentally too expensive — for humans and for agents.</p>
+<p>An agent working on module A doesn&rsquo;t need to read module B&rsquo;s 3,000 lines of implementation. It needs to know what module B exports, what invariants it maintains, what it depends on — and then decide whether to dig deeper. This is the same principle as API documentation for humans. The economics are sharper for agents: every unnecessary token costs compute and increases hallucination risk. Documentation becomes a navigation layer above the codebase, letting agents traverse it without reading it whole.<sup id="fnref:3"><a class="footnote-ref" href="#fn:3">3</a></sup></p>
+<p>Without this layer, every agent session begins the same way: reverse-engineering the system from source. Expensive in tokens, error-prone in practice, and repeated identically in every session. In practice, a small amount of targeted documentation can eliminate large amounts of repeated repository scanning.</p>
+<p>Four things specifically cannot be inferred from code.</p>
+<p><strong>Product context.</strong> Code can tell you how a system works. It cannot tell you why the system exists, who the users are, which external APIs carry SLAs, or which business rules must never be violated. The agent in the opening scenario failed here. The microservice boundary rule (from the introduction example) existed nowhere in the repository because no documentation brought it in, the agent had no way to encounter it.</p>
+<p><strong>Decisions and rationale.</strong> Code shows what was chosen. Architecture Decision Records capture what was rejected and why.<sup id="fnref:4"><a class="footnote-ref" href="#fn:4">4</a></sup> An agent proposing a solution that was already evaluated and ruled out two years ago has no way to know that — unless the decision was recorded. In agentic systems, ADRs gain dimensions the conventional format never anticipated: base model selection, context window constraints, fallback strategies when the model declines a task, drift tolerance thresholds.</p>
+<p><strong>Interface contracts.</strong> Between modules, between services, between teams. Code implements contracts; it doesn&rsquo;t always declare them. A module&rsquo;s public API is part of its implementation, but its invariants — what it guarantees it will never do, what callers must never assume — are often not. These need to be explicit, or agents will infer them from behavior they happen to observe in the current context.</p>
+<p><strong>Architecture boundaries.</strong> Traditional documentation assumes deterministic components with stable interfaces. Agent-based systems have probabilistic boundaries: where LLM output is non-deterministic, where data distribution shifts change behavior without code changes, where ML model lifecycles run asynchronously to the surrounding infrastructure. An agent working across these boundaries needs to know where deterministic behavior ends and where it must account for uncertainty. Documentation is the only way to make that visible.<sup id="fnref:5"><a class="footnote-ref" href="#fn:5">5</a></sup></p>
+<p>This isn&rsquo;t documentation for compliance. It&rsquo;s documentation as precision — the difference between an agent that guesses and one that knows what it&rsquo;s not allowed to guess. They are the context that lets an agent know what it cannot infer from code alone — and that prevents it from resolving ambiguity by guessing. The agent in the opening scenario guessed. It guessed correctly by every measure available to it. The cost wasn&rsquo;t from a bad guess — it was from a question the agent had no way to ask.</p>
+<hr />
+<h2 id="what-breaks-when-documentation-is-absent">What Breaks When Documentation Is Absent</h2>
+<p>That question becomes structural when you consider how agents operate across time. Every agent session starts fresh. The model has no memory between calls — no residual understanding of past decisions, no accumulated context from previous sessions. Documentation is the only mechanism that bridges the gap. Without it, multi-session workflows degenerate into repeated rediscovery: the agent reconstructs the same understanding from source code, session after session, at full token cost each time.</p>
+<p>This is the root cause of agent drift. Without documentation anchoring context, agents build their own implicit model of the system. These models diverge across sessions. Deprecated code structures that persist as technical debt become de facto patterns — the agent has no way to know it should not follow them. Two agents working in parallel on the same codebase can produce conflicting architectures because they each inferred a different starting model from the same repository.<sup id="fnref:6"><a class="footnote-ref" href="#fn:6">6</a></sup></p>
+<p>In multi-agent systems, this divergence has cascading consequences. When one agent&rsquo;s output serves as the input for the next, a misinterpretation at the first hop becomes the implicit context for all subsequent hops. Without explicit boundary documentation — where one agent&rsquo;s responsibility ends, what each agent can assume about the others&rsquo; output — failures propagate invisibly through the agentic network. Architecture reviews cannot catch what they cannot see.</p>
+<p>Documentation that exists but isn&rsquo;t maintained is another failure mode, distinct from absence. An agent reads stale documentation, trusts it, and generates code against it. The codebase now carries the original drift plus the new code built on top of it. Unlike a failing test, stale documentation gives no signal. It produces confident, coherent, wrong output.</p>
+<p>These are operational failures. They also have a second-order consequence that matters in regulated industries: what can&rsquo;t be traced can&rsquo;t be audited. Undocumented decisions are unauditable decisions. Under the EU AI Act (Annex IV, enforceable August 2026), organizations must provide systematic evidence of AI system design choices, risk controls, and governance structures. Traditional architecture documentation covers roughly 36% of what that regulation requires.<sup id="fnref2:5"><a class="footnote-ref" href="#fn:5">5</a></sup> The rest lives in decisions made verbally and never written down. For organizations operating under regulatory scrutiny, absent documentation is not a technical debt problem — it is a legal one.</p>
+<hr />
+<h2 id="when-code-and-documentation-conflict">When Code and Documentation Conflict</h2>
+<p>Treating documentation as essential context while maintaining that code is the source of truth creates a tension we cannot ignore: when the two disagree, which does the agent follow?</p>
+<p>The answer depends on what kind of claim is in conflict. Code and documentation are not competing sources of truth for the same thing — they answer different questions. Code is authoritative about <em>behavior</em>: what the system actually does when it runs. Documentation is authoritative about <em>intent and constraints</em>: what the system is supposed to do, and what it must never do. These are distinct domains. When they conflict, it does not mean one outranks the other — it means one of them is wrong, and a human needs to decide which.</p>
+<p>This distinction resolves most cases cleanly. If the documentation says &ldquo;no synchronous calls to CoreBanking_Legacy&rdquo; and the agent finds synchronous calls in the codebase, the code is not evidence that the constraint is wrong — the code is evidence that the constraint was violated, or that the code predates the decision. The agent follows the documented constraint and flags the discrepancy. If the documentation describes a module interface that no longer matches the implementation, the documentation is stale — the code is what actually executes. The agent surfaces the mismatch.</p>
+<p>What the agent cannot do is determine <em>why</em> the conflict exists. A documentation constraint that contradicts the code could mean the code has a bug, the code reflects a decision that was never documented, or the documentation was written for a system state that no longer exists. These are epistemically indistinguishable from the agent&rsquo;s position. An agent that resolves this ambiguity by guessing — in either direction — is making an architectural decision it is not qualified to make. The correct behavior is to surface the conflict and stop: human-in-the-loop, not agent judgment.</p>
+<p>The practical implication is that prevention matters more than resolution. The resolution mechanism for conflicts is &ldquo;Human in the loop&rdquo;; the mechanism for preventing conflicts is the PR. Documentation that lives in the repository ships in the same commit as the code it describes — which means divergence is a reviewable artifact, not a silent background process. The human reviewer is the synchronization check: the agent flags explicit contradictions it encounters during a session, and the reviewer catches what the agent missed at merge time. This does not eliminate the divergence problem — documentation written for a previous system state can survive many PRs undetected if nobody touches the relevant files. But it makes divergence structurally visible rather than structurally invisible, which is the most the tooling can do. The residual cases require human judgment, and that is a feature of the approach, not a gap in it.</p>
+<hr />
+<h2 id="what-good-documentation-looks-like-for-agents">What Good Documentation Looks Like for Agents</h2>
+<p>The obvious fix is to add documentation. But adding the wrong kind compounds the problem. Most documentation frameworks are designed for human readers — and agents aren&rsquo;t human readers. Humans tolerate ambiguity, infer intent, and navigate to what&rsquo;s relevant. Agents parse what&rsquo;s present, act on what they find, and treat gaps as permission to guess. Documentation for agents needs different properties.</p>
+<p><strong>Machine-readable first, human-readable second.</strong> Agents parse structure. Consistent headings, predictable file locations, and explicit cross-references matter more than prose elegance. An agent that knows documentation lives at <code>docs/architecture/decisions/</code> navigates there directly. One that must search for it will search the entire repository — or skip it entirely. Format is not an aesthetic choice - it is a navigability constraint.</p>
+<p><strong>Concise over comprehensive.</strong> Every token loaded into the context window displaces other context. A 200-token index that identifies what exists and where to find it is more valuable than a 2,000-token document where critical constraints get lost in the noise. The principle is Progressive Disclosure: a lightweight summary first, with pointers to deeper files the agent loads only when the task requires it. This keeps context usage predictable and hallucination risk low.</p>
+<p><strong>Living, not archival.</strong> The old criticism of documentation — it&rsquo;s always out of date — becomes a system failure in agentic coding. If documentation drifts from the codebase, agents generate code against stale assumptions. The fix is to make the agent the maintainer: the workflow must enforce that documentation is updated alongside the implementation — not as a parallel task, but as the same commit. The core loop is non-negotiable: read the relevant context before acting, update the architectural rules and system patterns after acting. Code and documentation ship together or not at all. I&rsquo;ve described this workflow in detail in my <a href="https://markus.wondrax.cloud/articles/spec-kit-reevaluation.html">reevaluation of spec-kit</a>, including the failure modes when the update step is skipped.</p>
+<p><strong>Layered by function, not audience.</strong> Effective documentation physically separates context into different files based on exactly when the agent needs them:</p>
+<ul>
+<li><strong>Global Constraints (Always-on):</strong> A single root file (like <code>AGENT.md</code>) containing hard prohibitions and project-wide conventions. This is the only file the agent is required to load in every single session.</li>
+<li><strong>Domain-Specific Context (Task-specific):</strong> Deep-dive architectural rules or module boundaries live in separate files (e.g., <code>docs/auth-service.md</code>). The agent is instructed to load these <em>only</em> when touching related code, keeping token consumption at zero otherwise.</li>
+<li><strong>Tooling Over Text (Live data):</strong> Documentation should never harbor rapidly changing state. Instead of maintaining a stale database schema in a text file, the documentation explicitly instructs the agent which CLI command to run to fetch the live schema at runtime.</li>
+<li><strong>The Memory Bank (Persistent context):</strong> To survive the amnesia between isolated sessions, projects need a structured, agent-maintained file (like <code>docs/active-context.md</code>). This acts as a persistent log where the agent records ongoing decisions and progress, bridging the gap between sessions.</li>
+</ul>
+<p>Each layer has a distinct function; conflating them into a single document produces an artifact that is too massive to load precisely and too diffuse to be useful.</p>
+<p><strong>The Bad Faith Test.</strong> Agents will misunderstand any instruction that admits misinterpretation — consistently, at scale, across every session. Documentation must be written to survive deliberate misreading: explicit, simple, bordering on pedantic. Rules must include their rationale. &ldquo;Use tabs&rdquo; is a rule. &ldquo;Use tabs because this is a Python project and the formatter enforces it&rdquo; is a rule the agent can apply correctly even in edge cases. LLMs comply at significantly higher rates when they understand the reasoning behind a convention.<sup id="fnref:8"><a class="footnote-ref" href="#fn:8">7</a></sup> Idioms, nuance, and implied exceptions are failure vectors.</p>
+<p>Rules constrain. Examples teach. A documentation system needs both. </p>
+<p>A well-structured documentation set also includes a Gold Standard File: a single, perfectly formatted source file that serves as the absolute reference for all generation. Paired with explicit correct-versus-incorrect comparisons, it tells the agent what not to replicate. Agents learn through pattern recognition. Providing the correct patterns explicitly is faster and more reliable than expecting agents to infer them from a heterogeneous codebase.<sup id="fnref2:8"><a class="footnote-ref" href="#fn:8">7</a></sup></p>
+<hr />
+<h2 id="architecture-documentation-must-evolve-and-arc42-already-shows-you-how">Architecture Documentation Must Evolve — and arc42 Already Shows You How</h2>
+<p>The properties described above — machine-readable, layered, living, concise — do not require a new framework to fulfill them. The instinct to invent one is understandable, but it ignores a more useful question: which of these requirements are already solved, and where does the genuine gap begin?</p>
+<p>Arc42 is the practical answer to the first part of that question. It is a structured, view-based documentation template that has been in production use for over a decade. Its twelve sections map to distinct concerns — context, constraints, building block structure, runtime behavior, deployment, cross-cutting concepts, decisions — and that separation of concerns is precisely what the previous section called for: distinct concerns in distinct, locatable places, not collapsed into undifferentiated prose. C4 contributes a complementary discipline: a strict four-level hierarchy (System, Container, Component, Code) that gives an agent a predictable traversal path. An agent can enter at the System level, descend exactly as far as the task requires, and stop — rather than scanning a flat, undifferentiated repository.</p>
+<p>Neither framework was designed for agentic coding. Both happen to be well-suited to it for the same reason they serve human readers: they make architecture navigable without requiring a full read.</p>
+<hr />
+<h3 id="from-framework-to-files-arc42-as-source-code-artifacts">From Framework to Files: arc42 as Source Code Artifacts</h3>
+<p>The gap between &ldquo;arc42 exists&rdquo; and &ldquo;an agent can use it&rdquo; is a question of where the documentation lives and how it is rendered. Most teams that use arc42 at all maintain it in Confluence, a shared wiki, or a PDF. All three are inaccessible to an agent working in a code repository. The adjustment is not structural — it is operational.</p>
+<p><strong>The documentation belongs in the repository, as Markdown files, alongside the code it describes.</strong></p>
+<p>External documentation systems can be made accessible to agents through MCP (Model Context Protocol) servers. This is a viable architecture if the MCP implementation provides hierarchical, precise access—semantic search, proper chunking, and scoped retrieval rather than flat document dumps. However, this introduces operational complexity: the MCP server becomes another component to maintain, configure, and keep in sync with the code.</p>
+<p>In-repo documentation sidesteps this entirely. The agent reads and updates docs using the same file operations it uses for code. The git history captures both together. The barrier to adoption is zero—no additional tooling, no server configuration, no dependency on MCP support in the agent system. It follows directly from the principle established earlier: if code is the source of truth, the context layer that makes code legible should live in the same place, maintained by the same workflow.</p>
+<p>The rendering implication matters as much as the location. Architecture diagrams embedded as PNGs or SVGs are expensive context — they require vision processing rather than text parsing, and they cannot be updated without external tooling. Mermaid.js closes this gap. Diagrams as plain text let agents parse system topology, reason about component relationships, and generate or update diagrams without any image-processing overhead. Every diagram in the documentation should be a Mermaid block, not an image embed.</p>
+<hr />
+<h3 id="the-three-tier-loading-model">The Three-Tier Loading Model</h3>
+<p>Not all arc42 sections are equally useful to an agent, and loading them indiscriminately defeats the purpose. The same progressive disclosure principle that governs documentation structure governs how documentation is loaded: a small amount of targeted context first, deeper content only when the task requires it.</p>
+<p>The twelve arc42 sections divide into three operational tiers based on two criteria: how often the agent needs them, and how expensive it is to load them unnecessarily.</p>
+<p><strong>Tier 1 — Always-on.</strong> These sections are short, stable, and define what the agent must not do. They belong in <code>AGENTS.md</code> itself — not as full content, but as explicit rules with their rationale.</p>
+<ul>
+<li><strong>§2 — Constraints</strong> is the most directly useful section for agentic coding. Hard prohibitions — the architectural rules the agent must never violate — live here. &ldquo;No synchronous calls to CoreBanking_Legacy for new mobile reads&rdquo; is a constraint. It belongs in Tier 1 because it applies universally and the cost of missing it is the scenario from the opening paragraph.</li>
+<li><strong>§1 — Introduction &amp; Goals</strong> contributes the top three quality objectives: performance, compliance, availability. Not the full stakeholder analysis — just the non-negotiables.</li>
+<li><strong>§12 — Glossary</strong> prevents the agent from treating domain synonyms as interchangeable. In a banking system, &ldquo;OverdraftLimit&rdquo; and &ldquo;CreditLine&rdquo; are not the same concept. A misidentification here propagates into every query, every variable name, every API call.</li>
+</ul>
+<p><strong>Tier 2 — On-demand.</strong> These sections are too large and too specific for the global context, but critical when the agent touches the relevant code area. The trigger is the code the agent is working in, not the task description.</p>
+<ul>
+<li><strong>§3 — Context &amp; Scope</strong> answers: what external systems exist, what do they promise, what are the interface contracts? Load it when the agent touches an external API call, an integration layer, or an event topic.</li>
+<li><strong>§5 — Building Block View</strong> is the structural index of the system: modules, components, their responsibilities, their dependencies. Load it when the agent creates a new component, refactors a module boundary, or encounters an unfamiliar directory.</li>
+<li><strong>§6 — Runtime View</strong> contains sequence diagrams of the critical flows across module boundaries. Load it when the agent is implementing a cross-module flow or debugging an interaction problem — not for self-contained feature tickets.</li>
+<li><strong>§7 — Deployment View</strong> maps infrastructure to environments. Load it when the agent touches configuration, infrastructure-as-code, CI/CD, or environment-specific logic.</li>
+<li><strong>§8 — Crosscutting Concepts</strong> is the Golden Path section: the patterns that apply everywhere — security, logging, error handling, authentication. Load it when the agent writes a new service, implements auth, or adds observability. This is where the reference implementation lives.</li>
+<li><strong>§9 — Architecture Decisions (ADRs)</strong> capture what was rejected and why. An ADR index stays in the always-available context; individual records are loaded when the agent is choosing between technical options or encounters a pattern that seems inconsistent with what it has seen elsewhere.</li>
+</ul>
+<p><strong>Tier 3 — Reference only.</strong> These sections have high value for human stakeholders and low operational value for the agent in a typical task.</p>
+<ul>
+<li><strong>§4 — Solution Strategy</strong> is too abstract for task-specific context. Useful for onboarding; not useful as a loaded constraint.</li>
+<li><strong>§10 — Quality Requirements</strong> matters only insofar as it produces concrete, testable non-functional requirements. If it does, those requirements belong in §2 (Constraints, Tier 1). Abstract quality trees do not.</li>
+<li><strong>§11 — Risks &amp; Technical Debt</strong> is the exception that proves the rule. Standard arc42 has no machine-readable format for this section — it is prose, and prose technical debt registers produce no operational signal. The correct approach here is an AI Debt Register: a structured list of patterns present in the codebase that are known technical debt and must not be replicated by the next agent session. A pointer to this register belongs in Tier 1. The full content is Tier 3.</li>
+</ul>
+<hr />
+<h3 id="nested-inheritance-constraints-that-know-their-scope">Nested Inheritance: Constraints That Know Their Scope</h3>
+<p>A constraint that applies to the backend service is not a constraint that should consume context in a frontend session. This is the practical problem that flat <code>AGENTS.md</code> files do not solve well — and it is solved by the nested inheritance model that the AGENTS.md specification already supports.</p>
+<p>The objection to repository-level context files is legitimate. Gloaguen et al. (2026) found that they reduce task success rates and increase inference costs by more than 20%.<sup id="fnref:15"><a class="footnote-ref" href="#fn:15">8</a></sup> This is a real finding, not an edge case, and the approach this article recommends would reproduce that failure if implemented naively — a single monolithic context file dumped into every session regardless of what the agent is doing. The nested model is a direct response to this failure mode. The agent loads the <code>AGENTS.md</code> file closest to the file it is editing. In a monorepo with <code>packages/api/</code> and <code>packages/frontend/</code>, a backend ticket automatically loads the backend-specific constraint file; a frontend ticket loads the frontend-specific one. Backend constraints are not loaded for frontend work. The Gloaguen et al. finding is an argument against undiscriminated context loading — not against structured, scoped documentation. </p>
+<p>The three-tier structure is a design inference from that finding — not an independently validated model. Whether nested scoping outperforms simpler alternatives in practice is an empirical question this article does not answer. The logic is sound; the evidence base is the Gloaguen et al. result plus the structural argument, not a controlled trial.</p>
+<p>The structure works at two levels: a root <code>AGENTS.md</code> for universal constraints, and nested <code>AGENTS.md</code> files for domain-specific ones. Universal constraints — architectural invariants that apply regardless of where the agent is working — live at the root. Domain constraints — rules that apply only to the API layer, or only to the frontend, or only to infrastructure code — live in the corresponding subdirectory.</p>
+<hr />
+<h3 id="the-concrete-file-structure">The Concrete File Structure</h3>
+<p>The following layout maps the three-tier model onto a repository. It is the arc42 documentation structure made agent-accessible.</p>
+<div class="codehilite"><pre><span></span><code><span class="o">/</span>
+<span class="err">├──</span><span class="w"> </span><span class="nx">AGENTS</span><span class="p">.</span><span class="nx">md</span><span class="w">                           </span><span class="err">#</span><span class="w"> </span><span class="nx">Tier</span><span class="w"> </span><span class="mi">1</span><span class="nx">a</span><span class="p">:</span><span class="w"> </span><span class="nx">Universal</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">Setup</span><span class="w"> </span><span class="nx">commands</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">Universal</span><span class="w"> </span><span class="nx">Constraints</span><span class="w"> </span><span class="p">(</span><span class="err">§</span><span class="mi">2</span><span class="p">)</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">Top</span><span class="o">-</span><span class="mi">3</span><span class="w"> </span><span class="nx">Quality</span><span class="w"> </span><span class="nx">Goals</span><span class="w"> </span><span class="p">(</span><span class="err">§</span><span class="mi">1</span><span class="p">)</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">Pointer</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">docs</span><span class="o">/</span><span class="nx">glossary</span><span class="p">.</span><span class="nx">md</span><span class="w"> </span><span class="p">(</span><span class="err">§</span><span class="mi">12</span><span class="p">)</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="nx">Pointer</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">docs</span><span class="o">/</span><span class="nx">architecture</span><span class="o">/</span><span class="nx">README</span><span class="p">.</span><span class="nx">md</span>
+<span class="err">│</span>
+<span class="err">├──</span><span class="w"> </span><span class="nx">packages</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="kn">api</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">AGENTS</span><span class="p">.</span><span class="nx">md</span><span class="w">                   </span><span class="err">#</span><span class="w"> </span><span class="nx">Tier</span><span class="w"> </span><span class="mi">1</span><span class="nx">b</span><span class="p">:</span><span class="w"> </span><span class="nx">Backend</span><span class="w"> </span><span class="nx">constraints</span><span class="w"> </span><span class="nx">only</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="nx">src</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="nx">frontend</span><span class="o">/</span>
+<span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="nx">AGENTS</span><span class="p">.</span><span class="nx">md</span><span class="w">                   </span><span class="err">#</span><span class="w"> </span><span class="nx">Tier</span><span class="w"> </span><span class="mi">1</span><span class="nx">b</span><span class="p">:</span><span class="w"> </span><span class="nx">Frontend</span><span class="w"> </span><span class="nx">constraints</span><span class="w"> </span><span class="nx">only</span>
+<span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="nx">src</span><span class="o">/</span>
+<span class="err">│</span>
+<span class="err">└──</span><span class="w"> </span><span class="nx">docs</span><span class="o">/</span>
+<span class="w">    </span><span class="err">├──</span><span class="w"> </span><span class="nx">architecture</span><span class="o">/</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">README</span><span class="p">.</span><span class="nx">md</span><span class="w">                   </span><span class="err">#</span><span class="w"> </span><span class="nx">Pointer</span><span class="w"> </span><span class="nx">index</span><span class="w"> </span><span class="p">(</span><span class="o">~</span><span class="mi">200</span><span class="w"> </span><span class="nx">tokens</span><span class="p">)</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">context</span><span class="o">-</span><span class="nx">scope</span><span class="p">.</span><span class="nx">md</span><span class="w">            </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">3</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Context</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nx">Scope</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">building</span><span class="o">-</span><span class="nx">blocks</span><span class="p">.</span><span class="nx">md</span><span class="w">          </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">5</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Building</span><span class="w"> </span><span class="nx">Block</span><span class="w"> </span><span class="nx">View</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">runtime</span><span class="p">.</span><span class="nx">md</span><span class="w">                  </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">6</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Runtime</span><span class="w"> </span><span class="nx">View</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">deployment</span><span class="p">.</span><span class="nx">md</span><span class="w">               </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">7</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Deployment</span><span class="w"> </span><span class="nx">View</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">patterns</span><span class="p">.</span><span class="nx">md</span><span class="w">                 </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">8</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Crosscutting</span><span class="w"> </span><span class="nx">Concepts</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">strategy</span><span class="p">.</span><span class="nx">md</span><span class="w">                 </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">4</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Solution</span><span class="w"> </span><span class="nx">Strategy</span><span class="w"> </span><span class="p">(</span><span class="nx">Tier</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">quality</span><span class="p">.</span><span class="nx">md</span><span class="w">                  </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">10</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Quality</span><span class="w"> </span><span class="nx">Requirements</span><span class="w"> </span><span class="p">(</span><span class="nx">Tier</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="nx">risks</span><span class="p">.</span><span class="nx">md</span><span class="w">                    </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">11</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">AI</span><span class="w"> </span><span class="nx">Debt</span><span class="w"> </span><span class="nx">Register</span><span class="w"> </span><span class="p">(</span><span class="nx">Tier</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span>
+<span class="w">    </span><span class="err">├──</span><span class="w"> </span><span class="nx">decisions</span><span class="o">/</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">README</span><span class="p">.</span><span class="nx">md</span><span class="w">                   </span><span class="err">#</span><span class="w"> </span><span class="nx">ADR</span><span class="w"> </span><span class="nx">index</span><span class="w"> </span><span class="p">(</span><span class="o">~</span><span class="mi">200</span><span class="w"> </span><span class="nx">tokens</span><span class="p">)</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="mi">001</span><span class="o">-</span><span class="nx">async</span><span class="o">-</span><span class="nx">mobile</span><span class="o">-</span><span class="nx">reads</span><span class="p">.</span><span class="nx">md</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="mi">002</span><span class="o">-</span><span class="nx">saga</span><span class="o">-</span><span class="nx">pattern</span><span class="p">.</span><span class="nx">md</span>
+<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="o">...</span>
+<span class="w">    </span><span class="err">└──</span><span class="w"> </span><span class="nx">glossary</span><span class="p">.</span><span class="nx">md</span><span class="w">                     </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">12</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Glossary</span>
+</code></pre></div>
+
+<p>The root <code>AGENTS.md</code> is the only file loaded in every session. It contains universal constraints as explicit rules, the top three quality objectives, and pointers — not content — to the deeper documentation. An agent working on a backend ticket also loads <code>packages/api/AGENTS.md</code>. An agent working on a frontend component loads <code>packages/frontend/AGENTS.md</code>. Neither loads the other.</p>
+<hr />
+<h3 id="what-the-files-actually-contain">What the Files Actually Contain</h3>
+<p>The content in each tier follows the same principle: explicit rules with their rationale, not prose description.</p>
+<p>The root <code>AGENTS.md</code> for the system from the opening scenario would contain:</p>
+<div class="codehilite"><pre><span></span><code><span class="gu">## Constraints (Universal)</span>
+
+<span class="k">-</span><span class="w"> </span><span class="gs">**No synchronous calls to CoreBanking_Legacy for new mobile reads.**</span>
+  Reason: The legacy endpoint cannot handle mobile peak traffic (ADR-001).
+  All new mobile read operations must route through the async caching layer via Kafka.
+
+<span class="k">-</span><span class="w"> </span><span class="gs">**All API endpoints require rate limiting.**</span>
+  Reason: EU AI Act Annex IV compliance requirement (docs/quality.md).
+
+<span class="k">-</span><span class="w"> </span><span class="gs">**No cross-service direct database access.**</span>
+  Reason: Microservice boundary invariant (docs/architecture/building-blocks.md).
+  Every service reads and writes only its own database.
+
+<span class="gu">## Top-3 Quality Goals</span>
+
+<span class="k">1.</span> <span class="gs">**Performance:**</span> Response time &lt; 200ms for all mobile endpoints (P95)
+<span class="k">2.</span> <span class="gs">**Compliance:**</span> EU AI Act Annex IV (high-risk components documented)
+<span class="k">3.</span> <span class="gs">**Availability:**</span> 99.9% for all customer-facing services
+
+<span class="gu">## Documentation Index</span>
+
+Full architecture documentation: docs/architecture/README.md
+Glossary: docs/glossary.md
+ADRs: docs/decisions/README.md
+</code></pre></div>
+
+<p>The architecture index (<code>docs/architecture/README.md</code>) functions as the entry point for Tier 2 content:</p>
+<div class="codehilite"><pre><span></span><code><span class="gh"># Architecture Documentation</span>
+
+Load the relevant section when your task touches the corresponding code area.
+
+| Section | File | Load when |
+|---|---|---|
+| Context &amp; Scope | context-scope.md | External API calls, event topics |
+| Building Blocks | building-blocks.md | New component, module refactor |
+| Runtime | runtime.md | Cross-module flows, interaction debugging |
+| Deployment | deployment.md | Config, IaC, CI/CD, env-specific logic |
+| Patterns | patterns.md | New service, auth, logging, error handling |
+| ADR Index | ../decisions/README.md | Technical choice, pattern inconsistency |
+</code></pre></div>
+
+<p>The context and scope file contains the system boundary diagram as a Mermaid block, not an image:</p>
+<div class="mermaid">
+C4Context
+  title System Context (Fixed)
+
+  Person(customer, "Customer", "Mobile Banking App user")
+
+  System(api_gateway, "API Gateway", "Kong")
+
+  System_Ext(kafka, "Kafka", "Async event bus")
+  System_Ext(core_banking, "CoreBanking_Legacy", "IBM Mainframe")
+  System_Ext(payment, "Payment Provider", "Stripe")
+
+  Rel(customer, api_gateway, "HTTPS")
+
+  %% Hierarchische Anordnung: Gateway -&gt; Kafka -&gt; Core Banking
+  Rel(api_gateway, kafka, "Publish (new mobile reads)")
+  Rel(kafka, core_banking, "Consume (async)")
+
+  Rel(api_gateway, payment, "REST")
+</div>
+
+<p>And a crosscutting concepts file (<code>patterns.md</code>) contains the Gold Standard implementation the agent should replicate — not describe in prose, but show in code:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">// Gold Standard: Service method with structured logging and error handling</span>
+<span class="c1">// This is the reference implementation. Replicate this pattern for all new service methods.</span>
+
+<span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">getAccountBalance</span><span class="p">(</span><span class="nx">accountId</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">AccountBalance</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">log</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">logger</span><span class="p">.</span><span class="nx">child</span><span class="p">({</span><span class="w"> </span><span class="nx">accountId</span><span class="p">,</span><span class="w"> </span><span class="nx">operation</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;getAccountBalance&#39;</span><span class="w"> </span><span class="p">});</span>
+<span class="w">  </span><span class="nx">log</span><span class="p">.</span><span class="nx">info</span><span class="p">(</span><span class="s1">&#39;Fetching balance&#39;</span><span class="p">);</span>
+
+<span class="w">  </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">balanceCache</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="nx">accountId</span><span class="p">);</span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">info</span><span class="p">({</span><span class="w"> </span><span class="nx">cached</span><span class="o">:</span><span class="w"> </span><span class="kt">true</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="s1">&#39;Balance retrieved&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">result</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">error</span><span class="p">({</span><span class="w"> </span><span class="nx">error</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="s1">&#39;Balance fetch failed&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">throw</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">ServiceError</span><span class="p">(</span><span class="s1">&#39;BALANCE_FETCH_FAILED&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">accountId</span><span class="w"> </span><span class="p">});</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<hr />
+<h3 id="the-genuine-gap-ai-specific-vocabulary">The Genuine Gap: AI-Specific Vocabulary</h3>
+<p>Arc42 as described above covers what any system needs documented. The gap for AI-augmented teams is not in structure — it is in vocabulary. Arc42 has no slot for the decisions that appear specifically in agentic systems: which base model was selected for a component and why, what the context window constraint is, what happens when the model declines a task, how much drift the surrounding system can tolerate before the component needs retraining.</p>
+<p>These decisions are being made in every team adopting agentic workflows right now. Most of them are going unrecorded. The RAD-AI framework extends arc42 with eight sections to close this gap — and does so backward-compatibly, meaning existing arc42 documentation does not need to be restructured.<sup id="fnref3:5"><a class="footnote-ref" href="#fn:5">5</a></sup> </p>
+<p>Section §11, in the RAD-AI extension, becomes the AI Debt Register: not prose observations about technical debt, but a structured list of patterns present in the codebase that are known debt and must not be replicated. The agent reads this register on every session start. It prevents the specific failure mode where an agent treats existing bad code as a precedent worth following.</p>
+<p>The ADR format gains seven new fields for AI components: base model, context window size and strategy, output format specification, fallback behavior when the model is unavailable or declines, drift tolerance thresholds, monitoring approach, and human-in-the-loop criteria. These are not niche concerns — they are operational requirements for any system that relies on non-deterministic components, and any team operating without them is accruing decision debt at the same rate they are accruing code.</p>
+<hr />
+<h3 id="what-this-changes-in-practice">What This Changes in Practice</h3>
+<p>The scenario from the opening section has a different outcome if this structure is in place. The agent picks up the ticket, loads the root <code>AGENTS.md</code>, and reads the first constraint under §2: no synchronous calls to CoreBanking_Legacy for new mobile reads. It loads the architecture index, sees that the building blocks file is relevant, and reads the async caching layer interface contract. It writes the implementation against the correct pattern, references ADR-001 in its commit message, and opens a Pull Request that passes review. This is a hypothetical — the same system, played forward with the documentation in place.</p>
+<p>What the research does support is narrower and more specific. Gloaguen et al. (2026) found that AGENTS.md files have a measurable positive effect when they contain explicit, task-relevant constraints — and a measurable negative effect when they don&rsquo;t, producing context bloat that actively degrades performance.<sup id="fnref2:15"><a class="footnote-ref" href="#fn:15">8</a></sup> The three-tier loading model is a direct structural response to that finding: global constraints only at the root, domain context loaded only when the task touches the relevant code area, reference material never loaded automatically. Whether that structure produces the outcome described above in practice depends on how well the documentation is written and maintained — a variable the model cannot control for.</p>
+<p>The documentation didn&rsquo;t make the agent smarter. It gave the agent the context it needed to apply what it already knows to the specific constraints of this system. That is a different claim, and a more tractable one.</p>
+<hr />
+<h2 id="conclusion">Conclusion</h2>
+<p>The instinct when facing a new problem is to reach for a new tool. Agentic coding feels new enough to justify that instinct — and the market has obliged, with a growing catalogue of frameworks, specification formats, and context management systems designed specifically for it.</p>
+<p>Most of that complexity is unnecessary. The problem is not that we lack the right documentation framework. arc42 has been solving the structural problem for over a decade: distinct concerns in distinct, locatable places, navigable without a full read. The problem is that the documentation lives in the wrong place — in Confluence, in a wiki, in a PDF that no agent will ever open. Moving it into the repository, as Markdown files, alongside the code it describes, is not a technical challenge. It is a habit change.</p>
+<p>The wheel does not need reinventing. It needs repositioning.</p>
+<p>What agents need from documentation is not different in kind from what human engineers need: the constraints they must not violate, the decisions that were already made and why, the interfaces they can rely on without reading the implementation. arc42 already has slots for all of it. The three-tier loading model is not a new invention — it is a way of reading what was already there with agent economics in mind.</p>
+<p>The one genuine gap is vocabulary. Agentic systems introduce decisions that no existing framework anticipated: base model selection, context window constraints, drift tolerance thresholds, fallback behavior when the model declines. These need to be recorded somewhere, and arc42 has no native slot for them. The RAD-AI extension closes that gap backward-compatibly. Everything else is already there.</p>
+<p>Source code remains the source of truth. Documentation remains the map that makes it navigable. Neither of those claims is new. What&rsquo;s changed is the cost of ignoring the second one — and the good news is that the tools to act on it have been available for years.</p>
+<hr />
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p>Paul Preiss, &ldquo;Spec-Driven Development is Better With Core Architecture,&rdquo; Architecture &amp; Governance, April 2026. <a href="https://www.architectureandgovernance.com/applications-technology/spec-driven-development-is-better-with-core-architecture/">https://www.architectureandgovernance.com/applications-technology/spec-driven-development-is-better-with-core-architecture/</a>&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+<li id="fn:2">
+<p>Birgitta Böckeler, &ldquo;Understanding Spec-Driven-Development: Kiro, spec-kit, and Tessl,&rdquo; martinfowler.com, October 2025. <a href="https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html">https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html</a>&#160;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 2 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:2" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+</li>
+<li id="fn:3">
+<p>Cline, &ldquo;Memory Bank,&rdquo; docs.cline.bot. <a href="https://docs.cline.bot/features/memory-bank">https://docs.cline.bot/features/memory-bank</a>&#160;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 3 in the text">&#8617;</a></p>
+</li>
+<li id="fn:4">
+<p>Michael Nygard, &ldquo;Documenting Architecture Decisions,&rdquo; Cognitect, 2011; Joel Parker Henderson, &ldquo;Architecture decision record,&rdquo; GitHub repository. <a href="https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions">https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions</a> <a href="https://github.com/joelparkerhenderson/architecture-decision-record">https://github.com/joelparkerhenderson/architecture-decision-record</a>&#160;<a class="footnote-backref" href="#fnref:4" title="Jump back to footnote 4 in the text">&#8617;</a></p>
+</li>
+<li id="fn:5">
+<p>Oliver Aleksander Larsen and Mahyar T. Moghaddam, &ldquo;RAD-AI: Rethinking Architecture Documentation for AI-Augmented Ecosystems,&rdquo; arXiv, 2026; companion repository. <a href="https://arxiv.org/abs/2603.28735">https://arxiv.org/abs/2603.28735</a> <a href="https://github.com/Oliver1703dk/RAD-AI">https://github.com/Oliver1703dk/RAD-AI</a>&#160;<a class="footnote-backref" href="#fnref:5" title="Jump back to footnote 5 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:5" title="Jump back to footnote 5 in the text">&#8617;</a><a class="footnote-backref" href="#fnref3:5" title="Jump back to footnote 5 in the text">&#8617;</a></p>
+</li>
+<li id="fn:6">
+<p>TeamDay.ai, &ldquo;The Complete Guide to Agentic Coding in 2026,&rdquo; 2026. <a href="https://www.teamday.ai/blog/complete-guide-agentic-coding-2026">https://www.teamday.ai/blog/complete-guide-agentic-coding-2026</a>&#160;<a class="footnote-backref" href="#fnref:6" title="Jump back to footnote 6 in the text">&#8617;</a></p>
+</li>
+<li id="fn:8">
+<p>Stack Overflow Blog, &ldquo;Building shared coding guidelines for AI (and people too),&rdquo; March 2026. <a href="https://stackoverflow.blog/2026/03/26/coding-guidelines-for-ai-agents-and-people-too/">https://stackoverflow.blog/2026/03/26/coding-guidelines-for-ai-agents-and-people-too/</a>&#160;<a class="footnote-backref" href="#fnref:8" title="Jump back to footnote 7 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:8" title="Jump back to footnote 7 in the text">&#8617;</a></p>
+</li>
+<li id="fn:15">
+<p>Thibaud Gloaguen et al., &ldquo;Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?&rdquo; arXiv, February 2026. <a href="https://arxiv.org/abs/2602.11988">https://arxiv.org/abs/2602.11988</a>&#160;<a class="footnote-backref" href="#fnref:15" title="Jump back to footnote 8 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:15" title="Jump back to footnote 8 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
+            </div>
+        </main>
+
+        <footer class="footer">&copy; 2026 Markus Wondrak</footer>
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#EDE8DC',
+                primaryTextColor: '#1A1714',
+                primaryBorderColor: '#DDD8CE',
+                lineColor: '#7C766E',
+                secondaryColor: '#F3EFE6',
+                tertiaryColor: '#F3EFE6',
+                fontFamily: "'Libre Franklin', 'Liberation Sans', system-ui, sans-serif"
+            },
+            flowchart: { useMaxWidth: true },
+            sequence: { useMaxWidth: true },
+            c4: { useMaxWidth: true }
+        });
+        mermaid.run().catch(function (err) { console.error('Mermaid:', err); });
+    </script>
+</body>
+</html>
