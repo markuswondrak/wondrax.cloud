@@ -197,6 +197,21 @@
             border-radius: 2px;
         }
 
+        /* ── Article hero image ── */
+        .article-hero {
+            margin-bottom: 3rem;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .article-hero__img {
+            display: block;
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+        }
+
         /* ── Article body ── */
         .article-body {
             font-family: var(--sans);
@@ -408,6 +423,8 @@
                 <h1 class="article-header__title">{{title}}</h1>
                 {{tags_html}}
             </div>
+
+            {{hero_image_html}}
 
             <div class="article-body">
                 {{content}}

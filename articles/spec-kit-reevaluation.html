@@ -197,6 +197,21 @@
             border-radius: 2px;
         }
 
+        /* ── Article hero image ── */
+        .article-hero {
+            margin-bottom: 3rem;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .article-hero__img {
+            display: block;
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+        }
+
         /* ── Article body ── */
         .article-body {
             font-family: var(--sans);
@@ -413,6 +428,8 @@
                     <span class="article-header__tag">Enterprise</span>
                 </div>
             </div>
+
+            
 
             <div class="article-body">
                 <p>I haven&rsquo;t written a line of code by hand in months. What I do instead is describe systems — their behavior, their boundaries, their constraints — and watch agents translate that into working software. They coordinate across repositories, generate migration scripts, work through large codebases with a degree of continuity that would have been difficult to believe a few years ago. The machinery works. The harder question is what keeps it coherent when the scope expands: when sessions restart, when a sequence of agent calls is supposed to share a consistent model of what it is building, when the plan that made sense at the start silently becomes something else. That is what structural workflow tooling is meant to solve. And it is exactly where most implementations break down.</p>

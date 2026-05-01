@@ -5,6 +5,7 @@ import glob
 import os
 import re
 import html
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -101,6 +102,7 @@ def parse_article(filepath: str) -> dict | None:
         "excerpt": excerpt,
         "tags": meta.get("tags", []),
         "reading_time": meta.get("reading_time", ""),
+        "image": meta.get("image", ""),
         "slug": slug,
         "body": body,
         "source": filepath,
@@ -117,6 +119,28 @@ def render_markdown(text: str) -> str:
 def format_date_display(date_obj: datetime) -> str:
     """Format date as '15 Apr 2026'."""
     return date_obj.strftime("%d %b %Y")
+
+
+def resolve_article_image(article: dict, images_dir: Path) -> None:
+    """Copy the article's image into the site's images dir and update the path in-place."""
+    raw = article.get("image", "")
+    if not raw:
+        return
+
+    source_dir = Path(article["source"]).parent
+    src = (source_dir / raw).resolve()
+
+    if not src.exists():
+        print(f"  Warning: image not found: {src}")
+        article["image"] = ""
+        return
+
+    images_dir.mkdir(parents=True, exist_ok=True)
+    dest = images_dir / src.name
+    shutil.copy2(src, dest)
+    # Rewrite to path relative to the output HTML file (articles/<slug>.html)
+    article["image"] = f"images/{src.name}"
+    print(f"  Copied image: {src.name}")
 
 
 def build_article_page(article: dict, template: str) -> str:
@@ -140,6 +164,16 @@ def build_article_page(article: dict, template: str) -> str:
         )
         tags_html = f'<div class="article-header__tags">\n{tag_spans}\n                </div>'
 
+    hero_image_html = ""
+    if article["image"]:
+        safe_src = html.escape(article["image"], quote=True)
+        safe_alt = html.escape(article["title"], quote=True)
+        hero_image_html = (
+            f'<div class="article-hero">'
+            f'<img class="article-hero__img" src="{safe_src}" alt="{safe_alt}">'
+            f'</div>'
+        )
+
     page = template
     page = page.replace("{{title}}", html.escape(article["title"]))
     page = page.replace("{{excerpt}}", html.escape(article["excerpt"]))
@@ -147,6 +181,7 @@ def build_article_page(article: dict, template: str) -> str:
     page = page.replace("{{date_display}}", date_display)
     page = page.replace("{{reading_time_html}}", reading_time_html)
     page = page.replace("{{tags_html}}", tags_html)
+    page = page.replace("{{hero_image_html}}", hero_image_html)
     page = page.replace("{{content}}", content_html)
 
     return page
@@ -236,7 +271,9 @@ def main():
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     # Generate individual article pages
+    images_dir = OUTPUT_DIR / "images"
     for article in articles:
+        resolve_article_image(article, images_dir)
         page_html = build_article_page(article, template)
         output_path = OUTPUT_DIR / f"{article['slug']}.html"
         with open(output_path, "w", encoding="utf-8") as f:

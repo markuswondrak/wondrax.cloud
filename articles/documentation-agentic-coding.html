@@ -197,6 +197,21 @@
             border-radius: 2px;
         }
 
+        /* ── Article hero image ── */
+        .article-hero {
+            margin-bottom: 3rem;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .article-hero__img {
+            display: block;
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+        }
+
         /* ── Article body ── */
         .article-body {
             font-family: var(--sans);
@@ -413,6 +428,8 @@
                     <span class="article-header__tag">Documentation</span>
                 </div>
             </div>
+
+            <div class="article-hero"><img class="article-hero__img" src="images/infographic.png" alt="From Wiki to Source: How arc42 Becomes the Context Layer for AI Agents"></div>
 
             <div class="article-body">
                 <p>An agent gets a straightforward ticket: &ldquo;Display the available overdraft limit on the mobile banking dashboard.&rdquo; It does what any good engineer would — it looks for existing patterns. It explores the AccountOrchestration API, spots dozens of existing synchronous REST calls to the CoreBanking_Legacy endpoint, and replicates the pattern to fetch the overdraft data. The code is clean, the unit tests pass, and the agent opens a Pull Request.</p>
