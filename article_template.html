@@ -1,462 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="{{excerpt}}">
-    <title>{{title}} — Markus Wondrak</title>
-    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Libre+Franklin:wght@300;400;500;600&family=Spectral:wght@600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg:          #F3EFE6;
-            --bg-hover:    #EDE8DC;
-            --text:        #1A1714;
-            --text-dim:    #7C766E;
-            --text-faint:  #B0A89E;
-            --border:      #DDD8CE;
-            --link:        #6B5A3A;
-            --link-hover:  #1A1714;
-
-            --serif: 'Spectral', Georgia, serif;
-            --sans:  'Libre Franklin', 'Liberation Sans', system-ui, sans-serif;
-            --mono:  'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
-            --ease:  cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-
-        *, *::before, *::after {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            font-size: 110%;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        body {
-            font-family: var(--sans);
-            background: var(--bg);
-            color: var(--text-dim);
-        }
-
-        a { color: var(--link); text-decoration: none; }
-        a:hover { color: var(--link-hover); }
-
-        /* ── Skip link ── */
-        .skip-link {
-            position: absolute;
-            top: -100%;
-            left: 1rem;
-            z-index: 100;
-            padding: 0.6rem 1.2rem;
-            background: var(--link);
-            color: var(--bg);
-            font-family: var(--mono);
-            font-size: 0.7rem;
-            letter-spacing: 0.05em;
-            border-radius: 0 0 4px 4px;
-            transition: top 0.15s var(--ease);
-        }
-
-        .skip-link:focus { top: 0; }
-
-        /* ── Page shell ── */
-        .page {
-            max-width: 700px;
-            margin: 0 auto;
-            padding: 4rem 2rem 6rem;
-            animation: fadeIn 0.6s var(--ease) both;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ── Header ── */
-        .header {
-            display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            gap: 1.5rem;
-            margin-bottom: 4rem;
-            padding-bottom: 1.5rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .header__name {
-            font-family: var(--serif);
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: var(--text);
-            letter-spacing: -0.02em;
-            transition: color 0.2s var(--ease);
-        }
-
-        .header__name:hover { color: var(--link); }
-
-        .header__nav {
-            display: flex;
-            align-items: center;
-            gap: 1.25rem;
-        }
-
-        .header__nav-item {
-            font-family: var(--mono);
-            font-size: 0.6rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--text-faint);
-            transition: color 0.2s var(--ease);
-        }
-
-        a.header__nav-item:hover { color: var(--link-hover); }
-
-        .header__nav-item--active { color: var(--text-dim); }
-
-        .header__nav-dot {
-            width: 3px;
-            height: 3px;
-            border-radius: 50%;
-            background: var(--border);
-        }
-
-        /* ── Article header ── */
-        .article-header {
-            margin-bottom: 3rem;
-        }
-
-        .article-header__back {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            font-family: var(--mono);
-            font-size: 0.6rem;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: var(--text-faint);
-            margin-bottom: 2rem;
-            transition: color 0.2s var(--ease);
-        }
-
-        .article-header__back:hover { color: var(--link); }
-
-        .article-header__meta {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .article-header__date {
-            font-family: var(--mono);
-            font-size: 0.6rem;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: var(--text-faint);
-        }
-
-        .article-header__time {
-            font-family: var(--mono);
-            font-size: 0.575rem;
-            letter-spacing: 0.04em;
-            color: var(--text-faint);
-            opacity: 0.7;
-        }
-
-        .article-header__title {
-            font-family: var(--serif);
-            font-size: clamp(2rem, 4.5vw, 2.8rem);
-            font-weight: 700;
-            color: var(--text);
-            line-height: 1.1;
-            letter-spacing: -0.02em;
-            margin-bottom: 0.75rem;
-        }
-
-        .article-header__tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.35rem;
-            margin-top: 1rem;
-        }
-
-        .article-header__tag {
-            font-family: var(--mono);
-            font-size: 0.55rem;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: var(--text-faint);
-            border: 1px solid var(--border);
-            padding: 0.2rem 0.5rem;
-            border-radius: 2px;
-        }
-
-        /* ── Article hero image ── */
-        .article-hero {
-            margin-bottom: 3rem;
-            border-radius: 4px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-        }
-
-        .article-hero__img {
-            display: block;
-            width: 100%;
-            height: auto;
-            object-fit: cover;
-        }
-
-        /* ── Article body ── */
-        .article-body {
-            font-family: var(--sans);
-            font-size: 0.95rem;
-            color: var(--text-dim);
-            line-height: 1.8;
-        }
-
-        .article-body p {
-            margin-bottom: 1.5rem;
-            max-width: 65ch;
-        }
-
-        .article-body h2 {
-            font-family: var(--serif);
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text);
-            letter-spacing: -0.01em;
-            margin-top: 3rem;
-            margin-bottom: 1rem;
-            line-height: 1.2;
-        }
-
-        .article-body h3 {
-            font-family: var(--serif);
-            font-size: 1.15rem;
-            font-weight: 600;
-            color: var(--text);
-            margin-top: 2rem;
-            margin-bottom: 0.75rem;
-            line-height: 1.3;
-        }
-
-        .article-body strong {
-            color: var(--text);
-            font-weight: 600;
-        }
-
-        .article-body em {
-            font-style: italic;
-        }
-
-        .article-body ul, .article-body ol {
-            margin-bottom: 1.5rem;
-            padding-left: 1.5rem;
-        }
-
-        .article-body li {
-            margin-bottom: 0.4rem;
-            max-width: 65ch;
-        }
-
-        .article-body blockquote {
-            border-left: 2px solid var(--border);
-            padding-left: 1.25rem;
-            margin: 1.5rem 0;
-            color: var(--text-faint);
-            font-style: italic;
-        }
-
-        .article-body code {
-            font-family: var(--mono);
-            font-size: 0.8em;
-            background: var(--bg-hover);
-            padding: 0.15rem 0.35rem;
-            border-radius: 3px;
-            color: var(--text);
-        }
-
-        .article-body pre {
-            background: #1A1714;
-            color: #D4D0C8;
-            padding: 1.25rem 1.5rem;
-            border-radius: 4px;
-            overflow-x: auto;
-            margin: 1.5rem 0;
-            font-size: 0.8rem;
-            line-height: 1.6;
-        }
-
-        .article-body pre code {
-            background: none;
-            padding: 0;
-            color: inherit;
-            font-size: inherit;
-        }
-
-        /* Mermaid (overrides dark `pre` code-block chrome) */
-        .article-body pre.mermaid {
-            background: var(--bg-hover);
-            color: var(--text-dim);
-            border: 1px solid var(--border);
-        }
-
-        .article-body div.mermaid {
-            margin: 1.5rem 0;
-            padding: 1rem 1.25rem;
-            background: var(--bg-hover);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            overflow-x: auto;
-        }
-
-        .article-body .mermaid svg {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-
-        .article-body hr {
-            border: none;
-            border-top: 1px solid var(--border);
-            margin: 2.5rem 0;
-        }
-
-        .article-body a {
-            color: var(--link);
-            text-decoration: underline;
-            text-underline-offset: 2px;
-            text-decoration-color: var(--border);
-            transition: text-decoration-color 0.2s var(--ease);
-        }
-
-        .article-body a:hover {
-            text-decoration-color: var(--link);
-        }
-
-        /* ── Footnotes ── */
-        .article-body .footnote-ref {
-            font-size: 0.75em;
-            vertical-align: super;
-            line-height: 0;
-            text-decoration: none;
-        }
-
-        .article-body .footnote {
-            font-size: 0.8rem;
-            color: var(--text-faint);
-            line-height: 1.6;
-            border-top: 1px solid var(--border);
-            margin-top: 3rem;
-            padding-top: 1.5rem;
-        }
-
-        .article-body .footnote ol {
-            padding-left: 1.25rem;
-        }
-
-        .article-body .footnote li {
-            margin-bottom: 0.5rem;
-        }
-
-        .article-body .footnote p {
-            margin-bottom: 0.25rem;
-        }
-
-        .article-body .footnote > hr {
-            display: none;
-        }
-
-        /* ── Footer ── */
-        .footer {
-            margin-top: 4rem;
-            padding-top: 1.25rem;
-            border-top: 1px solid var(--border);
-            font-family: var(--mono);
-            font-size: 0.6rem;
-            color: var(--text-faint);
-            letter-spacing: 0.04em;
-        }
-
-        /* ── Responsive ── */
-        @media (max-width: 520px) {
-            .page {
-                padding: 2.5rem 1.25rem 4rem;
-            }
-
-            .header {
-                margin-bottom: 2.5rem;
-            }
-
-            .article-header__title {
-                font-size: 1.8rem;
-            }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .page { animation: none; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="{{excerpt}}">
+  <title>{{title}} — Markus Wondrak</title>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css?v=3">
 </head>
 <body>
-    <a href="#article" class="skip-link">Skip to article</a>
-    <div class="page">
+  <div class="reading-progress" id="reading-progress"></div>
 
-        <header class="header">
-            <a href="../index.html" class="header__name">Markus Wondrak</a>
-            <nav class="header__nav" aria-label="Site navigation">
-                <a href="../index.html" class="header__nav-item">Projects</a>
-                <span class="header__nav-dot" aria-hidden="true"></span>
-                <a href="../blog.html" class="header__nav-item header__nav-item--active">Writing</a>
-            </nav>
-        </header>
-
-        <main id="article">
-            <div class="article-header">
-                <a href="../blog.html" class="article-header__back">← Back to Writing</a>
-                <div class="article-header__meta">
-                    <time class="article-header__date" datetime="{{date_iso}}">{{date_display}}</time>
-                    {{reading_time_html}}
-                </div>
-                <h1 class="article-header__title">{{title}}</h1>
-                {{tags_html}}
-            </div>
-
-            {{hero_image_html}}
-
-            <div class="article-body">
-                {{content}}
-            </div>
-        </main>
-
-        <footer class="footer">&copy; 2026 Markus Wondrak</footer>
-
+  <header class="masthead masthead--compact">
+    <div class="container">
+      <a href="../index.html" class="logo">Markus Wondrak</a>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-    <script>
-        mermaid.initialize({
-            startOnLoad: false,
-            theme: 'base',
-            themeVariables: {
-                primaryColor: '#EDE8DC',
-                primaryTextColor: '#1A1714',
-                primaryBorderColor: '#DDD8CE',
-                lineColor: '#7C766E',
-                secondaryColor: '#F3EFE6',
-                tertiaryColor: '#F3EFE6',
-                fontFamily: "'Libre Franklin', 'Liberation Sans', system-ui, sans-serif"
-            },
-            flowchart: { useMaxWidth: true },
-            sequence: { useMaxWidth: true },
-            c4: { useMaxWidth: true }
-        });
-        mermaid.run().catch(function (err) { console.error('Mermaid:', err); });
-    </script>
+  </header>
+
+  <main>
+    <article class="article-page">
+      <header class="article-header">
+        <div class="container container--narrow">
+          <a href="../index.html" class="back-link">← Back to all writing</a>
+          <div class="article-meta">
+            <time datetime="{{date_iso}}">{{date_display}}</time>
+            {{reading_time_html}}
+          </div>
+          <h1 class="article-headline">{{title}}</h1>
+          {{tags_html}}
+        </div>
+      </header>
+
+      {{hero_image_html}}
+
+      <div class="article-body">
+        <div class="container container--narrow">
+          {{content}}
+        </div>
+      </div>
+
+      <footer class="article-footer">
+        <div class="container container--narrow">
+          <a href="../index.html" class="back-link">← Back to all writing</a>
+        </div>
+      </footer>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>© 2026 Markus Wondrak</p>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      var progressBar = document.getElementById('reading-progress');
+      if (!progressBar) return;
+      function updateProgress() {
+        var scrollTop = window.scrollY || document.documentElement.scrollTop;
+        var docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        var progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+        progressBar.style.width = progress + '%';
+      }
+      window.addEventListener('scroll', updateProgress, { passive: true });
+      updateProgress();
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#EDE8DC',
+        primaryTextColor: '#1A1714',
+        primaryBorderColor: '#DDD8CE',
+        lineColor: '#7C766E',
+        secondaryColor: '#F3EFE6',
+        tertiaryColor: '#F3EFE6',
+        fontFamily: "'Source Serif 4', Georgia, serif"
+      },
+      flowchart: { useMaxWidth: true },
+      sequence: { useMaxWidth: true },
+      c4: { useMaxWidth: true }
+    });
+    mermaid.run().catch(function (err) { console.error('Mermaid:', err); });
+  </script>
 </body>
 </html>
