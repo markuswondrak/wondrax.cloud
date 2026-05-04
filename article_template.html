@@ -56,6 +56,10 @@
     </div>
   </footer>
 
+  <div class="lightbox" aria-hidden="true">
+    <img src="" alt="">
+  </div>
+
   <script>
     (function() {
       var progressBar = document.getElementById('reading-progress');
@@ -68,6 +72,34 @@
       }
       window.addEventListener('scroll', updateProgress, { passive: true });
       updateProgress();
+    })();
+
+    // Lightbox for article hero images
+    (function() {
+      var lightbox = document.querySelector('.lightbox');
+      var lightboxImg = lightbox.querySelector('img');
+      var heroImages = document.querySelectorAll('.article-hero img');
+
+      heroImages.forEach(function(img) {
+        img.addEventListener('click', function() {
+          lightboxImg.src = img.src;
+          lightboxImg.alt = img.alt;
+          lightbox.classList.add('is-active');
+          lightbox.setAttribute('aria-hidden', 'false');
+        });
+      });
+
+      lightbox.addEventListener('click', function() {
+        lightbox.classList.remove('is-active');
+        lightbox.setAttribute('aria-hidden', 'true');
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && lightbox.classList.contains('is-active')) {
+          lightbox.classList.remove('is-active');
+          lightbox.setAttribute('aria-hidden', 'true');
+        }
+      });
     })();
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>

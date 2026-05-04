@@ -81,7 +81,9 @@ def parse_article(filepath: str) -> dict | None:
             except ValueError:
                 continue
         else:
-            print(f"  Warning: unparseable date '{date_str}' in {filepath}, using epoch")
+            print(
+                f"  Warning: unparseable date '{date_str}' in {filepath}, using epoch"
+            )
             date_obj = datetime(1970, 1, 1)
 
     # Auto-extract excerpt from first paragraph if missing
@@ -135,12 +137,14 @@ def resolve_article_image(article: dict, images_dir: Path) -> None:
         article["image"] = ""
         return
 
+    slug = article["slug"]
+    namespaced_name = f"{slug}_{src.name}"
     images_dir.mkdir(parents=True, exist_ok=True)
-    dest = images_dir / src.name
+    dest = images_dir / namespaced_name
     shutil.copy2(src, dest)
     # Rewrite to path relative to the output HTML file (articles/<slug>.html)
-    article["image"] = f"images/{src.name}"
-    print(f"  Copied image: {src.name}")
+    article["image"] = f"images/{namespaced_name}"
+    print(f"  Copied image: {namespaced_name}")
 
 
 def build_article_page(article: dict, template: str) -> str:
@@ -152,9 +156,7 @@ def build_article_page(article: dict, template: str) -> str:
     # Build optional HTML fragments
     reading_time_html = ""
     if article["reading_time"]:
-        reading_time_html = (
-            f'<span class="article-header__time">{html.escape(article["reading_time"])}</span>'
-        )
+        reading_time_html = f'<span class="article-header__time">{html.escape(article["reading_time"])}</span>'
 
     tags_html = ""
     if article["tags"]:
@@ -162,7 +164,9 @@ def build_article_page(article: dict, template: str) -> str:
             f'                    <span class="article-header__tag">{html.escape(t)}</span>'
             for t in article["tags"]
         )
-        tags_html = f'<div class="article-header__tags">\n{tag_spans}\n                </div>'
+        tags_html = (
+            f'<div class="article-header__tags">\n{tag_spans}\n                </div>'
+        )
 
     hero_image_html = ""
     if article["image"]:
@@ -171,7 +175,7 @@ def build_article_page(article: dict, template: str) -> str:
         hero_image_html = (
             f'<div class="article-hero">'
             f'<img class="article-hero__img" src="{safe_src}" alt="{safe_alt}">'
-            f'</div>'
+            f"</div>"
         )
 
     page = template
@@ -229,7 +233,9 @@ def update_blog_listing(articles: list[dict]) -> None:
     entries = "\n\n".join(build_listing_entry(a) for a in articles)
     new_section = f"{MARKER_START}\n\n{entries}\n\n                {MARKER_END}"
 
-    blog_html = blog_html[:start_idx] + new_section + blog_html[end_idx + len(MARKER_END):]
+    blog_html = (
+        blog_html[:start_idx] + new_section + blog_html[end_idx + len(MARKER_END) :]
+    )
 
     with open(BLOG_PATH, "w", encoding="utf-8") as f:
         f.write(blog_html)
