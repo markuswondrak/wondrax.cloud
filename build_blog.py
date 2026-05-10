@@ -12,8 +12,8 @@ from pathlib import Path
 import yaml
 import markdown
 
-ARTICLES_SOURCE = os.path.expanduser("~/workspace/articles")
 SITE_ROOT = Path(__file__).parent
+ARTICLES_SOURCE = SITE_ROOT / "article-sources"
 TEMPLATE_PATH = SITE_ROOT / "article_template.html"
 BLOG_PATH = SITE_ROOT / "blog.html"
 OUTPUT_DIR = SITE_ROOT / "articles"
