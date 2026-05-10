@@ -36,7 +36,7 @@ And the compounding dynamic in long sessions makes this worse: a small drift in 
 
 ## The Architecture That Should Work
 
-The obvious engineering response follows directly from the drift diagnosis: if an agent drifts because it carries too much — too many phases, too many concerns, too long a session — the fix is to narrow its scope. Give each agent exactly one job. A researcher that only retrieves and summarizes. A coder that only implements a bounded task against a given spec. A reviewer that only evaluates output against defined criteria. Each worker has a short context, a single responsibility, and only the tools that responsibility requires.
+The obvious engineering response follows directly from the drift diagnosis: if an agent drifts because it carries too much — too many phases, too many concerns, too long a session — the fix is to narrow its scope. Give each agent exactly one job. A *researcher* that only retrieves and summarizes. A *coder* that only implements a bounded task against a given spec. A *reviewer* that only evaluates output against defined criteria. Each worker has a short context, a single responsibility, and only the tools that responsibility requires.
 
 This is the specialist-worker architecture. The researcher receives a question and returns structured findings. The coder receives a spec and a file list and returns a diff. The reviewer receives code and acceptance criteria and returns a pass/fail with notes. The context window for each call stays narrow. The drift surface shrinks proportionally. Each invocation is short enough that recency effects and the "lost in the middle" problem don't dominate. On paper, the architecture solves the problem that the single-agent approach could not.
 
