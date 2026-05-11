@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Agents are probabilistic by design. Hard workflow guarantees — phase gates, enforced sequencing, human checkpoints — cannot be achieved by giving an agent better instructions. They require a runtime that the agent cannot override.">
+  <title>When Orchestrators Drift: Why Deterministic Pipelines Must Live Outside the Agent — Markus Wondrak</title>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css?v=3">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
+</head>
+<body>
+  <div class="reading-progress" id="reading-progress"></div>
+
+  <header class="masthead masthead--compact">
+    <div class="container">
+      <a href="../index.html" class="logo">Markus Wondrak</a>
+    </div>
+  </header>
+
+  <main>
+    <article class="article-page">
+      <header class="article-header">
+        <div class="container container--narrow">
+          <a href="../index.html" class="back-link">← Back to all writing</a>
+          <div class="article-meta">
+            <time datetime="2026-05-10">10 May 2026</time>
+            <span class="article-header__time">13 min read</span>
+          </div>
+          <h1 class="article-headline">When Orchestrators Drift: Why Deterministic Pipelines Must Live Outside the Agent</h1>
+          <div class="article-header__tags">
+                    <span class="article-header__tag">Agentic Coding</span>
+                    <span class="article-header__tag">Spec Kit</span>
+                    <span class="article-header__tag">Architecture</span>
+                    <span class="article-header__tag">Workflows</span>
+                </div>
+        </div>
+      </header>
+
+      
+
+      <div class="article-body">
+        <div class="container container--narrow">
+          <p>The agent had been running for forty minutes. The task was clear: refactor the authentication module, write tests, open a PR. No surprises.</p>
+<p>By minute twelve, it had drifted. Not dramatically — it still produced code, still ran the test suite, still committed incrementally. But the spec it had been given called for an architecture review before touching the token validation logic. The agent skipped it. Not because it decided to — it never decided anything. It moved to the next plausible step, because &ldquo;next plausible step&rdquo; is what the model does.</p>
+<p>By minute forty, the test suite was passing. The authentication module had been refactored in a way that was syntactically correct, functionally coherent, and architecturally incompatible with the planned microservices migration. The agent had been consistent. Just not right. And because it had been consistent, the errors compounded quietly across every commit.</p>
+<p>This is agentic drift. It is not a model quality problem. It is a structural consequence of asking a probabilistic system to manage its own workflow — and it gets worse the longer the session runs.</p>
+<p>When you ask your agent how to mitigate that risk, it will suggest writing better instructions. Add emphasis. Make the constraint louder. I have done this. The system prompt began accumulating things like <code>IMPORTANT: DO NOT proceed to implementation before the architecture review is complete. YOU MUST ASK THE USER TO CONFIRM FIRST.</code> All caps. Exclamation marks. The model read those instructions with the same probabilistic attention it applied to everything else in the context window. Sometimes it complied. Under a long context with competing signals, it did not. The instructions had weight — not authority.</p>
+<hr />
+<h2 id="why-agents-drift">Why Agents Drift</h2>
+<p>The underlying mechanism is how attention works. Models do not process context uniformly — tokens at the beginning and end of the context window receive systematically more weight than those in the middle.<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup> Recency is a further pull: the closer a token is to the current generation point, the stronger its influence on the next prediction. This means a constraint written in the system prompt does not get read once and retained. It competes continuously against everything that has accumulated between it and the current step — and that competition is structural, not a failure of model quality.</p>
+<p>Session length is the practical consequence. The longer the session, the more tool outputs, intermediate results, and generated content accumulate between early instructions and the current generation point. A constraint established in the first ten minutes may have no practical weight by minute sixty — not because the agent decided to ignore it, but because it has been progressively outweighed by more recent material.</p>
+<p>Phase discipline is the next casualty. A workflow that requires design before planning before implementation is a sequence of commitments. In a human workflow, something enforces those commitments: a ticket system, a review gate, a process that withholds the next step until the previous one is signed off. In an agent workflow that exists only as instructions in a prompt, the mechanism is the model&rsquo;s compliance with those instructions. Compliance is probabilistic. Under pressure — a long context, a complex task, conflicting signals — it degrades.</p>
+<p>The third factor is stochastic divergence. Run the same agentic workflow twice with identical inputs and you will not get identical outputs. This is expected — it is not a defect. But it means that any workflow property you rely on is a statistical tendency, not a guarantee. The agent will usually check architecture constraints. It will usually run linting before committing. Under the load of a long context or an unlucky sampling path, it won&rsquo;t.</p>
+<p>And the compounding dynamic in long sessions makes this worse: a small drift in step three becomes a larger constraint violation in step seven, because subsequent steps optimize for the current state — however that state was arrived at. By the end of a multi-hour session, the distance between what was intended and what was produced can be substantial, even though every individual step looked plausible.<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup></p>
+<hr />
+<h2 id="the-architecture-that-should-work">The Architecture That Should Work</h2>
+<p>The obvious engineering response follows directly from the drift diagnosis: if an agent drifts because it carries too much — too many phases, too many concerns, too long a session — the fix is to narrow its scope. Give each agent exactly one job. A <em>researcher</em> that only retrieves and summarizes. A <em>coder</em> that only implements a bounded task against a given spec. A <em>reviewer</em> that only evaluates output against defined criteria. Each worker has a short context, a single responsibility, and only the tools that responsibility requires.</p>
+<p>This is the specialist-worker architecture. The researcher receives a question and returns structured findings. The coder receives a spec and a file list and returns a diff. The reviewer receives code and acceptance criteria and returns a pass/fail with notes. The context window for each call stays narrow. The drift surface shrinks proportionally. Each invocation is short enough that recency effects and the &ldquo;lost in the middle&rdquo; problem don&rsquo;t dominate. On paper, the architecture solves the problem that the single-agent approach could not.</p>
+<p>But the workers don&rsquo;t coordinate themselves. Something has to decide which worker runs next, what output gets passed as input to the following step, whether the reviewer&rsquo;s rejection means retry or abort. The natural answer — the answer most teams reach — is to handle coordination with another agent. An orchestrator that receives the original goal, maintains the overall plan, dispatches workers in sequence, and synthesizes their outputs into a coherent result. It is a reasonable design. It is also the point where the original problem re-enters the system.</p>
+<p>The orchestrator is an agent. It is subject to exactly the same attention mechanics established above. Its context window accumulates the outputs of every worker it has dispatched — research summaries, generated diffs, reviewer notes. Early decisions recede into the middle of a growing context: the architectural constraints agreed on at the start of the session, the scope boundaries defined before any code was written. The orchestrator&rsquo;s judgment about what the reviewer&rsquo;s output means, whether a failed test warrants a retry or a replanning, which worker should handle an unexpected edge case — all of that is probabilistic inference against a context that degrades over time. The specialist workers reduced drift at the leaf level. The orchestrator reintroduces it at the root.</p>
+<p>The underlying assumption is that the orchestrator manages state coherently across the full session. In a short session with a tightly scoped task, this holds. Scale either dimension — session length or task complexity — and the assumption breaks for the same reasons it broke with the single agent.</p>
+<hr />
+<h2 id="structure-cannot-live-inside-the-agent">Structure Cannot Live Inside the Agent</h2>
+<p>This is the core problem, stated precisely: a deterministic property cannot be achieved through a probabilistic mechanism.</p>
+<p>Software engineering requires determinism in specific places. A function call either succeeds or raises an exception. An API contract is met or it is not. A test passes or it fails. These are not approximations. They are boolean facts on which the rest of the system depends. When an agent is asked to <em>guarantee</em> that planning was completed before implementation began, the guarantee is only as strong as the model&rsquo;s disposition to comply.</p>
+<p>Matthew Thompson&rsquo;s <em>Dual-State Agent Process framework</em> formalizes this as a separation between two state spaces.<sup id="fnref:3"><a class="footnote-ref" href="#fn:3">3</a></sup> The first is $S_{workflow}$: the deterministic control flow — what states are legal, what transitions are permitted, what happens when a guard condition fails. The second is $S_{env}$: the stochastic environment where content is generated. These are fundamentally different concerns. $S_{env}$ is where the agent operates, and probabilistic behavior is appropriate there — that is the space where language model capabilities are relevant. $S_{workflow}$ must be engineered, not modeled.</p>
+<p>Post-condition guards follow from this separation. Instead of trusting the agent to self-certify that a phase is complete, a deterministic guard function evaluates the output against defined criteria before the workflow advances. The agent produces content; the runtime decides what happens next. The agent can be wrong. The guard is not.</p>
+<p>There is a cost beyond correctness when this separation is absent. Without enforced state, every agent call must carry enough workflow context for the model to orient itself: current phase, completed phases, applicable rules, transition criteria. It all goes into the system prompt. With a workflow state machine managing transitions externally, each call receives only the instructions scoped to the current state. The context is narrower, cheaper, and less susceptible to instruction decay toward the end of a long window.</p>
+<p>The conclusion is inconvenient but unavoidable. You cannot make an agent more deterministic by giving it better instructions. Instructions are processed by the same probabilistic mechanism that causes drift in the first place. The only way to enforce workflow structure is to move it outside the agent entirely — into an execution environment the agent cannot override.</p>
+<hr />
+<h2 id="engineering-already-has-a-framework-for-this">Engineering Already Has a Framework for This</h2>
+<p>The software development lifecycle is a system of enforced handoffs, not a set of recommendations. Decades of practice produced explicit gates because teams learned that advancing on a broken foundation compounds errors faster than fixing them early.</p>
+<p>Those gates take two forms. Phase gates control sequencing: Scrum&rsquo;s Definition of Ready means a requirement cannot enter a sprint until it is specified well enough to be implemented. Large changes must be designed and decomposed into tasks before implementation begins. No skipping, no self-certification. Quality gates control output: the CI pipeline does not ask the developer whether the code is correct — it runs the tests, evaluates the result, and either blocks the merge or allows it. The developer&rsquo;s intent is not a factor. The outcome is a fact.</p>
+<p>Agents need the same structure, for the same reasons. An agent is a capable, generative worker — exactly the kind of worker you want inside a well-defined pipeline. But it should not be the pipeline. It should not decide when phases transition, whether its own output met the required criteria, or how many iterations a loop should run. Those are runtime properties. A human team enforces them with process and tooling. An agentic system needs the same enforcement — built into the execution environment, not requested of the model.</p>
+<p>The agentic workflow engine is the piece that most implementations are missing. It is what makes the rest of the architecture coherent.</p>
+<hr />
+<h2 id="spec-kit-specification-as-the-primary-artifact">Spec-Kit: Specification as the Primary Artifact</h2>
+<p>GitHub&rsquo;s Spec-Kit is an open-source toolkit for spec-driven development with AI. The central premise is straightforward: before an agent writes code, it should produce a formal specification of what it intends to build — and that specification should be reviewed and agreed on before implementation begins. The spec is not documentation added after the fact. It is the primary artifact from which everything downstream — the plan, the task list, the implementation — is derived.</p>
+<p>The toolkit structures agentic work into four sequential phases. Specify produces a written statement of intent: what is being built and why. Plan translates that into a technical approach: how it will be built. Tasks decomposes the plan into atomic, implementable units. Implement executes them. Each phase produces a distinct artifact; each artifact is the input to the next phase. A <code>constitution</code> file sits alongside the phases as a persistent layer of project-level constraints — architecture rules, naming conventions, boundaries the agent must not cross — that applies across all phases without being re-stated in every prompt.</p>
+<p>Each phase is invoked through a scoped slash command — <code>/specify</code>, <code>/plan</code>, <code>/tasks</code>, <code>/implement</code>. These are not free-text prompts. They are predefined agent instructions, each loading only the context relevant to that phase. The agent handling <code>/plan</code> knows it is planning — it does not carry the implementation instructions, the testing criteria, or anything outside its current responsibility. The cognitive surface is narrow by design: the same principle as the specialist workers described earlier, applied at the phase level rather than the system level.</p>
+<p>Each phase writes its output as a Markdown file in the <code>.specify/</code> directory: <code>spec.md</code>, <code>plan.md</code>, <code>tasks.md</code>. These are human-readable artifacts — not opaque database entries, not serialized agent state. The spec can be opened, edited, and approved before the next phase begins. When <code>/plan</code> runs, it receives <code>spec.md</code> and the constitution as its input. When <code>/tasks</code> runs, it receives <code>plan.md</code>. Each phase call is a bounded, stateless invocation against a concrete file. The continuity between phases lives in the files, not in the agent&rsquo;s memory. <code>specify init</code> sets up the directory structure and installs the built-in workflow automatically.</p>
+<p>The phase structure is recognizable. It is the SDLC logic from the previous chapter applied to agentic work: separate concerns, produce verifiable artifacts, advance only when the previous step is complete. At the time of the earlier article on Spec-Kit, this structure was well-designed and clearly documented. What it lacked was enforcement. The phases were a convention the agent was expected to follow — not a sequence the runtime controlled. Nothing prevented an agent from skipping directly to implementation. That is the gap the workflow engine was built to close.</p>
+<hr />
+<h2 id="spec-kits-workflow-engine">Spec-Kit&rsquo;s Workflow Engine</h2>
+<p>A few weeks ago I published a re-evaluation of Spec-Kit.<sup id="fnref:4"><a class="footnote-ref" href="#fn:4">4</a></sup> Shortly after it went out, one of the maintainers reached out — and pointed me to the workflow engine that had just shipped.<sup id="fnref:5"><a class="footnote-ref" href="#fn:5">5</a></sup> It was exactly the missing piece this article is about.</p>
+<p>The architecture is clean: a workflow is a YAML file with a defined schema. The runtime is a deterministic orchestrator that reads the YAML, executes steps in sequence, and dispatches AI integrations as needed. The AI calls are one step type among several. The orchestrator does not delegate control to the model — it delegates a bounded task, collects the output, and decides what happens next.</p>
+<p><strong>Step types</strong> define the vocabulary:</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>command</code></td>
+<td>Invokes a Spec-Kit command (e.g., <code>speckit.plan</code>)</td>
+</tr>
+<tr>
+<td><code>gate</code></td>
+<td>Pauses for human review; <code>on_reject: abort</code> halts the workflow</td>
+</tr>
+<tr>
+<td><code>shell</code></td>
+<td>Executes shell commands without involving an agent</td>
+</tr>
+<tr>
+<td><code>prompt</code></td>
+<td>Sends a free-form prompt to the configured AI integration</td>
+</tr>
+<tr>
+<td><code>if</code> / <code>switch</code></td>
+<td>Conditional branching based on step outputs</td>
+</tr>
+<tr>
+<td><code>while</code> / <code>do-while</code></td>
+<td>Loops while a condition evaluates to true</td>
+</tr>
+<tr>
+<td><code>fan-out</code></td>
+<td>Dispatches a step for each item in a collection</td>
+</tr>
+<tr>
+<td><code>fan-in</code></td>
+<td>Collects all fan-out branches before proceeding</td>
+</tr>
+</tbody>
+</table>
+<p>The gate step is where the human-in-the-loop guarantee is actually implemented:</p>
+<div class="codehilite"><pre><span></span><code><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review-spec</span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gate</span>
+<span class="w">  </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Review</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">generated</span><span class="nv"> </span><span class="s">spec</span><span class="nv"> </span><span class="s">before</span><span class="nv"> </span><span class="s">planning.&quot;</span>
+<span class="w">  </span><span class="nt">options</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">approve</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">reject</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">on_reject</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">abort</span>
+</code></pre></div>
+
+<p>The workflow stops here. Not &ldquo;pauses and might continue&rdquo; — stops. The agent has no mechanism to resume this run. Only <code>specify workflow resume &lt;run-id&gt;</code> after a human approval does that. The model cannot bypass a gate because the gate is enforced by the runtime, not requested of the model. The control surface is unambiguous: human approval is not a convention, it is a hard dependency.</p>
+<p>Fan-out applies the same principle to collection iteration. Instead of asking an agent to loop over a task list, track its own progress, and decide when it is done, the runtime iterates the collection and dispatches the step for each item:</p>
+<div class="codehilite"><pre><span></span><code><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">implement-tasks</span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fan-out</span>
+<span class="w">  </span><span class="nt">items</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">steps.tasks.output.task_list</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<span class="w">  </span><span class="nt">step</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">implement-task</span>
+<span class="w">    </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">speckit.implement</span>
+<span class="w">    </span><span class="nt">input</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">args</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">item.file</span><span class="nv"> </span><span class="s">}}&quot;</span>
+</code></pre></div>
+
+<p>Each item is processed by a bounded, isolated invocation. The agent handling a task has no awareness of the other items in the list — which is correct: it should not. Fan-in collects the results when all items are complete.</p>
+<p>The while loop shows the same constraint applied to iteration:</p>
+<div class="codehilite"><pre><span></span><code><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">test-loop</span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">while</span>
+<span class="w">  </span><span class="nt">condition</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">steps.run-tests.output.exit_code</span><span class="nv"> </span><span class="s">!=</span><span class="nv"> </span><span class="s">0</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<span class="w">  </span><span class="nt">steps</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fix</span>
+<span class="w">      </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">speckit.implement</span>
+<span class="w">      </span><span class="nt">input</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">args</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;--fix</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">steps.run-tests.output.failures</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">run-tests</span>
+<span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">shell</span>
+<span class="w">      </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;npm</span><span class="nv"> </span><span class="s">test&quot;</span>
+</code></pre></div>
+
+<p>The agent iterates. But the exit condition is evaluated deterministically against the shell step&rsquo;s <code>exit_code</code> — a concrete integer produced by the runtime, not the model&rsquo;s assessment of whether the tests are passing. The loop terminates when the condition is false. That is a boolean fact, not a judgment.</p>
+<p><strong>Expressions</strong> pass typed data between steps. <code>{{ steps.specify.output.file }}</code> routes a previous step&rsquo;s output as the next step&rsquo;s input. Branching conditions like <code>{{ steps.plan.output.task_count &gt; 5 }}</code> are evaluated against concrete step outputs — not against the model&rsquo;s judgment. The expression language is a custom Jinja2-like engine with a deliberately narrow feature set: dot-path access, comparisons, boolean logic, and four filters (<code>default</code>, <code>join</code>, <code>contains</code>, <code>map</code>).</p>
+<p><strong>Multi-integration dispatch</strong> allows different AI models per step. The <code>integration</code> field is per-step configuration — a research step and an implementation step can use different models. The workflow declares this; each model at its step has no knowledge of what model ran before or will run after. The cognitive specialization is explicit in the configuration, not emergent from agent coordination.</p>
+<p><strong>State persistence</strong> ties the whole design together. Every workflow run stores its state under <code>.specify/workflows/runs/&lt;run-id&gt;/</code>: a <code>state.json</code> with the current step index and all step outputs, an <code>inputs.json</code> with resolved input values, and a <code>log.jsonl</code> append-only execution log. A paused run — whether paused at a gate or failed mid-execution — can be resumed exactly at the last completed step. Nothing is reconstructed from agent memory. The run state is a first-class artifact, independent of any model&rsquo;s context window.<sup id="fnref:6"><a class="footnote-ref" href="#fn:6">6</a></sup></p>
+<p>This is what the Dual-State separation looks like in practice. $S_{workflow}$ is the YAML definition plus the runtime&rsquo;s execution state. $S_{env}$ is what happens inside each AI step. The two spaces are explicitly bounded, with no leakage in either direction.</p>
+<hr />
+<h2 id="getting-started">Getting Started</h2>
+<p>A workflow run starts with a single command:</p>
+<div class="codehilite"><pre><span></span><code>specify<span class="w"> </span>workflow<span class="w"> </span>run<span class="w"> </span>speckit<span class="w"> </span>-i<span class="w"> </span><span class="nv">spec</span><span class="o">=</span><span class="s2">&quot;Build a kanban board with drag-and-drop&quot;</span>
+</code></pre></div>
+
+<p>The built-in <code>speckit</code> workflow runs the full SDD cycle: specify → gate → plan → gate → tasks → implement, with two human review checkpoints before any code is written. A paused workflow resumes with <code>specify workflow resume &lt;run-id&gt;</code>.</p>
+<p>Additional workflows are distributed through the catalog system. <code>specify workflow add &lt;source&gt;</code> installs a workflow from a URL, local file, or catalog entry. The catalog resolves sources in priority order — environment variable, project config, user config, then the built-in defaults — which makes org-wide workflow overrides possible without touching individual project files.</p>
+<hr />
+<h2 id="conclusion">Conclusion</h2>
+<p>The phrase &ldquo;intention as the new source of truth&rdquo; captures something real. The shift from asking agents to produce code toward asking them to first produce, and then execute, a formal specification is a structural improvement. Intention stated explicitly before implementation begins is more auditable, more consistent, and more aligned with how engineering teams actually want to work.</p>
+<p>But intention without enforcement is documentation. Teams have always documented their intentions. Documentation does not stop an agent from skipping the planning phase. It does not terminate a loop that runs to infinity. It does not create a human review checkpoint the model cannot bypass.</p>
+<p>What the workflow engine provides is something different: intention that the execution environment enforces. The spec is reviewed before planning begins because the gate step blocks the runtime. The test loop terminates because the exit condition is evaluated by the orchestrator against concrete step output — not by the model. The AI call at each step receives a bounded task and no control over what comes next.</p>
+<p>This is the correct architecture for agentic software development. Use agents for the generative work — the work where probabilistic behavior is the feature, not the defect. Own the structure through workflow design. The agent does not orchestrate the workflow. The workflow dispatches the agent.</p>
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p>Nelson F. Liu et al., &ldquo;Lost in the Middle: How Language Models Use Long Contexts,&rdquo; arXiv:2307.03172, 2023. <a href="https://arxiv.org/abs/2307.03172">https://arxiv.org/abs/2307.03172</a>&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+<li id="fn:2">
+<p>Matthew Thompson, &ldquo;Managing the Stochastic: A Dual-State Agent Process Framework,&rdquo; arXiv:2512.20660, 2024. <a href="https://arxiv.org/abs/2512.20660">https://arxiv.org/abs/2512.20660</a>&#160;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+</li>
+<li id="fn:3">
+<p>Ibid. The paper formalizes the separation as $S_{workflow} \times S_{env}$, with guard functions $g: S_{workflow} \times Output \to \{pass, fail\}$ evaluated deterministically before any state transition.&#160;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 3 in the text">&#8617;</a></p>
+</li>
+<li id="fn:4">
+<p>Markus Wondrak, &ldquo;Re-evaluating GitHub&rsquo;s Spec Kit: Structured SDLC Automation,&rdquo; wondrax.cloud, April 2026. <a href="https://markus.wondrax.cloud/articles/spec-kit-reevaluation.html">https://markus.wondrax.cloud/articles/spec-kit-reevaluation.html</a>&#160;<a class="footnote-backref" href="#fnref:4" title="Jump back to footnote 4 in the text">&#8617;</a></p>
+</li>
+<li id="fn:5">
+<p>GitHub, &ldquo;Workflow Engine — spec-kit Issue #2142,&rdquo; github.com, April 2026. <a href="https://github.com/github/spec-kit/issues/2142">https://github.com/github/spec-kit/issues/2142</a>&#160;<a class="footnote-backref" href="#fnref:5" title="Jump back to footnote 5 in the text">&#8617;</a></p>
+</li>
+<li id="fn:6">
+<p>GitHub, &ldquo;Workflow Reference — github/spec-kit,&rdquo; github.com. <a href="https://github.com/github/spec-kit/blob/main/docs/reference/workflows.md">https://github.com/github/spec-kit/blob/main/docs/reference/workflows.md</a>&#160;<a class="footnote-backref" href="#fnref:6" title="Jump back to footnote 6 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
+        </div>
+      </div>
+
+      <footer class="article-footer">
+        <div class="container container--narrow">
+          <a href="../index.html" class="back-link">← Back to all writing</a>
+        </div>
+      </footer>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>© 2026 Markus Wondrak</p>
+    </div>
+  </footer>
+
+  <div class="lightbox" aria-hidden="true">
+    <img src="" alt="">
+  </div>
+
+  <script>
+    (function() {
+      var progressBar = document.getElementById('reading-progress');
+      if (!progressBar) return;
+      function updateProgress() {
+        var scrollTop = window.scrollY || document.documentElement.scrollTop;
+        var docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        var progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+        progressBar.style.width = progress + '%';
+      }
+      window.addEventListener('scroll', updateProgress, { passive: true });
+      updateProgress();
+    })();
+
+    // Lightbox for article hero images
+    (function() {
+      var lightbox = document.querySelector('.lightbox');
+      var lightboxImg = lightbox.querySelector('img');
+      var heroImages = document.querySelectorAll('.article-hero img');
+
+      heroImages.forEach(function(img) {
+        img.addEventListener('click', function() {
+          lightboxImg.src = img.src;
+          lightboxImg.alt = img.alt;
+          lightbox.classList.add('is-active');
+          lightbox.setAttribute('aria-hidden', 'false');
+        });
+      });
+
+      lightbox.addEventListener('click', function() {
+        lightbox.classList.remove('is-active');
+        lightbox.setAttribute('aria-hidden', 'true');
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && lightbox.classList.contains('is-active')) {
+          lightbox.classList.remove('is-active');
+          lightbox.setAttribute('aria-hidden', 'true');
+        }
+      });
+    })();
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ]
+    });"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#EDE8DC',
+        primaryTextColor: '#1A1714',
+        primaryBorderColor: '#DDD8CE',
+        lineColor: '#7C766E',
+        secondaryColor: '#F3EFE6',
+        tertiaryColor: '#F3EFE6',
+        fontFamily: "'Source Serif 4', Georgia, serif"
+      },
+      flowchart: { useMaxWidth: true },
+      sequence: { useMaxWidth: true },
+      c4: { useMaxWidth: true }
+    });
+    mermaid.run().catch(function (err) { console.error('Mermaid:', err); });
+  </script>
+</body>
+</html>

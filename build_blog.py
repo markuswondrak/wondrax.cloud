@@ -16,6 +16,7 @@ SITE_ROOT = Path(__file__).parent
 ARTICLES_SOURCE = SITE_ROOT / "article-sources"
 TEMPLATE_PATH = SITE_ROOT / "article_template.html"
 BLOG_PATH = SITE_ROOT / "blog.html"
+INDEX_PATH = SITE_ROOT / "index.html"
 OUTPUT_DIR = SITE_ROOT / "articles"
 
 MARKER_START = "<!-- ARTICLES:START -->"
@@ -28,6 +29,26 @@ MD_CONFIG = {
 }
 
 MERMAID_FENCE_RE = re.compile(r"```mermaid\s*\r?\n([\s\S]*?)\r?\n```", re.IGNORECASE)
+MATH_INLINE_RE = re.compile(r"\$\$[\s\S]+?\$\$|\$.+?\$", re.DOTALL)
+_math_store: list[str] = []
+
+
+def preprocess_math(text: str) -> str:
+    """Replace $...$ and $$...$$ with placeholders before markdown conversion."""
+    _math_store.clear()
+
+    def _replace(m: re.Match) -> str:
+        _math_store.append(m.group(0))
+        return f"MATHPLACEHOLDER{len(_math_store) - 1}ENDMATH"
+
+    return MATH_INLINE_RE.sub(_replace, text)
+
+
+def postprocess_math(html_text: str) -> str:
+    """Restore math placeholders after markdown conversion."""
+    for i, expr in enumerate(_math_store):
+        html_text = html_text.replace(f"MATHPLACEHOLDER{i}ENDMATH", expr)
+    return html_text
 
 
 def preprocess_mermaid_fences(markdown_text: str) -> str:
@@ -114,8 +135,10 @@ def parse_article(filepath: str) -> dict | None:
 def render_markdown(text: str) -> str:
     """Convert markdown to HTML."""
     text = preprocess_mermaid_fences(text)
+    text = preprocess_math(text)
     md = markdown.Markdown(extensions=MD_EXTENSIONS, extension_configs=MD_CONFIG)
-    return md.convert(text)
+    result = md.convert(text)
+    return postprocess_math(result)
 
 
 def format_date_display(date_obj: datetime) -> str:
@@ -243,6 +266,63 @@ def update_blog_listing(articles: list[dict]) -> None:
     print(f"  Updated blog.html with {len(articles)} article(s)")
 
 
+def build_index_teaser(article: dict) -> str:
+    """Generate an article teaser for the index.html 'Latest Writing' section."""
+    date_iso = article["date"].strftime("%Y-%m-%d")
+    date_display = format_date_display(article["date"])
+    slug = article["slug"]
+
+    reading_time_html = ""
+    if article["reading_time"]:
+        reading_time_html = f'\n            <span class="reading-time">{html.escape(article["reading_time"])}</span>'
+
+    tags_html = ""
+    if article["tags"]:
+        tag_spans = "\n".join(
+            f'            <span class="article-tag">{html.escape(t)}</span>'
+            for t in article["tags"]
+        )
+        tags_html = f'\n          <div class="article-tags">\n{tag_spans}\n          </div>'
+
+    return f"""        <article class="article-teaser reveal">
+          <div class="article-meta">
+            <time datetime="{date_iso}">{date_display}</time>{reading_time_html}
+          </div>
+          <h3 class="article-title">
+            <a href="articles/{slug}.html">{html.escape(article["title"])}</a>
+          </h3>
+          <p class="article-excerpt">{html.escape(article["excerpt"])}</p>{tags_html}
+        </article>"""
+
+
+def update_index_latest_writing(articles: list[dict], max_items: int = 2) -> None:
+    """Replace the content between markers in index.html (Latest Writing)."""
+    with open(INDEX_PATH, "r", encoding="utf-8") as f:
+        index_html = f.read()
+
+    start_idx = index_html.find(MARKER_START)
+    end_idx = index_html.find(MARKER_END)
+
+    if start_idx == -1 or end_idx == -1:
+        print("Error: Could not find ARTICLES:START/END markers in index.html")
+        return
+
+    latest = articles[:max_items]
+    entries = "\n\n".join(build_index_teaser(a) for a in latest)
+    new_section = f"{MARKER_START}\n{entries}\n        {MARKER_END}"
+
+    index_html = (
+        index_html[:start_idx]
+        + new_section
+        + index_html[end_idx + len(MARKER_END) :]
+    )
+
+    with open(INDEX_PATH, "w", encoding="utf-8") as f:
+        f.write(index_html)
+
+    print(f"  Updated index.html with {len(latest)} latest article(s)")
+
+
 def main():
     print("Building blog articles...")
     print(f"  Source: {ARTICLES_SOURCE}")
@@ -288,6 +368,7 @@ def main():
 
     # Update blog listing
     update_blog_listing(articles)
+    update_index_latest_writing(articles, max_items=2)
 
     print("Done!")
 

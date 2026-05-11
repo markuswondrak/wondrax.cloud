@@ -54,35 +54,47 @@ This is the core problem, stated precisely: a deterministic property cannot be a
 
 Software engineering requires determinism in specific places. A function call either succeeds or raises an exception. An API contract is met or it is not. A test passes or it fails. These are not approximations. They are boolean facts on which the rest of the system depends. When an agent is asked to *guarantee* that planning was completed before implementation began, the guarantee is only as strong as the model's disposition to comply.
 
-The Dual-State Agent Process framework formalizes this as a separation between two state spaces.[^3] The first is $S_{workflow}$: the deterministic control flow — what states are legal, what transitions are permitted, what happens when a guard condition fails. The second is $S_{env}$: the stochastic environment where content is generated. These are fundamentally different concerns. $S_{env}$ is where the agent operates, and probabilistic behavior is appropriate there — that is the space where language model capabilities are relevant. $S_{workflow}$ must be engineered, not modeled.
+Matthew Thompson's *Dual-State Agent Process framework* formalizes this as a separation between two state spaces.[^3] The first is $S_{workflow}$: the deterministic control flow — what states are legal, what transitions are permitted, what happens when a guard condition fails. The second is $S_{env}$: the stochastic environment where content is generated. These are fundamentally different concerns. $S_{env}$ is where the agent operates, and probabilistic behavior is appropriate there — that is the space where language model capabilities are relevant. $S_{workflow}$ must be engineered, not modeled.
 
 Post-condition guards follow from this separation. Instead of trusting the agent to self-certify that a phase is complete, a deterministic guard function evaluates the output against defined criteria before the workflow advances. The agent produces content; the runtime decides what happens next. The agent can be wrong. The guard is not.
 
 There is a cost beyond correctness when this separation is absent. Without enforced state, every agent call must carry enough workflow context for the model to orient itself: current phase, completed phases, applicable rules, transition criteria. It all goes into the system prompt. With a workflow state machine managing transitions externally, each call receives only the instructions scoped to the current state. The context is narrower, cheaper, and less susceptible to instruction decay toward the end of a long window.
 
-The conclusion is uncomfortable but unavoidable. You cannot make an agent more deterministic by giving it better instructions. Instructions are processed by the same probabilistic mechanism that causes drift in the first place. The only way to enforce workflow structure is to move it outside the agent entirely — into an execution environment the agent cannot override.
+The conclusion is inconvenient but unavoidable. You cannot make an agent more deterministic by giving it better instructions. Instructions are processed by the same probabilistic mechanism that causes drift in the first place. The only way to enforce workflow structure is to move it outside the agent entirely — into an execution environment the agent cannot override.
 
 ---
 
 ## Engineering Already Has a Framework for This
 
-The software development lifecycle is not a convention. It is a structure for managing context contamination and error accumulation across phases.
+The software development lifecycle is a system of enforced handoffs, not a set of recommendations. Decades of practice produced explicit gates because teams learned that advancing on a broken foundation compounds errors faster than fixing them early.
 
-Hard phase separation exists because state bleeds. A developer who has been deep in implementation details for three days will make different architectural decisions than the same developer in a fresh design session. Phases enforce cognitive distance. They also enforce verification: you do not move from design to implementation until the design has been reviewed. Not reviewed by the person who produced it — reviewed by someone whose job is to evaluate it.
+Those gates take two forms. Phase gates control sequencing: Scrum's Definition of Ready means a requirement cannot enter a sprint until it is specified well enough to be implemented. Large changes must be designed and decomposed into tasks before implementation begins. No skipping, no self-certification. Quality gates control output: the CI pipeline does not ask the developer whether the code is correct — it runs the tests, evaluates the result, and either blocks the merge or allows it. The developer's intent is not a factor. The outcome is a fact.
 
-Quality gates are deterministic checkpoints. A pull request does not ask the developer whether the code is correct. The CI pipeline runs the tests, evaluates the result, and either gates the merge or lets it through. The developer's intent is not a factor. The outcome is a fact.
-
-The parallel for agentic orchestration is exact. The agent should be a worker in a pipeline — skilled, generative, capable of producing output that no deterministic system could produce. But it should not be the pipeline. It should not decide when phases transition, whether its own output met the required criteria, or how many iterations a loop is allowed to run. Those are runtime properties. They belong in the execution environment.
+Agents need the same structure, for the same reasons. An agent is a capable, generative worker — exactly the kind of worker you want inside a well-defined pipeline. But it should not be the pipeline. It should not decide when phases transition, whether its own output met the required criteria, or how many iterations a loop should run. Those are runtime properties. A human team enforces them with process and tooling. An agentic system needs the same enforcement — built into the execution environment, not requested of the model.
 
 The agentic workflow engine is the piece that most implementations are missing. It is what makes the rest of the architecture coherent.
 
 ---
 
+## Spec-Kit: Specification as the Primary Artifact
+
+GitHub's Spec-Kit is an open-source toolkit for spec-driven development with AI. The central premise is straightforward: before an agent writes code, it should produce a formal specification of what it intends to build — and that specification should be reviewed and agreed on before implementation begins. The spec is not documentation added after the fact. It is the primary artifact from which everything downstream — the plan, the task list, the implementation — is derived.
+
+The toolkit structures agentic work into four sequential phases. Specify produces a written statement of intent: what is being built and why. Plan translates that into a technical approach: how it will be built. Tasks decomposes the plan into atomic, implementable units. Implement executes them. Each phase produces a distinct artifact; each artifact is the input to the next phase. A `constitution` file sits alongside the phases as a persistent layer of project-level constraints — architecture rules, naming conventions, boundaries the agent must not cross — that applies across all phases without being re-stated in every prompt.
+
+Each phase is invoked through a scoped slash command — `/specify`, `/plan`, `/tasks`, `/implement`. These are not free-text prompts. They are predefined agent instructions, each loading only the context relevant to that phase. The agent handling `/plan` knows it is planning — it does not carry the implementation instructions, the testing criteria, or anything outside its current responsibility. The cognitive surface is narrow by design: the same principle as the specialist workers described earlier, applied at the phase level rather than the system level.
+
+Each phase writes its output as a Markdown file in the `.specify/` directory: `spec.md`, `plan.md`, `tasks.md`. These are human-readable artifacts — not opaque database entries, not serialized agent state. The spec can be opened, edited, and approved before the next phase begins. When `/plan` runs, it receives `spec.md` and the constitution as its input. When `/tasks` runs, it receives `plan.md`. Each phase call is a bounded, stateless invocation against a concrete file. The continuity between phases lives in the files, not in the agent's memory. `specify init` sets up the directory structure and installs the built-in workflow automatically.
+
+The phase structure is recognizable. It is the SDLC logic from the previous chapter applied to agentic work: separate concerns, produce verifiable artifacts, advance only when the previous step is complete. At the time of the earlier article on Spec-Kit, this structure was well-designed and clearly documented. What it lacked was enforcement. The phases were a convention the agent was expected to follow — not a sequence the runtime controlled. Nothing prevented an agent from skipping directly to implementation. That is the gap the workflow engine was built to close.
+
+---
+
 ## Spec-Kit's Workflow Engine
 
-When I re-evaluated GitHub's Spec-Kit in April 2026, the primary structural gap I identified was the absence of an enforced state machine.[^4] The phase-gated workflow was well-designed and well-documented. But the mechanism that enforced phase transitions was the model's compliance with documentation — convention, not constraint. An agent could read the spec phase, declare itself done, and proceed directly to implementation. Nothing in the tooling prevented it.
+A few weeks ago I published a re-evaluation of Spec-Kit.[^4] Shortly after it went out, one of the maintainers reached out — and pointed me to the workflow engine that had just shipped.[^5] It was exactly the missing piece this article is about.
 
-The April 2026 release of the workflow engine is the direct answer to that gap.[^5] The architecture is clean: a workflow is a YAML file with a defined schema. The runtime is a deterministic orchestrator that reads the YAML, executes steps in sequence, and dispatches AI integrations as needed. The AI calls are one step type among several. The orchestrator does not delegate control to the model — it delegates a bounded task, collects the output, and decides what happens next.
+The architecture is clean: a workflow is a YAML file with a defined schema. The runtime is a deterministic orchestrator that reads the YAML, executes steps in sequence, and dispatches AI integrations as needed. The AI calls are one step type among several. The orchestrator does not delegate control to the model — it delegates a bounded task, collects the output, and decides what happens next.
 
 **Step types** define the vocabulary:
 
@@ -93,8 +105,8 @@ The April 2026 release of the workflow engine is the direct answer to that gap.[
 | `shell` | Executes shell commands without involving an agent |
 | `prompt` | Sends a free-form prompt to the configured AI integration |
 | `if` / `switch` | Conditional branching based on step outputs |
-| `while` / `do-while` | Loops with a `max_iterations` safety limit |
-| `fan-out` | Dispatches a collection in parallel with `max_concurrency` |
+| `while` / `do-while` | Loops while a condition evaluates to true |
+| `fan-out` | Dispatches a step for each item in a collection |
 | `fan-in` | Collects all fan-out branches before proceeding |
 
 The gate step is where the human-in-the-loop guarantee is actually implemented:
@@ -109,22 +121,20 @@ The gate step is where the human-in-the-loop guarantee is actually implemented:
 
 The workflow stops here. Not "pauses and might continue" — stops. The agent has no mechanism to resume this run. Only `specify workflow resume <run-id>` after a human approval does that. The model cannot bypass a gate because the gate is enforced by the runtime, not requested of the model. The control surface is unambiguous: human approval is not a convention, it is a hard dependency.
 
-Fan-out applies the same principle to parallelism. Instead of asking an agent to coordinate parallel tasks — which requires the model to manage concurrency, track completion, and decide when to collect results — the runtime handles all of it:
+Fan-out applies the same principle to collection iteration. Instead of asking an agent to loop over a task list, track its own progress, and decide when it is done, the runtime iterates the collection and dispatches the step for each item:
 
 ```yaml
-- id: implement-parallel
+- id: implement-tasks
   type: fan-out
   items: "{{ steps.tasks.output.task_list }}"
-  max_concurrency: 3
   step:
     id: implement-task
     command: speckit.implement
-    integration: "{{ item.preferred_integration | default('claude') }}"
     input:
       args: "{{ item.file }}"
 ```
 
-Each task runs in a bounded parallel branch. `max_concurrency: 3` is enforced by the runtime — no agent decides how many tasks run at once. The agent implementing each task has no awareness of the other branches, which is correct: it should not.
+Each item is processed by a bounded, isolated invocation. The agent handling a task has no awareness of the other items in the list — which is correct: it should not. Fan-in collects the results when all items are complete.
 
 The while loop shows the same constraint applied to iteration:
 
@@ -132,7 +142,6 @@ The while loop shows the same constraint applied to iteration:
 - id: test-loop
   type: while
   condition: "{{ steps.run-tests.output.exit_code != 0 }}"
-  max_iterations: 5
   steps:
     - id: fix
       command: speckit.implement
@@ -143,11 +152,11 @@ The while loop shows the same constraint applied to iteration:
       run: "npm test"
 ```
 
-The agent iterates. `max_iterations: 5` means the loop cannot run indefinitely — not because the agent was instructed to stop, but because the runtime enforces the bound. The exit condition is evaluated deterministically on the shell step's output, not on the model's assessment of whether the tests are passing.
+The agent iterates. But the exit condition is evaluated deterministically against the shell step's `exit_code` — a concrete integer produced by the runtime, not the model's assessment of whether the tests are passing. The loop terminates when the condition is false. That is a boolean fact, not a judgment.
 
-**Expressions** pass typed data between steps. `{{ steps.specify.output.file }}` routes a previous step's output as the next step's input. Branching conditions like `{{ steps.plan.output.task_count > 5 }}` are evaluated against concrete step outputs — not against the model's judgment. The expression language is a sandboxed Jinja2 subset with no file I/O, no imports, and no code injection surface.
+**Expressions** pass typed data between steps. `{{ steps.specify.output.file }}` routes a previous step's output as the next step's input. Branching conditions like `{{ steps.plan.output.task_count > 5 }}` are evaluated against concrete step outputs — not against the model's judgment. The expression language is a custom Jinja2-like engine with a deliberately narrow feature set: dot-path access, comparisons, boolean logic, and four filters (`default`, `join`, `contains`, `map`).
 
-**Multi-integration dispatch** allows different AI models per step. A planning step that requires sustained reasoning can specify Gemini 2.5 Pro with a thinking budget. An implementation step that benefits from code quality can use Claude Opus. The workflow declares this; each model at its step has no knowledge of what model ran before or will run after. The cognitive specialization is explicit in the configuration, not emergent from agent coordination.
+**Multi-integration dispatch** allows different AI models per step. The `integration` field is per-step configuration — a research step and an implementation step can use different models. The workflow declares this; each model at its step has no knowledge of what model ran before or will run after. The cognitive specialization is explicit in the configuration, not emergent from agent coordination.
 
 **State persistence** ties the whole design together. Every workflow run stores its state under `.specify/workflows/runs/<run-id>/`: a `state.json` with the current step index and all step outputs, an `inputs.json` with resolved input values, and a `log.jsonl` append-only execution log. A paused run — whether paused at a gate or failed mid-execution — can be resumed exactly at the last completed step. Nothing is reconstructed from agent memory. The run state is a first-class artifact, independent of any model's context window.[^6]
 
@@ -163,11 +172,9 @@ A workflow run starts with a single command:
 specify workflow run speckit -i spec="Build a kanban board with drag-and-drop"
 ```
 
-Three built-in variants ship with Spec-Kit. `speckit` runs the full SDD cycle: specify → gate → plan → gate → tasks → implement, with two human review checkpoints before any code is written. `speckit-quick` collapses to specify → implement for fast iteration on low-stakes changes. `speckit-review` runs specify → plan → gate → tasks without auto-implementation — useful when the intent is to produce a plan for human-driven execution.
+The built-in `speckit` workflow runs the full SDD cycle: specify → gate → plan → gate → tasks → implement, with two human review checkpoints before any code is written. A paused workflow resumes with `specify workflow resume <run-id>`.
 
-A paused workflow resumes with `specify workflow resume <run-id>`. The catalog system distributes additional workflows via environment variable, project config, or user config, with a resolution order that makes org-wide overrides possible without touching individual project files. Custom workflows and extensions follow the same distribution path.
-
-Presets standardize across teams. A preset packages template overrides for specs, plans, tasks, and agent instructions, and applies across every project that installs it. An organization can ship compliance constraints or domain-specific architectural standards once as a preset and apply them without forking anything.
+Additional workflows are distributed through the catalog system. `specify workflow add <source>` installs a workflow from a URL, local file, or catalog entry. The catalog resolves sources in priority order — environment variable, project config, user config, then the built-in defaults — which makes org-wide workflow overrides possible without touching individual project files.
 
 ---
 
@@ -177,7 +184,7 @@ The phrase "intention as the new source of truth" captures something real. The s
 
 But intention without enforcement is documentation. Teams have always documented their intentions. Documentation does not stop an agent from skipping the planning phase. It does not terminate a loop that runs to infinity. It does not create a human review checkpoint the model cannot bypass.
 
-What the workflow engine provides is something different: intention that the execution environment enforces. The spec is reviewed before planning begins because the gate step blocks the runtime. The test loop terminates because `max_iterations: 5` is evaluated by the orchestrator. The AI call at each step receives a bounded task and no control over what comes next.
+What the workflow engine provides is something different: intention that the execution environment enforces. The spec is reviewed before planning begins because the gate step blocks the runtime. The test loop terminates because the exit condition is evaluated by the orchestrator against concrete step output — not by the model. The AI call at each step receives a bounded task and no control over what comes next.
 
 This is the correct architecture for agentic software development. Use agents for the generative work — the work where probabilistic behavior is the feature, not the defect. Own the structure through workflow design. The agent does not orchestrate the workflow. The workflow dispatches the agent.
 

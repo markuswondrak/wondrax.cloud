@@ -24,17 +24,36 @@
   <main>
     <section class="section writing reveal" aria-labelledby="writing-heading">
       <div class="container">
-        <h2 id="writing-heading" class="section-title">Latest Writing</h2>
-        
+        <div class="section-title-row">
+          <h2 id="writing-heading" class="section-title">Latest Writing</h2>
+          <a href="blog.html" class="section-title-link">All articles →</a>
+        </div>
+        <!-- ARTICLES:START -->
+        <article class="article-teaser reveal">
+          <div class="article-meta">
+            <time datetime="2026-05-10">10 May 2026</time>
+            <span class="reading-time">13 min read</span>
+          </div>
+          <h3 class="article-title">
+            <a href="articles/deterministic-pipelines.html">When Orchestrators Drift: Why Deterministic Pipelines Must Live Outside the Agent</a>
+          </h3>
+          <p class="article-excerpt">Agents are probabilistic by design. Hard workflow guarantees — phase gates, enforced sequencing, human checkpoints — cannot be achieved by giving an agent better instructions. They require a runtime that the agent cannot override.</p>
+          <div class="article-tags">
+            <span class="article-tag">Agentic Coding</span>
+            <span class="article-tag">Spec Kit</span>
+            <span class="article-tag">Architecture</span>
+            <span class="article-tag">Workflows</span>
+          </div>
+        </article>
+
         <article class="article-teaser reveal">
           <div class="article-meta">
             <time datetime="2026-04-30">30 Apr 2026</time>
-            <span class="reading-time">18 min read</span>
           </div>
           <h3 class="article-title">
             <a href="articles/documentation-agentic-coding.html">From Wiki to Source: How arc42 Becomes the Context Layer for AI Agents</a>
           </h3>
-          <p class="article-excerpt">Agentic coding scales output — and, without the right context layer, scales misalignment at the same rate. arc42's twelve structured sections already satisfy most of what agents need from documentation. The missing piece is not a new framework: it's putting the documentation in the repository, as Markdown files, where agents can actually find it.</p>
+          <p class="article-excerpt">Agentic coding scales output — and, without the right context layer, scales misalignment at the same rate. arc42&#x27;s twelve structured sections already satisfy most of what agents need from documentation. The missing piece is not a new framework: it&#x27;s putting the documentation in the repository, as Markdown files, where agents can actually find it.</p>
           <div class="article-tags">
             <span class="article-tag">Agentic Coding</span>
             <span class="article-tag">arc42</span>
@@ -42,23 +61,7 @@
             <span class="article-tag">Documentation</span>
           </div>
         </article>
-
-        <article class="article-teaser reveal">
-          <div class="article-meta">
-            <time datetime="2026-04-26">26 Apr 2026</time>
-            <span class="reading-time">12 min read</span>
-          </div>
-          <h3 class="article-title">
-            <a href="articles/spec-kit-reevaluation.html">Re-evaluating GitHub's Spec Kit: Structured SDLC Automation</a>
-          </h3>
-          <p class="article-excerpt">GitHub's Spec Kit promises structured SDLC automation for agentic coding. After a second evaluation, here's what improved — and three enterprise gaps that still remain.</p>
-          <div class="article-tags">
-            <span class="article-tag">Agentic Coding</span>
-            <span class="article-tag">Spec Kit</span>
-            <span class="article-tag">Architecture</span>
-            <span class="article-tag">Enterprise</span>
-          </div>
-        </article>
+        <!-- ARTICLES:END -->
       </div>
     </section>
 
