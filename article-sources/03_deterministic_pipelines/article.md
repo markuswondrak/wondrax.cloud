@@ -94,7 +94,7 @@ The phase structure is recognizable. It is the SDLC logic from the previous chap
 
 A few weeks ago I published a re-evaluation of Spec-Kit.[^4] Shortly after it went out, one of the maintainers reached out — and pointed me to the workflow engine that had just shipped.[^5] It was exactly the missing piece this article is about.
 
-The architecture is clean: a workflow is a YAML file with a defined schema. The runtime is a deterministic orchestrator that reads the YAML, executes steps in sequence, and dispatches AI integrations as needed. The AI calls are one step type among several. The orchestrator does not delegate control to the model — it delegates a bounded task, collects the output, and decides what happens next.
+The architecture is straight forward: a workflow is a YAML file with a defined schema. The runtime is a deterministic orchestrator that reads the YAML, executes steps in sequence, and dispatches AI integrations as needed. The AI calls are one step type among several. The orchestrator does not delegate control to the model — it delegates a bounded task, collects the output, and decides what happens next.
 
 **Step types** define the vocabulary:
 
@@ -105,11 +105,11 @@ The architecture is clean: a workflow is a YAML file with a defined schema. The 
 | `shell` | Executes shell commands without involving an agent |
 | `prompt` | Sends a free-form prompt to the configured AI integration |
 | `if` / `switch` | Conditional branching based on step outputs |
-| `while` / `do-while` | Loops while a condition evaluates to true |
-| `fan-out` | Dispatches a step for each item in a collection |
+| `while` / `do-while` | Loops while a condition evaluates to true; `max_iterations` sets a hard upper bound |
+| `fan-out` | Dispatches a step for each item in a collection; `max_concurrency` controls parallelism |
 | `fan-in` | Collects all fan-out branches before proceeding |
 
-The gate step is where the human-in-the-loop guarantee is actually implemented:
+The gate step is where the human-in-the-loop guarantee is actually implemented ([`workflow.yml`](https://github.com/markuswondrak/spec-kit-workflows-demo/blob/main/workflow.yml)):
 
 ```yaml
 - id: review-spec
@@ -119,40 +119,54 @@ The gate step is where the human-in-the-loop guarantee is actually implemented:
   on_reject: abort
 ```
 
-The workflow stops here. Not "pauses and might continue" — stops. The agent has no mechanism to resume this run. Only `specify workflow resume <run-id>` after a human approval does that. The model cannot bypass a gate because the gate is enforced by the runtime, not requested of the model. The control surface is unambiguous: human approval is not a convention, it is a hard dependency.
+The workflow pauses here. If the reviewer approves, `specify workflow resume <run-id>` continues execution at the next step. If they reject, `on_reject: abort` instructs the runtime to halt the run entirely. Either way, the model has no input into what happens next — only the human's decision and the runtime's response to it determine the outcome.
 
-Fan-out applies the same principle to collection iteration. Instead of asking an agent to loop over a task list, track its own progress, and decide when it is done, the runtime iterates the collection and dispatches the step for each item:
+**Gates in practice.** That guarantee is real — but it is worth being precise about what "human approval" means in the current implementation. A gate pauses the workflow and writes the run state to disk. Resumption requires someone to run `specify workflow resume <run-id>` in a terminal. There is no push notification, no web UI, no webhook to an external approval system. A reviewer does not receive a Slack message or a GitHub PR comment. They need to know a run is waiting, and they need CLI access to the machine that started it.
+
+For local development workflows — a developer running a multi-phase pipeline on their own machine — this is entirely workable. For team pipelines, or for workflows running in CI, the CLI-only surface is a gap. Nothing in the gate specification prevents an operator from wrapping `specify workflow status` in a polling loop that bridges to an external notification channel. But that bridge is not built in. The structural pattern is correct — enforcement lives outside the model — and the operational tooling around it is still maturing.
+
+The `shell` step makes the separation concrete in a different way ([`workflow-from-file.yml`](https://github.com/markuswondrak/spec-kit-workflows-demo/blob/main/workflow-from-file.yml)):
 
 ```yaml
-- id: implement-tasks
-  type: fan-out
-  items: "{{ steps.tasks.output.task_list }}"
-  step:
-    id: implement-task
-    command: speckit.implement
-    input:
-      args: "{{ item.file }}"
+- id: load-spec
+  type: shell
+  run: "cat \"{{ inputs.spec_file }}\""
 ```
 
-Each item is processed by a bounded, isolated invocation. The agent handling a task has no awareness of the other items in the list — which is correct: it should not. Fan-in collects the results when all items are complete.
+A `shell` step runs entirely outside the AI integration. Its `stdout` is captured by the runtime and becomes `steps.load-spec.output.stdout` — a concrete string that every downstream `speckit.*` command receives as its input. The agent at the `specify` step gets text; it has no knowledge of whether that text came from a file, an inline argument, or any other source. The runtime resolved the value before the AI call was made.
 
-The while loop shows the same constraint applied to iteration:
+The `do-while` loop shows how the same runtime authority applies to iteration ([`workflow.yml`](https://github.com/markuswondrak/spec-kit-workflows-demo/blob/main/workflow.yml)):
 
 ```yaml
-- id: test-loop
-  type: while
-  condition: "{{ steps.run-tests.output.exit_code != 0 }}"
+- id: review-fix-loop
+  type: do-while
+  max_iterations: 3
+  condition: "{{ steps.check-verdict.output.choice == 'fix' }}"
   steps:
-    - id: fix
-      command: speckit.implement
+    - id: code-review
+      command: speckit.code-review.review
+      integration: "{{ inputs.integration }}"
       input:
-        args: "--fix {{ steps.run-tests.output.failures }}"
-    - id: run-tests
-      type: shell
-      run: "npm test"
+        args: "{{ inputs.spec }}"
+
+    - id: check-verdict
+      type: gate
+      message: "Open the feature directory's review.md, then decide: approve (done) or fix (run a fix pass)."
+      options: [approve, fix]
+      on_reject: abort
+
+    - id: fix-implementation
+      type: if
+      condition: "{{ steps.check-verdict.output.choice == 'fix' }}"
+      then:
+        - id: fix
+          command: speckit.code-review.fix
+          integration: "{{ inputs.integration }}"
+          input:
+            args: "{{ inputs.spec }}"
 ```
 
-The agent iterates. But the exit condition is evaluated deterministically against the shell step's `exit_code` — a concrete integer produced by the runtime, not the model's assessment of whether the tests are passing. The loop terminates when the condition is false. That is a boolean fact, not a judgment.
+Several constraints operate at once here. `max_iterations: 3` is a hard bound enforced by the runtime — the loop cannot run indefinitely regardless of what the model produces. The loop's exit condition is `steps.check-verdict.output.choice == 'fix'` — not the model's assessment of whether the code is good enough, but a human decision written into run state at the gate. The `if/then` inside the loop dispatches the fix pass only when that verdict requires it. And the gate itself carries two options — `approve` exits the loop immediately; `fix` continues it. At each decision point, a human or the runtime holds authority. The model implements; it does not decide.
 
 **Expressions** pass typed data between steps. `{{ steps.specify.output.file }}` routes a previous step's output as the next step's input. Branching conditions like `{{ steps.plan.output.task_count > 5 }}` are evaluated against concrete step outputs — not against the model's judgment. The expression language is a custom Jinja2-like engine with a deliberately narrow feature set: dot-path access, comparisons, boolean logic, and four filters (`default`, `join`, `contains`, `map`).
 
@@ -175,6 +189,8 @@ specify workflow run speckit -i spec="Build a kanban board with drag-and-drop"
 The built-in `speckit` workflow runs the full SDD cycle: specify → gate → plan → gate → tasks → implement, with two human review checkpoints before any code is written. A paused workflow resumes with `specify workflow resume <run-id>`.
 
 Additional workflows are distributed through the catalog system. `specify workflow add <source>` installs a workflow from a URL, local file, or catalog entry. The catalog resolves sources in priority order — environment variable, project config, user config, then the built-in defaults — which makes org-wide workflow overrides possible without touching individual project files.
+
+A working implementation of the patterns described in this article — including an extended SDD workflow with an AI code-review step and a human verdict gate — is available at [markuswondrak/spec-kit-workflows-demo](https://github.com/markuswondrak/spec-kit-workflows-demo).
 
 ---
 
