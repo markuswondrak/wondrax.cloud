@@ -1,11 +1,12 @@
 ---
-title: "The Agent Is Not the Pipeline: Spec-Kit Workflows and the Enforcement Layer"
+title: "The Agent is not the Pipeline: Spec-Kit Workflows and the Enforcement Layer"
 author: "Markus Wondrak"
-date: "2026-05-10"
+date: "2026-05-14"
 excerpt: "Agents are probabilistic by design. Hard workflow guarantees — phase gates, enforced sequencing, human checkpoints — cannot be achieved by giving an agent better instructions. They require a runtime the agent cannot override. Spec-Kit's workflow engine provides one."
 tags: ["Agentic Coding", "Spec Kit", "Architecture", "Workflows"]
 reading_time: "13 min read"
 slug: "deterministic-pipelines"
+image: infografik.png
 ---
 
 The agent had been running for forty minutes on a straightforward task: refactor the authentication module, write tests, open a PR.
@@ -16,7 +17,16 @@ By minute forty, the test suite was passing. The authentication module had been 
 
 This is agentic drift. It is not a model quality problem but a structural consequence of asking a probabilistic system to manage its own workflow — and it compounds the longer the session runs.
 
-When you ask your agent how to mitigate that risk, it will suggest writing better instructions. Add emphasis. Make the constraint louder. I have done this. The system prompt began accumulating things like `IMPORTANT: DO NOT proceed to implementation before the architecture review is complete. YOU MUST ASK THE USER TO CONFIRM FIRST.` All caps. Exclamation marks. The model read those instructions with the same probabilistic attention it applied to everything else in the context window. Sometimes it complied. Under a long context with competing signals, it did not. The instructions had weight — not authority.
+When you ask your agent how to mitigate that risk, it will suggest writing better instructions. Add emphasis. Make the constraint louder. I have done this. The system prompt began accumulating things like 
+
+```
+IMPORTANT: DO NOT proceed to implementation before 
+the architecture review is complete. 
+
+YOU MUST ASK THE USER TO CONFIRM FIRST!!
+```
+
+All caps. Exclamation marks. The model read those instructions with the same probabilistic attention it applied to everything else in the context window. Sometimes it complied. Under a long context with competing signals, it did not. The instructions had weight — not authority.
 
 ---
 

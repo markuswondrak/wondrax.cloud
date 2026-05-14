@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Agents are probabilistic by design. Hard workflow guarantees — phase gates, enforced sequencing, human checkpoints — cannot be achieved by giving an agent better instructions. They require a runtime the agent cannot override. Spec-Kit&#x27;s workflow engine provides one.">
-  <title>The Agent Is Not the Pipeline: Spec-Kit Workflows and the Enforcement Layer — Markus Wondrak</title>
+  <title>The Agent is not the Pipeline: Spec-Kit Workflows and the Enforcement Layer — Markus Wondrak</title>
   <link rel="icon" type="image/svg+xml" href="../favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,20 +27,19 @@
         <div class="container container--narrow">
           <a href="../index.html" class="back-link">← Back to all writing</a>
           <div class="article-meta">
-            <time datetime="2026-05-10">10 May 2026</time>
+            <time datetime="2026-05-14">14 May 2026</time>
             <span class="article-header__time">13 min read</span>
           </div>
-          <h1 class="article-headline">The Agent Is Not the Pipeline: Spec-Kit Workflows and the Enforcement Layer</h1>
+          <h1 class="article-headline">The Agent is not the Pipeline: Spec-Kit Workflows and the Enforcement Layer</h1>
           <div class="article-header__tags">
                     <span class="article-header__tag">Agentic Coding</span>
                     <span class="article-header__tag">Spec Kit</span>
                     <span class="article-header__tag">Architecture</span>
                     <span class="article-header__tag">Workflows</span>
                 </div>
+          <div class="article-hero"><img class="article-hero__img" src="images/deterministic-pipelines_infografik.png" alt="The Agent is not the Pipeline: Spec-Kit Workflows and the Enforcement Layer"></div>
         </div>
       </header>
-
-      
 
       <div class="article-body">
         <div class="container container--narrow">
@@ -48,7 +47,14 @@
 <p>By minute twelve, it had drifted — not dramatically. It still produced code, ran the test suite, committed incrementally. But the spec called for an architecture review before touching the token validation logic. The agent skipped it, not because it decided to, but because it moved to the next plausible step. That is what the model does.</p>
 <p>By minute forty, the test suite was passing. The authentication module had been refactored in a way that was syntactically correct, functionally coherent, and architecturally incompatible with the planned microservices migration. The errors had compounded quietly across every commit, each one optimizing for the current state rather than the intended one.</p>
 <p>This is agentic drift. It is not a model quality problem but a structural consequence of asking a probabilistic system to manage its own workflow — and it compounds the longer the session runs.</p>
-<p>When you ask your agent how to mitigate that risk, it will suggest writing better instructions. Add emphasis. Make the constraint louder. I have done this. The system prompt began accumulating things like <code>IMPORTANT: DO NOT proceed to implementation before the architecture review is complete. YOU MUST ASK THE USER TO CONFIRM FIRST.</code> All caps. Exclamation marks. The model read those instructions with the same probabilistic attention it applied to everything else in the context window. Sometimes it complied. Under a long context with competing signals, it did not. The instructions had weight — not authority.</p>
+<p>When you ask your agent how to mitigate that risk, it will suggest writing better instructions. Add emphasis. Make the constraint louder. I have done this. The system prompt began accumulating things like </p>
+<div class="codehilite"><pre><span></span><code><span class="n">IMPORTANT</span><span class="o">:</span><span class="w"> </span><span class="n">DO</span><span class="w"> </span><span class="n">NOT</span><span class="w"> </span><span class="n">proceed</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">implementation</span><span class="w"> </span><span class="n">before</span><span class="w"> </span>
+<span class="n">the</span><span class="w"> </span><span class="n">architecture</span><span class="w"> </span><span class="n">review</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">complete</span><span class="o">.</span><span class="w"> </span>
+
+<span class="n">YOU</span><span class="w"> </span><span class="n">MUST</span><span class="w"> </span><span class="n">ASK</span><span class="w"> </span><span class="n">THE</span><span class="w"> </span><span class="n">USER</span><span class="w"> </span><span class="n">TO</span><span class="w"> </span><span class="n">CONFIRM</span><span class="w"> </span><span class="n">FIRST</span><span class="o">!!</span>
+</code></pre></div>
+
+<p>All caps. Exclamation marks. The model read those instructions with the same probabilistic attention it applied to everything else in the context window. Sometimes it complied. Under a long context with competing signals, it did not. The instructions had weight — not authority.</p>
 <hr />
 <h2 id="why-agents-drift">Why Agents Drift</h2>
 <p>The underlying mechanism is how attention works. Models do not process context uniformly — tokens at the beginning and end of the context window receive systematically more weight than those in the middle.<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup> Recency is a further pull: the closer a token is to the current generation point, the stronger its influence on the next prediction. This means a constraint written in the system prompt does not get read once and retained. It competes continuously against everything that has accumulated between it and the current step — and that competition is structural, not a failure of model quality.</p>

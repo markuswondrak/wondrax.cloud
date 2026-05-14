@@ -551,19 +551,17 @@ a:focus-visible {
 
 /* Article Hero Image */
 .article-hero {
+  margin-top: var(--space-8);
   margin-bottom: var(--space-12);
   border-radius: var(--radius-md);
   overflow: hidden;
   cursor: zoom-in;
-  display: flex;
-  justify-content: center;
 }
 
 .article-hero img {
   display: block;
-  max-width: min(100%, 700px);
-  max-height: 300px;
-  width: auto;
+  width: 100%;
+  max-height: 600px;
   height: auto;
   transition: transform var(--duration-base) var(--ease-out);
 }
