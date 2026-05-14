@@ -174,9 +174,21 @@ Three constraints govern this loop deterministically:
 
 **Multi-integration dispatch** allows different AI models per step. The `integration` field is per-step configuration — a research step and an implementation step can use different models. The workflow declares this; each model at its step has no knowledge of what model ran before or will run after. The cognitive specialization is explicit in the configuration, not emergent from agent coordination.
 
-**State persistence** ties the whole design together. Every workflow run stores its state under `.specify/workflows/runs/<run-id>/`: a `state.json` with the current step index and all step outputs, an `inputs.json` with resolved input values, and a `log.jsonl` append-only execution log. A paused run — whether paused at a gate or failed mid-execution — can be resumed exactly at the last completed step. Nothing is reconstructed from agent memory. The run state is a first-class artifact, independent of any model's context window.[^6]
+**State persistence** ties the whole design together. Every workflow run stores its state under `.specify/workflows/runs/<run-id>/`: a `state.json` with the current step index and all step outputs, an `inputs.json` with resolved input values, and a `log.jsonl` append-only execution log. A paused run — whether paused at a gate or failed mid-execution — can be resumed exactly at the last completed step.[^6]
 
 This is what the Dual-State separation looks like in practice. $S_{workflow}$ is the YAML definition plus the runtime's execution state. $S_{env}$ is what happens inside each AI step. The two spaces are explicitly bounded, with no leakage in either direction.
+
+**Quality gates as workflow steps** extend the same principle. The `shell` step that loads a file above uses deterministic execution for plumbing. The same mechanism applies to verification: any check the team already runs in CI can be embedded as a workflow step, enforced before the agent proceeds.
+
+- A test suite either passes or fails.
+- A linter either reports violations or it does not.
+- ArchUnit[^9] validates architecture rules against compiled bytecode -- package dependency constraints, cycle detection, access restrictions.
+
+These are boolean outcomes. They do not require interpretation, and they do not benefit from an agent's judgment. They are exactly the kind of check that belongs in the runtime, not delegated to the model.
+
+In a conventional SDLC, the CI pipeline runs these checks after code is written. The workflow engine moves them inside the agentic pipeline. A `shell` step that runs `./gradlew test` after the implement step produces a concrete exit code. An `if` condition branches on that result: pass continues to the next phase, fail routes back to a fix loop or aborts. The agent never sees the test output as context to interpret. The runtime evaluates it and decides.
+
+This is the quality gate from the SDLC analogy, made executable. The CI pipeline does not ask the developer whether the code is correct. The test suite should not be a suggestion in the system prompt. It should be a step the agent cannot skip.
 
 ---
 
@@ -208,9 +220,10 @@ This separation — agents for generative work, a deterministic runtime for cont
 
 [^1]: Nelson F. Liu et al., "Lost in the Middle: How Language Models Use Long Contexts," arXiv:2307.03172, 2023. <https://arxiv.org/abs/2307.03172>
 [^2]: Matthew Thompson, "Managing the Stochastic: A Dual-State Agent Process Framework," arXiv:2512.20660, 2024. <https://arxiv.org/abs/2512.20660>
-[^3]: Ibid. The paper formalizes the separation as $S_{workflow} \times S_{env}$, with guard functions $g: S_{workflow} \times Output \to \{pass, fail\}$ evaluated deterministically before any state transition.
+[^3]: Ibid. The paper formalizes the separation as $S_{workflow} \times S_{env}$, with guard functions $g: S_{workflow} \times Output \to \{pass, fail\}$ evaluated deterministically before any state transition. <https://arxiv.org/abs/2512.20660>
 [^4]: Markus Wondrak, "Re-evaluating GitHub's Spec Kit: Structured SDLC Automation," wondrax.cloud, April 2026. <https://markus.wondrax.cloud/articles/spec-kit-reevaluation.html>
 [^5]: GitHub, "Workflow Engine — spec-kit Issue #2142," github.com, April 2026. <https://github.com/github/spec-kit/issues/2142>
 [^6]: GitHub, "Workflow Reference — github/spec-kit," github.com. <https://github.com/github/spec-kit/blob/main/docs/reference/workflows.md>
 [^7]: GitHub, "Gate step — `GateStep` (stdin TTY check)," github/spec-kit. <https://github.com/github/spec-kit/blob/main/src/specify_cli/workflows/steps/gate/__init__.py> State persistence and resume: [Workflow System Architecture](https://github.com/github/spec-kit/blob/main/workflows/ARCHITECTURE.md); gate and resume usage: [Workflows README](https://github.com/github/spec-kit/blob/main/workflows/README.md).
 [^8]: GitHub, "Support file references for workflow inputs," github.com, April 2026. <https://github.com/github/spec-kit/issues/2405>
+[^9]: TNG Technology Consulting, "ArchUnit -- A Java Architecture Test Library," github.com. <https://github.com/TNG/ArchUnit>

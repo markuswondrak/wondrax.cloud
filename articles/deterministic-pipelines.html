@@ -186,8 +186,17 @@
 </ul>
 <p><strong>Expressions</strong> pass typed data between steps. <code>{{ steps.specify.output.file }}</code> routes a previous step&rsquo;s output as the next step&rsquo;s input. Branching conditions like <code>{{ steps.plan.output.task_count &gt; 5 }}</code> are evaluated against concrete step outputs. The expression language is a custom Jinja2-like engine with a deliberately narrow feature set: dot-path access, comparisons, boolean logic, and four filters (<code>default</code>, <code>join</code>, <code>contains</code>, <code>map</code>).</p>
 <p><strong>Multi-integration dispatch</strong> allows different AI models per step. The <code>integration</code> field is per-step configuration — a research step and an implementation step can use different models. The workflow declares this; each model at its step has no knowledge of what model ran before or will run after. The cognitive specialization is explicit in the configuration, not emergent from agent coordination.</p>
-<p><strong>State persistence</strong> ties the whole design together. Every workflow run stores its state under <code>.specify/workflows/runs/&lt;run-id&gt;/</code>: a <code>state.json</code> with the current step index and all step outputs, an <code>inputs.json</code> with resolved input values, and a <code>log.jsonl</code> append-only execution log. A paused run — whether paused at a gate or failed mid-execution — can be resumed exactly at the last completed step. Nothing is reconstructed from agent memory. The run state is a first-class artifact, independent of any model&rsquo;s context window.<sup id="fnref:6"><a class="footnote-ref" href="#fn:6">6</a></sup></p>
+<p><strong>State persistence</strong> ties the whole design together. Every workflow run stores its state under <code>.specify/workflows/runs/&lt;run-id&gt;/</code>: a <code>state.json</code> with the current step index and all step outputs, an <code>inputs.json</code> with resolved input values, and a <code>log.jsonl</code> append-only execution log. A paused run — whether paused at a gate or failed mid-execution — can be resumed exactly at the last completed step.<sup id="fnref:6"><a class="footnote-ref" href="#fn:6">6</a></sup></p>
 <p>This is what the Dual-State separation looks like in practice. $S_{workflow}$ is the YAML definition plus the runtime&rsquo;s execution state. $S_{env}$ is what happens inside each AI step. The two spaces are explicitly bounded, with no leakage in either direction.</p>
+<p><strong>Quality gates as workflow steps</strong> extend the same principle. The <code>shell</code> step that loads a file above uses deterministic execution for plumbing. The same mechanism applies to verification: any check the team already runs in CI can be embedded as a workflow step, enforced before the agent proceeds.</p>
+<ul>
+<li>A test suite either passes or fails.</li>
+<li>A linter either reports violations or it does not.</li>
+<li>ArchUnit<sup id="fnref:9"><a class="footnote-ref" href="#fn:9">9</a></sup> validates architecture rules against compiled bytecode &ndash; package dependency constraints, cycle detection, access restrictions.</li>
+</ul>
+<p>These are boolean outcomes. They do not require interpretation, and they do not benefit from an agent&rsquo;s judgment. They are exactly the kind of check that belongs in the runtime, not delegated to the model.</p>
+<p>In a conventional SDLC, the CI pipeline runs these checks after code is written. The workflow engine moves them inside the agentic pipeline. A <code>shell</code> step that runs <code>./gradlew test</code> after the implement step produces a concrete exit code. An <code>if</code> condition branches on that result: pass continues to the next phase, fail routes back to a fix loop or aborts. The agent never sees the test output as context to interpret. The runtime evaluates it and decides.</p>
+<p>This is the quality gate from the SDLC analogy, made executable. The CI pipeline does not ask the developer whether the code is correct. The test suite should not be a suggestion in the system prompt. It should be a step the agent cannot skip.</p>
 <hr />
 <h2 id="getting-started">Getting Started</h2>
 <p>A workflow run starts with a single command:</p>
@@ -213,7 +222,7 @@
 <p>Matthew Thompson, &ldquo;Managing the Stochastic: A Dual-State Agent Process Framework,&rdquo; arXiv:2512.20660, 2024. <a href="https://arxiv.org/abs/2512.20660">https://arxiv.org/abs/2512.20660</a>&#160;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 2 in the text">&#8617;</a></p>
 </li>
 <li id="fn:3">
-<p>Ibid. The paper formalizes the separation as $S_{workflow} \times S_{env}$, with guard functions $g: S_{workflow} \times Output \to \{pass, fail\}$ evaluated deterministically before any state transition.&#160;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 3 in the text">&#8617;</a></p>
+<p>Ibid. The paper formalizes the separation as $S_{workflow} \times S_{env}$, with guard functions $g: S_{workflow} \times Output \to \{pass, fail\}$ evaluated deterministically before any state transition. <a href="https://arxiv.org/abs/2512.20660">https://arxiv.org/abs/2512.20660</a>&#160;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 3 in the text">&#8617;</a></p>
 </li>
 <li id="fn:4">
 <p>Markus Wondrak, &ldquo;Re-evaluating GitHub&rsquo;s Spec Kit: Structured SDLC Automation,&rdquo; wondrax.cloud, April 2026. <a href="https://markus.wondrax.cloud/articles/spec-kit-reevaluation.html">https://markus.wondrax.cloud/articles/spec-kit-reevaluation.html</a>&#160;<a class="footnote-backref" href="#fnref:4" title="Jump back to footnote 4 in the text">&#8617;</a></p>
@@ -229,6 +238,9 @@
 </li>
 <li id="fn:8">
 <p>GitHub, &ldquo;Support file references for workflow inputs,&rdquo; github.com, April 2026. <a href="https://github.com/github/spec-kit/issues/2405">https://github.com/github/spec-kit/issues/2405</a>&#160;<a class="footnote-backref" href="#fnref:8" title="Jump back to footnote 8 in the text">&#8617;</a></p>
+</li>
+<li id="fn:9">
+<p>TNG Technology Consulting, &ldquo;ArchUnit &ndash; A Java Architecture Test Library,&rdquo; github.com. <a href="https://github.com/TNG/ArchUnit">https://github.com/TNG/ArchUnit</a>&#160;<a class="footnote-backref" href="#fnref:9" title="Jump back to footnote 9 in the text">&#8617;</a></p>
 </li>
 </ol>
 </div>
