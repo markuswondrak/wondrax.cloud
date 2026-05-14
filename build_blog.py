@@ -26,6 +26,10 @@ MD_EXTENSIONS = ["extra", "footnotes", "smarty", "toc", "codehilite", "tables"]
 MD_CONFIG = {
     "footnotes": {"BACKLINK_TEXT": "&#8617;"},
     "toc": {"permalink": False},
+    "codehilite": {
+        "guess_lang": False,
+        "css_class": "codehilite",
+    },
 }
 
 MERMAID_FENCE_RE = re.compile(r"```mermaid\s*\r?\n([\s\S]*?)\r?\n```", re.IGNORECASE)
@@ -282,7 +286,9 @@ def build_index_teaser(article: dict) -> str:
             f'            <span class="article-tag">{html.escape(t)}</span>'
             for t in article["tags"]
         )
-        tags_html = f'\n          <div class="article-tags">\n{tag_spans}\n          </div>'
+        tags_html = (
+            f'\n          <div class="article-tags">\n{tag_spans}\n          </div>'
+        )
 
     return f"""        <article class="article-teaser reveal">
           <div class="article-meta">
@@ -312,9 +318,7 @@ def update_index_latest_writing(articles: list[dict], max_items: int = 2) -> Non
     new_section = f"{MARKER_START}\n{entries}\n        {MARKER_END}"
 
     index_html = (
-        index_html[:start_idx]
-        + new_section
-        + index_html[end_idx + len(MARKER_END) :]
+        index_html[:start_idx] + new_section + index_html[end_idx + len(MARKER_END) :]
     )
 
     with open(INDEX_PATH, "w", encoding="utf-8") as f:

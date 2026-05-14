@@ -9,7 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/styles.css?v=3">
+  <link rel="stylesheet" href="../css/styles.css?v=4">
+  <link rel="stylesheet" href="../css/syntax-highlight.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
 </head>
 <body>
@@ -48,10 +49,9 @@
 <p>By minute forty, the test suite was passing. The authentication module had been refactored in a way that was syntactically correct, functionally coherent, and architecturally incompatible with the planned microservices migration. The errors had compounded quietly across every commit, each one optimizing for the current state rather than the intended one.</p>
 <p>This is agentic drift. It is not a model quality problem but a structural consequence of asking a probabilistic system to manage its own workflow — and it compounds the longer the session runs.</p>
 <p>When you ask your agent how to mitigate that risk, it will suggest writing better instructions. Add emphasis. Make the constraint louder. I have done this. The system prompt began accumulating things like </p>
-<div class="codehilite"><pre><span></span><code><span class="n">IMPORTANT</span><span class="o">:</span><span class="w"> </span><span class="n">DO</span><span class="w"> </span><span class="n">NOT</span><span class="w"> </span><span class="n">proceed</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">implementation</span><span class="w"> </span><span class="n">before</span><span class="w"> </span>
-<span class="n">the</span><span class="w"> </span><span class="n">architecture</span><span class="w"> </span><span class="n">review</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">complete</span><span class="o">.</span><span class="w"> </span>
+<div class="codehilite"><pre><span></span><code>IMPORTANT: DO NOT proceed to implementation before the architecture review is complete. 
 
-<span class="n">YOU</span><span class="w"> </span><span class="n">MUST</span><span class="w"> </span><span class="n">ASK</span><span class="w"> </span><span class="n">THE</span><span class="w"> </span><span class="n">USER</span><span class="w"> </span><span class="n">TO</span><span class="w"> </span><span class="n">CONFIRM</span><span class="w"> </span><span class="n">FIRST</span><span class="o">!!</span>
+YOU MUST ASK THE USER TO CONFIRM FIRST!!
 </code></pre></div>
 
 <p>All caps. Exclamation marks. The model read those instructions with the same probabilistic attention it applied to everything else in the context window. Sometimes it complied. Under a long context with competing signals, it did not. The instructions had weight — not authority.</p>
@@ -310,6 +310,36 @@
           lightbox.classList.remove('is-active');
           lightbox.setAttribute('aria-hidden', 'true');
         }
+      });
+    })();
+
+    // Copy button for code blocks
+    (function() {
+      var codeBlocks = document.querySelectorAll('.article-body .codehilite');
+      
+      codeBlocks.forEach(function(block) {
+        var pre = block.querySelector('pre');
+        if (!pre) return;
+        
+        var button = document.createElement('button');
+        button.className = 'code-copy-btn';
+        button.setAttribute('aria-label', 'Copy code');
+        button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+        
+        block.style.position = 'relative';
+        block.appendChild(button);
+        
+        button.addEventListener('click', function() {
+          var code = pre.querySelector('code');
+          var text = code ? code.textContent : pre.textContent;
+          
+          navigator.clipboard.writeText(text).then(function() {
+            button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8DB580" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            setTimeout(function() {
+              button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+            }, 2000);
+          });
+        });
       });
     })();
   </script>

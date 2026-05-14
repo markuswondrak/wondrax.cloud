@@ -20,8 +20,7 @@ This is agentic drift. It is not a model quality problem but a structural conseq
 When you ask your agent how to mitigate that risk, it will suggest writing better instructions. Add emphasis. Make the constraint louder. I have done this. The system prompt began accumulating things like 
 
 ```
-IMPORTANT: DO NOT proceed to implementation before 
-the architecture review is complete. 
+IMPORTANT: DO NOT proceed to implementation before the architecture review is complete. 
 
 YOU MUST ASK THE USER TO CONFIRM FIRST!!
 ```

@@ -680,14 +680,15 @@ a:focus-visible {
 }
 
 .article-body pre {
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
   background: var(--color-text);
   color: var(--color-bg);
   padding: var(--space-6);
-  border-radius: var(--radius-md);
   overflow-x: auto;
   margin: var(--space-8) 0;
   font-size: var(--text-sm);
-  line-height: 1.6;
+  line-height: 1.7;
+  tab-size: 2;
 }
 
 .article-body pre code {
@@ -695,6 +696,90 @@ a:focus-visible {
   padding: 0;
   color: inherit;
   font-size: inherit;
+}
+
+/* ============================================
+   BREAKOUT LAYOUT: Code blocks get more space
+   ============================================ */
+
+/* Widen the article body container */
+.article-body .container--narrow {
+  display: grid;
+  grid-template-columns:
+    [full-start] minmax(var(--space-6), 1fr)
+    [content-start] min(65ch, 100%)
+    [content-end] minmax(var(--space-6), 1fr)
+    [full-end];
+  padding-inline: 0;
+  max-width: var(--container-max);
+}
+
+/* Default: all children sit in the content column */
+.article-body .container--narrow > * {
+  grid-column: content;
+}
+
+/* Breakout elements: span all columns for full width */
+.article-body .container--narrow > .codehilite,
+.article-body .container--narrow > pre,
+.article-body .container--narrow > div.mermaid {
+  grid-column: full;
+  margin: 0;
+  border-radius: 0;
+}
+
+/* Re-apply vertical margins for breakout elements */
+.article-body .container--narrow > .codehilite,
+.article-body .container--narrow > pre {
+  margin-top: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+
+.article-body .container--narrow > div.mermaid {
+  margin-top: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+
+/* On mobile, keep some rounding for comfort */
+@media (max-width: 640px) {
+  .article-body .container--narrow > .codehilite,
+  .article-body .container--narrow > pre,
+  .article-body .container--narrow > div.mermaid {
+    border-radius: var(--radius-md);
+  }
+}
+
+/* Copy button for code blocks */
+.code-copy-btn {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  background: rgba(243, 239, 230, 0.08);
+  border: 1px solid rgba(243, 239, 230, 0.12);
+  border-radius: var(--radius-sm);
+  color: rgba(243, 239, 230, 0.5);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.codehilite:hover .code-copy-btn,
+.codehilite:focus-within .code-copy-btn {
+  opacity: 1;
+}
+
+.code-copy-btn:hover {
+  background: rgba(243, 239, 230, 0.15);
+  color: rgba(243, 239, 230, 0.8);
+}
+
+.code-copy-btn:active {
+  transform: scale(0.95);
 }
 
 .article-body hr {

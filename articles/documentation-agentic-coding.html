@@ -9,7 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/styles.css?v=3">
+  <link rel="stylesheet" href="../css/styles.css?v=4">
+  <link rel="stylesheet" href="../css/syntax-highlight.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
 </head>
 <body>
@@ -149,39 +150,39 @@
 <hr />
 <h3 id="the-concrete-file-structure">The Concrete File Structure</h3>
 <p>The following layout maps the three-tier model onto a repository. It is the arc42 documentation structure made agent-accessible.</p>
-<div class="codehilite"><pre><span></span><code><span class="o">/</span>
-<span class="err">├──</span><span class="w"> </span><span class="nx">AGENTS</span><span class="p">.</span><span class="nx">md</span><span class="w">                           </span><span class="err">#</span><span class="w"> </span><span class="nx">Tier</span><span class="w"> </span><span class="mi">1</span><span class="nx">a</span><span class="p">:</span><span class="w"> </span><span class="nx">Universal</span>
-<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">Setup</span><span class="w"> </span><span class="nx">commands</span>
-<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">Universal</span><span class="w"> </span><span class="nx">Constraints</span><span class="w"> </span><span class="p">(</span><span class="err">§</span><span class="mi">2</span><span class="p">)</span>
-<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">Top</span><span class="o">-</span><span class="mi">3</span><span class="w"> </span><span class="nx">Quality</span><span class="w"> </span><span class="nx">Goals</span><span class="w"> </span><span class="p">(</span><span class="err">§</span><span class="mi">1</span><span class="p">)</span>
-<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">Pointer</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">docs</span><span class="o">/</span><span class="nx">glossary</span><span class="p">.</span><span class="nx">md</span><span class="w"> </span><span class="p">(</span><span class="err">§</span><span class="mi">12</span><span class="p">)</span>
-<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="nx">Pointer</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">docs</span><span class="o">/</span><span class="nx">architecture</span><span class="o">/</span><span class="nx">README</span><span class="p">.</span><span class="nx">md</span>
-<span class="err">│</span>
-<span class="err">├──</span><span class="w"> </span><span class="nx">packages</span><span class="o">/</span>
-<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="kn">api</span><span class="o">/</span>
-<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">AGENTS</span><span class="p">.</span><span class="nx">md</span><span class="w">                   </span><span class="err">#</span><span class="w"> </span><span class="nx">Tier</span><span class="w"> </span><span class="mi">1</span><span class="nx">b</span><span class="p">:</span><span class="w"> </span><span class="nx">Backend</span><span class="w"> </span><span class="nx">constraints</span><span class="w"> </span><span class="nx">only</span>
-<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="nx">src</span><span class="o">/</span>
-<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="nx">frontend</span><span class="o">/</span>
-<span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="nx">AGENTS</span><span class="p">.</span><span class="nx">md</span><span class="w">                   </span><span class="err">#</span><span class="w"> </span><span class="nx">Tier</span><span class="w"> </span><span class="mi">1</span><span class="nx">b</span><span class="p">:</span><span class="w"> </span><span class="nx">Frontend</span><span class="w"> </span><span class="nx">constraints</span><span class="w"> </span><span class="nx">only</span>
-<span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="nx">src</span><span class="o">/</span>
-<span class="err">│</span>
-<span class="err">└──</span><span class="w"> </span><span class="nx">docs</span><span class="o">/</span>
-<span class="w">    </span><span class="err">├──</span><span class="w"> </span><span class="nx">architecture</span><span class="o">/</span>
-<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">README</span><span class="p">.</span><span class="nx">md</span><span class="w">                   </span><span class="err">#</span><span class="w"> </span><span class="nx">Pointer</span><span class="w"> </span><span class="nx">index</span><span class="w"> </span><span class="p">(</span><span class="o">~</span><span class="mi">200</span><span class="w"> </span><span class="nx">tokens</span><span class="p">)</span>
-<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">context</span><span class="o">-</span><span class="nx">scope</span><span class="p">.</span><span class="nx">md</span><span class="w">            </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">3</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Context</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nx">Scope</span>
-<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">building</span><span class="o">-</span><span class="nx">blocks</span><span class="p">.</span><span class="nx">md</span><span class="w">          </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">5</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Building</span><span class="w"> </span><span class="nx">Block</span><span class="w"> </span><span class="nx">View</span>
-<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">runtime</span><span class="p">.</span><span class="nx">md</span><span class="w">                  </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">6</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Runtime</span><span class="w"> </span><span class="nx">View</span>
-<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">deployment</span><span class="p">.</span><span class="nx">md</span><span class="w">               </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">7</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Deployment</span><span class="w"> </span><span class="nx">View</span>
-<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">patterns</span><span class="p">.</span><span class="nx">md</span><span class="w">                 </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">8</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Crosscutting</span><span class="w"> </span><span class="nx">Concepts</span>
-<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">strategy</span><span class="p">.</span><span class="nx">md</span><span class="w">                 </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">4</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Solution</span><span class="w"> </span><span class="nx">Strategy</span><span class="w"> </span><span class="p">(</span><span class="nx">Tier</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span>
-<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">quality</span><span class="p">.</span><span class="nx">md</span><span class="w">                  </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">10</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Quality</span><span class="w"> </span><span class="nx">Requirements</span><span class="w"> </span><span class="p">(</span><span class="nx">Tier</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span>
-<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="nx">risks</span><span class="p">.</span><span class="nx">md</span><span class="w">                    </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">11</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">AI</span><span class="w"> </span><span class="nx">Debt</span><span class="w"> </span><span class="nx">Register</span><span class="w"> </span><span class="p">(</span><span class="nx">Tier</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span>
-<span class="w">    </span><span class="err">├──</span><span class="w"> </span><span class="nx">decisions</span><span class="o">/</span>
-<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nx">README</span><span class="p">.</span><span class="nx">md</span><span class="w">                   </span><span class="err">#</span><span class="w"> </span><span class="nx">ADR</span><span class="w"> </span><span class="nx">index</span><span class="w"> </span><span class="p">(</span><span class="o">~</span><span class="mi">200</span><span class="w"> </span><span class="nx">tokens</span><span class="p">)</span>
-<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="mi">001</span><span class="o">-</span><span class="nx">async</span><span class="o">-</span><span class="nx">mobile</span><span class="o">-</span><span class="nx">reads</span><span class="p">.</span><span class="nx">md</span>
-<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="mi">002</span><span class="o">-</span><span class="nx">saga</span><span class="o">-</span><span class="nx">pattern</span><span class="p">.</span><span class="nx">md</span>
-<span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="o">...</span>
-<span class="w">    </span><span class="err">└──</span><span class="w"> </span><span class="nx">glossary</span><span class="p">.</span><span class="nx">md</span><span class="w">                     </span><span class="err">#</span><span class="w"> </span><span class="err">§</span><span class="mi">12</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Glossary</span>
+<div class="codehilite"><pre><span></span><code>/
+├── AGENTS.md                           # Tier 1a: Universal
+│   ├── Setup commands
+│   ├── Universal Constraints (§2)
+│   ├── Top-3 Quality Goals (§1)
+│   ├── Pointer → docs/glossary.md (§12)
+│   └── Pointer → docs/architecture/README.md
+│
+├── packages/
+│   ├── api/
+│   │   ├── AGENTS.md                   # Tier 1b: Backend constraints only
+│   │   └── src/
+│   └── frontend/
+│       ├── AGENTS.md                   # Tier 1b: Frontend constraints only
+│       └── src/
+│
+└── docs/
+    ├── architecture/
+    │   ├── README.md                   # Pointer index (~200 tokens)
+    │   ├── context-scope.md            # §3 — Context &amp; Scope
+    │   ├── building-blocks.md          # §5 — Building Block View
+    │   ├── runtime.md                  # §6 — Runtime View
+    │   ├── deployment.md               # §7 — Deployment View
+    │   ├── patterns.md                 # §8 — Crosscutting Concepts
+    │   ├── strategy.md                 # §4 — Solution Strategy (Tier 3)
+    │   ├── quality.md                  # §10 — Quality Requirements (Tier 3)
+    │   └── risks.md                    # §11 — AI Debt Register (Tier 3)
+    ├── decisions/
+    │   ├── README.md                   # ADR index (~200 tokens)
+    │   ├── 001-async-mobile-reads.md
+    │   ├── 002-saga-pattern.md
+    │   └── ...
+    └── glossary.md                     # §12 — Glossary
 </code></pre></div>
 
 <p>The root <code>AGENTS.md</code> is the only file loaded in every session. It contains universal constraints as explicit rules, the top three quality objectives, and pointers — not content — to the deeper documentation. An agent working on a backend ticket also loads <code>packages/api/AGENTS.md</code>. An agent working on a frontend component loads <code>packages/frontend/AGENTS.md</code>. Neither loads the other.</p>
@@ -381,6 +382,36 @@ C4Context
           lightbox.classList.remove('is-active');
           lightbox.setAttribute('aria-hidden', 'true');
         }
+      });
+    })();
+
+    // Copy button for code blocks
+    (function() {
+      var codeBlocks = document.querySelectorAll('.article-body .codehilite');
+      
+      codeBlocks.forEach(function(block) {
+        var pre = block.querySelector('pre');
+        if (!pre) return;
+        
+        var button = document.createElement('button');
+        button.className = 'code-copy-btn';
+        button.setAttribute('aria-label', 'Copy code');
+        button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+        
+        block.style.position = 'relative';
+        block.appendChild(button);
+        
+        button.addEventListener('click', function() {
+          var code = pre.querySelector('code');
+          var text = code ? code.textContent : pre.textContent;
+          
+          navigator.clipboard.writeText(text).then(function() {
+            button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8DB580" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            setTimeout(function() {
+              button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+            }, 2000);
+          });
+        });
       });
     })();
   </script>
