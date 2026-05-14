@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "author": {
+      "description": "Write, edit, revise, or structure technical articles. Enforces consistent voice, narrative coherence, source-backed claims, and whole-article awareness. Use for drafting, outlining, revising, sourcing, or critiquing articles.",
+      "mode": "primary",
+      "model": "opencode-go/glm-5.1",
+      "prompt": "{file:.agents/skills/author/SKILL.md}",
+      "permission": {
+        "read": "allow",
+        "edit": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": {
+          "*": "ask",
+          "git status *": "allow",
+          "git log *": "allow",
+          "git diff *": "allow"
+        },
+        "task": "allow",
+        "webfetch": "allow",
+        "websearch": "allow",
+        "skill": "allow",
+        "question": "allow"
+      }
+    }
+  }
+}

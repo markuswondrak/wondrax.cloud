@@ -1,20 +1,20 @@
 ---
-title: "When Orchestrators Drift: Why Deterministic Pipelines Must Live Outside the Agent"
+title: "The Agent Is Not the Pipeline: Spec-Kit Workflows and the Enforcement Layer"
 author: "Markus Wondrak"
 date: "2026-05-10"
-excerpt: "Agents are probabilistic by design. Hard workflow guarantees — phase gates, enforced sequencing, human checkpoints — cannot be achieved by giving an agent better instructions. They require a runtime that the agent cannot override."
+excerpt: "Agents are probabilistic by design. Hard workflow guarantees — phase gates, enforced sequencing, human checkpoints — cannot be achieved by giving an agent better instructions. They require a runtime the agent cannot override. Spec-Kit's workflow engine provides one."
 tags: ["Agentic Coding", "Spec Kit", "Architecture", "Workflows"]
 reading_time: "13 min read"
 slug: "deterministic-pipelines"
 ---
 
-The agent had been running for forty minutes. The task was clear: refactor the authentication module, write tests, open a PR. No surprises.
+The agent had been running for forty minutes on a straightforward task: refactor the authentication module, write tests, open a PR.
 
-By minute twelve, it had drifted. Not dramatically — it still produced code, still ran the test suite, still committed incrementally. But the spec it had been given called for an architecture review before touching the token validation logic. The agent skipped it. Not because it decided to — it never decided anything. It moved to the next plausible step, because "next plausible step" is what the model does.
+By minute twelve, it had drifted — not dramatically. It still produced code, ran the test suite, committed incrementally. But the spec called for an architecture review before touching the token validation logic. The agent skipped it, not because it decided to, but because it moved to the next plausible step. That is what the model does.
 
-By minute forty, the test suite was passing. The authentication module had been refactored in a way that was syntactically correct, functionally coherent, and architecturally incompatible with the planned microservices migration. The agent had been consistent. Just not right. And because it had been consistent, the errors compounded quietly across every commit.
+By minute forty, the test suite was passing. The authentication module had been refactored in a way that was syntactically correct, functionally coherent, and architecturally incompatible with the planned microservices migration. The errors had compounded quietly across every commit, each one optimizing for the current state rather than the intended one.
 
-This is agentic drift. It is not a model quality problem. It is a structural consequence of asking a probabilistic system to manage its own workflow — and it gets worse the longer the session runs.
+This is agentic drift. It is not a model quality problem but a structural consequence of asking a probabilistic system to manage its own workflow — and it compounds the longer the session runs.
 
 When you ask your agent how to mitigate that risk, it will suggest writing better instructions. Add emphasis. Make the constraint louder. I have done this. The system prompt began accumulating things like `IMPORTANT: DO NOT proceed to implementation before the architecture review is complete. YOU MUST ASK THE USER TO CONFIRM FIRST.` All caps. Exclamation marks. The model read those instructions with the same probabilistic attention it applied to everything else in the context window. Sometimes it complied. Under a long context with competing signals, it did not. The instructions had weight — not authority.
 
@@ -26,7 +26,7 @@ The underlying mechanism is how attention works. Models do not process context u
 
 Session length is the practical consequence. The longer the session, the more tool outputs, intermediate results, and generated content accumulate between early instructions and the current generation point. A constraint established in the first ten minutes may have no practical weight by minute sixty — not because the agent decided to ignore it, but because it has been progressively outweighed by more recent material.
 
-Phase discipline is the next casualty. A workflow that requires design before planning before implementation is a sequence of commitments. In a human workflow, something enforces those commitments: a ticket system, a review gate, a process that withholds the next step until the previous one is signed off. In an agent workflow that exists only as instructions in a prompt, the mechanism is the model's compliance with those instructions. Compliance is probabilistic. Under pressure — a long context, a complex task, conflicting signals — it degrades.
+Phase discipline breaks down for the same reason. A workflow that requires design before planning before implementation is a sequence of commitments. In a human workflow, something enforces those commitments: a ticket system, a review gate, a process that withholds the next step until the previous one is signed off. In an agent workflow that exists only as instructions in a prompt, the mechanism is the model's compliance with those instructions. Compliance is probabilistic. Under pressure — a long context, a complex task, conflicting signals — it degrades.
 
 The third factor is stochastic divergence. Run the same agentic workflow twice with identical inputs and you will not get identical outputs. This is expected — it is not a defect. But it means that any workflow property you rely on is a statistical tendency, not a guarantee. The agent will usually check architecture constraints. It will usually run linting before committing. Under the load of a long context or an unlucky sampling path, it won't.
 
@@ -50,17 +50,17 @@ The underlying assumption is that the orchestrator manages state coherently acro
 
 ## Structure Cannot Live Inside the Agent
 
-This is the core problem, stated precisely: a deterministic property cannot be achieved through a probabilistic mechanism.
+The structural issue is straightforward: a deterministic property cannot be achieved through a probabilistic mechanism.
 
 Software engineering requires determinism in specific places. A function call either succeeds or raises an exception. An API contract is met or it is not. A test passes or it fails. These are not approximations. They are boolean facts on which the rest of the system depends. When an agent is asked to *guarantee* that planning was completed before implementation began, the guarantee is only as strong as the model's disposition to comply.
 
 Matthew Thompson's *Dual-State Agent Process framework* formalizes this as a separation between two state spaces.[^3] The first is $S_{workflow}$: the deterministic control flow — what states are legal, what transitions are permitted, what happens when a guard condition fails. The second is $S_{env}$: the stochastic environment where content is generated. These are fundamentally different concerns. $S_{env}$ is where the agent operates, and probabilistic behavior is appropriate there — that is the space where language model capabilities are relevant. $S_{workflow}$ must be engineered, not modeled.
 
-Post-condition guards follow from this separation. Instead of trusting the agent to self-certify that a phase is complete, a deterministic guard function evaluates the output against defined criteria before the workflow advances. The agent produces content; the runtime decides what happens next. The agent can be wrong. The guard is not.
+Post-condition guards follow from this separation. Instead of trusting the agent to self-certify that a phase is complete, a deterministic guard function evaluates the output against defined criteria before the workflow advances. The agent produces content; the runtime decides what happens next based on those criteria, not on the agent's self-assessment.
 
 There is a cost beyond correctness when this separation is absent. Without enforced state, every agent call must carry enough workflow context for the model to orient itself: current phase, completed phases, applicable rules, transition criteria. It all goes into the system prompt. With a workflow state machine managing transitions externally, each call receives only the instructions scoped to the current state. The context is narrower, cheaper, and less susceptible to instruction decay toward the end of a long window.
 
-The conclusion is inconvenient but unavoidable. You cannot make an agent more deterministic by giving it better instructions. Instructions are processed by the same probabilistic mechanism that causes drift in the first place. The only way to enforce workflow structure is to move it outside the agent entirely — into an execution environment the agent cannot override.
+You cannot make an agent more deterministic by giving it better instructions. Instructions are processed by the same probabilistic mechanism that causes drift in the first place. The only way to enforce workflow structure is to move it outside the agent entirely — into an execution environment the agent cannot override.
 
 ---
 
@@ -92,9 +92,9 @@ The phase structure is recognizable. It is the SDLC logic from the previous chap
 
 ## Spec-Kit's Workflow Engine
 
-A few weeks ago I published a re-evaluation of Spec-Kit.[^4] Shortly after it went out, one of the maintainers reached out — and pointed me to the workflow engine that had just shipped.[^5] It was exactly the missing piece this article is about.
+A few weeks ago I published a re-evaluation of Spec-Kit.[^4] Shortly after it went out, one of the maintainers reached out — and pointed me to the workflow engine that had just shipped.[^5] It addressed the enforcement gap described above.
 
-The architecture is straight forward: a workflow is a YAML file with a defined schema. The runtime is a deterministic orchestrator that reads the YAML, executes steps in sequence, and dispatches AI integrations as needed. The AI calls are one step type among several. The orchestrator does not delegate control to the model — it delegates a bounded task, collects the output, and decides what happens next.
+The architecture is straight forward: a workflow is a YAML file with a defined schema. The runtime is a deterministic orchestrator that reads the YAML, executes steps in sequence, and dispatches AI integrations as needed. The AI calls are one step type among several. The orchestrator delegates a bounded task, collects the output, and decides what happens next.
 
 **Step types** define the vocabulary:
 
@@ -109,7 +109,7 @@ The architecture is straight forward: a workflow is a YAML file with a defined s
 | `fan-out` | Dispatches a step for each item in a collection; `max_concurrency` controls parallelism |
 | `fan-in` | Collects all fan-out branches before proceeding |
 
-The gate step is where the human-in-the-loop guarantee is actually implemented ([`workflow.yml`](https://github.com/markuswondrak/spec-kit-workflows-demo/blob/main/workflow.yml)):
+The gate step is how the human-in-the-loop checkpoint is implemented ([`workflow.yml`](https://github.com/markuswondrak/spec-kit-workflows-demo/blob/main/workflow.yml)):
 
 ```yaml
 - id: review-spec
@@ -119,21 +119,19 @@ The gate step is where the human-in-the-loop guarantee is actually implemented (
   on_reject: abort
 ```
 
-The workflow pauses here. If the reviewer approves, `specify workflow resume <run-id>` continues execution at the next step. If they reject, `on_reject: abort` instructs the runtime to halt the run entirely. Either way, the model has no input into what happens next — only the human's decision and the runtime's response to it determine the outcome.
-
-**Gates in practice.** That guarantee is real — but it is worth being precise about what "human approval" means in the current implementation. A gate pauses the workflow and writes the run state to disk. Resumption requires someone to run `specify workflow resume <run-id>` in a terminal. There is no push notification, no web UI, no webhook to an external approval system. A reviewer does not receive a Slack message or a GitHub PR comment. They need to know a run is waiting, and they need CLI access to the machine that started it.
-
-For local development workflows — a developer running a multi-phase pipeline on their own machine — this is entirely workable. For team pipelines, or for workflows running in CI, the CLI-only surface is a gap. Nothing in the gate specification prevents an operator from wrapping `specify workflow status` in a polling loop that bridges to an external notification channel. But that bridge is not built in. The structural pattern is correct — enforcement lives outside the model — and the operational tooling around it is still maturing.
+When the workflow reaches a gate step, execution pauses. The runtime checks whether it is connected to an interactive terminal (`sys.stdin.isatty()`). If it is, the gate prints its message, lists the options, and waits for input — `approve` or `reject`. Choosing `reject` triggers `on_reject: abort` and halts the run. If there is no TTY, there is no prompt. The step records its paused state to disk and the process exits. The run can be resumed later with `specify workflow resume <run-id>`. The same checkpoint works in CI without workflow changes — an adapter can bridge the paused run to any review channel, and the runtime accepts `resume` regardless of how the reviewer was reached. In neither path does the model participate. The checkpoint is between the human and the runtime.[^7]
 
 The `shell` step makes the separation concrete in a different way ([`workflow-from-file.yml`](https://github.com/markuswondrak/spec-kit-workflows-demo/blob/main/workflow-from-file.yml)):
 
 ```yaml
+# Spec-Kit currently lacks native file-reference inputs,
+# so reading a file into the workflow requires a shell step.
 - id: load-spec
   type: shell
   run: "cat \"{{ inputs.spec_file }}\""
 ```
 
-A `shell` step runs entirely outside the AI integration. Its `stdout` is captured by the runtime and becomes `steps.load-spec.output.stdout` — a concrete string that every downstream `speckit.*` command receives as its input. The agent at the `specify` step gets text; it has no knowledge of whether that text came from a file, an inline argument, or any other source. The runtime resolved the value before the AI call was made.
+A `shell` step runs entirely outside the AI integration. The runtime executes it, captures the `stdout`, and makes it available as `steps.load-spec.output.stdout` — a concrete string that every downstream `speckit.*` command receives as its input. The agent at the next step gets text, not a file path it has to resolve. It has no knowledge of whether that text came from a file, an inline argument, or any other source. The runtime resolved the value before the AI call was made.
 
 The `do-while` loop shows how the same runtime authority applies to iteration ([`workflow.yml`](https://github.com/markuswondrak/spec-kit-workflows-demo/blob/main/workflow.yml)):
 
@@ -166,9 +164,13 @@ The `do-while` loop shows how the same runtime authority applies to iteration ([
             args: "{{ inputs.spec }}"
 ```
 
-Several constraints operate at once here. `max_iterations: 3` is a hard bound enforced by the runtime — the loop cannot run indefinitely regardless of what the model produces. The loop's exit condition is `steps.check-verdict.output.choice == 'fix'` — not the model's assessment of whether the code is good enough, but a human decision written into run state at the gate. The `if/then` inside the loop dispatches the fix pass only when that verdict requires it. And the gate itself carries two options — `approve` exits the loop immediately; `fix` continues it. At each decision point, a human or the runtime holds authority. The model implements; it does not decide.
+Three constraints govern this loop deterministically:
 
-**Expressions** pass typed data between steps. `{{ steps.specify.output.file }}` routes a previous step's output as the next step's input. Branching conditions like `{{ steps.plan.output.task_count > 5 }}` are evaluated against concrete step outputs — not against the model's judgment. The expression language is a custom Jinja2-like engine with a deliberately narrow feature set: dot-path access, comparisons, boolean logic, and four filters (`default`, `join`, `contains`, `map`).
+- `max_iterations: 3` sets a hard ceiling. The loop cannot exceed three passes regardless of what happens inside it.
+- The continuation condition evaluates a human verdict. The loop continues only when the reviewer chooses `fix`; choosing `approve` ends it.
+- The `if/then` dispatches the fix pass only on a `fix` verdict. On an approval, the fix step does not run.
+
+**Expressions** pass typed data between steps. `{{ steps.specify.output.file }}` routes a previous step's output as the next step's input. Branching conditions like `{{ steps.plan.output.task_count > 5 }}` are evaluated against concrete step outputs. The expression language is a custom Jinja2-like engine with a deliberately narrow feature set: dot-path access, comparisons, boolean logic, and four filters (`default`, `join`, `contains`, `map`).
 
 **Multi-integration dispatch** allows different AI models per step. The `integration` field is per-step configuration — a research step and an implementation step can use different models. The workflow declares this; each model at its step has no knowledge of what model ran before or will run after. The cognitive specialization is explicit in the configuration, not emergent from agent coordination.
 
@@ -196,13 +198,13 @@ A working implementation of the patterns described in this article — including
 
 ## Conclusion
 
-The phrase "intention as the new source of truth" captures something real. The shift from asking agents to produce code toward asking them to first produce, and then execute, a formal specification is a structural improvement. Intention stated explicitly before implementation begins is more auditable, more consistent, and more aligned with how engineering teams actually want to work.
+The shift from asking agents to produce code toward asking them to first produce, and then execute, a formal specification is a meaningful structural improvement. Intention stated explicitly before implementation begins is more auditable, more consistent, and more aligned with how engineering teams actually want to work.
 
-But intention without enforcement is documentation. Teams have always documented their intentions. Documentation does not stop an agent from skipping the planning phase. It does not terminate a loop that runs to infinity. It does not create a human review checkpoint the model cannot bypass.
+Without enforcement, though, an intention statement has the same effect as documentation: it describes what should happen but does not ensure it. Teams have always documented their intentions. A spec file does not stop an agent from skipping the planning phase, and a prompt instruction does not terminate a loop or create a checkpoint the model cannot bypass.
 
-What the workflow engine provides is something different: intention that the execution environment enforces. The spec is reviewed before planning begins because the gate step blocks the runtime. The test loop terminates because the exit condition is evaluated by the orchestrator against concrete step output — not by the model. The AI call at each step receives a bounded task and no control over what comes next.
+What the workflow engine adds is the enforcement layer. The spec is reviewed before planning begins because the gate step withholds execution. The review-fix loop terminates because the exit condition is evaluated by the runtime against a human's explicit choice — not inferred from model output. Each AI step receives a bounded task; the runtime determines what happens next.
 
-This is the correct architecture for agentic software development. Use agents for the generative work — the work where probabilistic behavior is the feature, not the defect. Own the structure through workflow design. The agent does not orchestrate the workflow. The workflow dispatches the agent.
+This separation — agents for generative work, a deterministic runtime for control flow — is what makes the overall system predictable. The model's probabilistic nature is appropriate and useful inside each step. It is only a problem when that same probabilistic behavior is asked to manage the transitions between steps.
 
 [^1]: Nelson F. Liu et al., "Lost in the Middle: How Language Models Use Long Contexts," arXiv:2307.03172, 2023. <https://arxiv.org/abs/2307.03172>
 [^2]: Matthew Thompson, "Managing the Stochastic: A Dual-State Agent Process Framework," arXiv:2512.20660, 2024. <https://arxiv.org/abs/2512.20660>
@@ -210,3 +212,5 @@ This is the correct architecture for agentic software development. Use agents fo
 [^4]: Markus Wondrak, "Re-evaluating GitHub's Spec Kit: Structured SDLC Automation," wondrax.cloud, April 2026. <https://markus.wondrax.cloud/articles/spec-kit-reevaluation.html>
 [^5]: GitHub, "Workflow Engine — spec-kit Issue #2142," github.com, April 2026. <https://github.com/github/spec-kit/issues/2142>
 [^6]: GitHub, "Workflow Reference — github/spec-kit," github.com. <https://github.com/github/spec-kit/blob/main/docs/reference/workflows.md>
+[^7]: GitHub, "Gate step — `GateStep` (stdin TTY check)," github/spec-kit. <https://github.com/github/spec-kit/blob/main/src/specify_cli/workflows/steps/gate/__init__.py> State persistence and resume: [Workflow System Architecture](https://github.com/github/spec-kit/blob/main/workflows/ARCHITECTURE.md); gate and resume usage: [Workflows README](https://github.com/github/spec-kit/blob/main/workflows/README.md).
+[^8]: GitHub, "Support file references for workflow inputs," github.com, April 2026. <https://github.com/github/spec-kit/issues/2405>
