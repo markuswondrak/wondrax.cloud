@@ -1,5 +1,5 @@
 ---
-title: "Static Markdowns, Dynamic Problems: The Missing Glue for Agentic Coding"
+title: "State of Agent Skills: Format Portability Achieved; Composability, Scoping, and Execution Semantics to Be Defined"
 author: "Markus Wondrak"
 date: "2026-05-24"
 excerpt: "The SKILL.md standard gives agents portable instructions, but its static nature creates real friction: probabilistic loading, no variables, no composition, no scoping, no tests. The solution is not to bloat Markdown into a programming language but to build orchestrators that resolve these gaps deterministically."
@@ -15,7 +15,13 @@ So I had a look at the skill and found the mismatch immediately. It hardcodes a 
 
 I started digging. How do skills compose? Can one skill depend on another? Can I inject project-specific context into a shared skill? The answer to every question was the same: the specification does not say.
 
-This is not a niche complaint. It is the central tension in how agent skills work today: the format is portable and growing fast, but the interaction between skill author and agent execution is probabilistic. The author writes deterministic rules. The orchestrator treats them as suggestions. And when a skill makes assumptions about your project that do not hold, there is no mechanism to adapt it without rewriting.
+That experience made me look closer. The Agent Skills specification has achieved broad adoption, but it leaves five operational topics open where there is room for optimisation. Here is what I want to look at in detail:
+
+- **Triggers.** When should a skill be loaded? The current approach relies on description matching, which leaves room for more deterministic mechanisms.
+- **Variables.** How can a skill adapt to runtime context? Paths and configurations are currently static, with no standard way to inject dynamic values.
+- **Composition.** How do skills relate to each other? There is no standard mechanism for one skill to build on another.
+- **Scoping.** Which skills apply where? In larger repositories, the rules for when a skill is active remain unspecified.
+- **Tests.** How do you verify a skill works? There is no standard way to validate that a skill produces the intended behaviour.
 
 ---
 
