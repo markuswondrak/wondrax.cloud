@@ -4,7 +4,7 @@
     "author": {
       "description": "Write, edit, revise, or structure technical articles. Enforces consistent voice, narrative coherence, source-backed claims, and whole-article awareness. Use for drafting, outlining, revising, sourcing, or critiquing articles.",
       "mode": "primary",
-      "model": "opencode-go/glm-5.1",
+      "model": "opencode-go/kimi-k2.6",
       "prompt": "{file:.agents/skills/author/SKILL.md}",
       "permission": {
         "read": "allow",
