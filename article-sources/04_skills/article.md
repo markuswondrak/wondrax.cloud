@@ -66,7 +66,7 @@ Because the format is just Markdown frontmatter plus a body, any tool that imple
 
 ## No Composition: DRY Violations as a Maintenance Tax
 
-If a "deployment" skill requires knowledge from a "build" skill, the current standard offers no way to express that dependency. The context has to be duplicated. When the build process changes, every skill that depends on it needs a manual update.
+Consider two skills: one for deployment, one for build verification. Both need to know where build artifacts are placed. Currently each skill must hardcode that path. Change the output directory once, and you hunt through every `SKILL.md` that references it.
 
 This is what blocked me with `grill-with-docs`. The skill assumes a specific documentation layout: `CONTEXT.md` at the root, ADRs under `docs/adr/`. My project structures documentation differently. The skill's path assumptions are interleaved with its interview logic throughout the Markdown body. There is no way to override just the layout part. I would have to fork the entire skill and maintain my own copy, or rewrite it from scratch. Both options defeat the point of a shared, portable skill format.
 
@@ -85,7 +85,9 @@ requires:
 
 The validation runs at the tooling level, not at the agent level. The orchestrator checks that required skills exist and meet the version constraint before the skill becomes available. Circular dependencies are rejected. The agent never sees the `requires` field.
 
-That is the correct boundary. Dependency resolution is a deterministic problem that belongs in the orchestrator. Delegating it to the model would mean the model sometimes loads dependent skills, sometimes does not, and has no way to report a missing dependency as an error.
+Discussion #210 takes this further with a full `skills.json` manifest and lockfile, modeled on `package.json` and `go.mod`.[^11] It specifies how to declare, resolve, and install dependencies. But its design principle for composition is explicit: "No composition verbs, no orchestration — let the LLM figure that out." The manifest gets the right files onto disk. What happens after that — which skill runs first, how output from one becomes input to another — is delegated back to the model. Even the most advanced dependency proposal stops at installation time and punts runtime composition to probabilistic inference.
+
+That is the correct boundary. Dependency resolution is a deterministic problem that belongs in the orchestrator. Delegating it to the model would mean the model sometimes loads dependent skills, sometimes does not, and has no way to report a missing dependency as an error. The same argument applies to composition itself: deciding which skill runs first, what output from skill A becomes input to skill B, and whether skill B should abort when skill A fails — these are sequencing decisions, not content-generation decisions. They require a runtime that evaluates conditions deterministically and transitions between states authoritatively. That separation — agents for generative work, a deterministic runtime for control flow — is the central argument of the Spec-Kit workflow engine analysis.[^10]
 
 Issue #137 raises a related concern: whether a skill can instruct the agent to invoke another skill by name.[^6] The specification is silent. Some implementations support it. Some do not. The behavior is inconsistent, which is exactly the portability problem the standard was designed to solve.
 
@@ -217,3 +219,5 @@ The Agent Skills specification has achieved broad adoption by being minimal. Tha
 [^7]: lcs-bdr, "Proposal: add path-based, recursive skill discovery," agentskills/agentskills Issue #115, February 2, 2026. <https://github.com/agentskills/agentskills/issues/115>
 [^8]: Matt Pocock, "grill-with-docs" skill, mattpocock/skills repository. <https://github.com/mattpocock/skills/blob/main/skills/engineering/grill-with-docs/SKILL.md>
 [^9]: Markus Wondrak, "From Wiki to Source: How arc42 Becomes the Context Layer for AI Agents," 2026. <https://wondrax.cloud/articles/documentation-agentic-coding>
+[^10]: Markus Wondrak, "The Agent is not the Pipeline: Spec-Kit Workflows and the Enforcement Layer," 2026. <https://wondrax.cloud/articles/deterministic-pipelines>
+[^11]: erdemtuna, "Proposal: Skill Package Manifest for Dependency Resolution and Distribution for Agent Skills," agentskills/agentskills Discussion #210, March 5, 2026. <https://github.com/agentskills/agentskills/discussions/210>
