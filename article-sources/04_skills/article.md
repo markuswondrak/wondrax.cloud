@@ -17,35 +17,77 @@ I started digging. How do skills compose? Can one skill depend on another? Can I
 
 That experience made me look closer. The Agent Skills specification has achieved broad adoption, but it leaves five operational topics open where there is room for optimisation. Here is what I want to look at in detail:
 
-- **Triggers.** When should a skill be loaded? The current approach relies on description matching, which leaves room for more deterministic mechanisms.
-- **Variables.** How can a skill adapt to runtime context? Paths and configurations are currently static, with no standard way to inject dynamic values.
 - **Composition.** How do skills relate to each other? There is no standard mechanism for one skill to build on another.
+- **Variables.** How can a skill adapt to runtime context? Paths and configurations are currently static, with no standard way to inject dynamic values.
+- **Triggers.** When should a skill be loaded? The current approach relies on description matching, which leaves room for more deterministic mechanisms.
 - **Scoping.** Which skills apply where? In larger repositories, the rules for when a skill is active remain unspecified.
 - **Tests.** How do you verify a skill works? There is no standard way to validate that a skill produces the intended behaviour.
 
 ---
 
-## The Standard Spreads, The Experience Stalls
+## What a Skill Is
 
-The Agent Skills specification has achieved something rare in the AI tooling space: cross-product adoption. Originally developed by Anthropic and released as an open standard at agentskills.io, the format is now supported by over thirty tools: Claude Code, Cursor, GitHub Copilot, VS Code, Gemini CLI, OpenHands, Roo Code, Amp, and many others.[^1] A skill written once runs across all of them.
+A skill is a directory with a `SKILL.md` file at its root. The frontmatter declares a `name` and a `description`. The `name` is the skill's identifier. The `description` is what the orchestrator—the agentic loop process that manages tool calls, context, and skill loading—uses to decide whether the skill is relevant to the current task.[^1]
 
-The format itself is minimal. A skill is a directory with a `SKILL.md` file. The frontmatter defines `name` and `description`. The body contains instructions. Optional directories hold scripts, references, and assets. Agents load skills through progressive disclosure: at startup they read only names and descriptions; full content loads when a task matches.[^1]
+The body of `SKILL.md` contains instructions written for the model: constraints, workflow steps, style rules, or domain context. The format is Markdown. There is no special syntax for variables, conditionals, or includes. Everything the model sees is plain text that the author wrote in advance.[^1]
 
-This minimalism is by design. It makes skills portable. It also creates the friction I experienced. The specification intentionally leaves four operational questions unanswered: how skills are triggered, how they receive dynamic context, how they compose, and how they scope. Each gap is a source of real Developer Experience pain, and each has active community proposals that have not been resolved.
+A minimal skill looks like this:
+
+```markdown
+---
+name: java-tests
+description: Generate JUnit 5 unit tests for Java classes
+---
+
+## Instructions
+
+When asked to write tests for a Java class:
+
+1. Use JUnit 5. Prefer `@ParameterizedTest` over duplicated test cases
+2. Mirror the package structure: `src/main/java/com/example/Foo.java` → `src/test/java/com/example/FooTest.java`
+3. Name the test class `{ClassUnderTest}Test`
+4. Use the `@DisplayName` annotation to describe intent in plain English
+5. Use AssertJ for assertions: `assertThat(result).isEqualTo(expected)`
+6. Mock external dependencies with Mockito. Do not mock value objects or internal helpers
+7. Cover: null inputs, empty collections, boundary values, and the happy path
+```
+
+Optionally, the directory can contain additional files: scripts the skill can reference, image assets, Mermaid diagrams, or supplementary Markdown files. The skill may instruct the model to read these files, but the specification does not enforce how they are structured or when they are loaded.[^1]
+
+Skills are discovered in two ways. Global skills sit in a platform-specific directory (for example, `~/.config/opencode/skills/` or `~/.claude/skills/`) and are available in every session. Project-local skills live inside the repository itself, typically under a hidden directory like `.opencode/skills/` or `.claude/skills/`.[^2] Project skills travel with the codebase, so a team can commit its conventions to version control and every developer gets the same agent behaviour.
+
+Activation works through progressive disclosure. Skills are not part of the default context. At startup, the orchestrator scans all skill directories and reads only the `name` and `description` fields. The full body stays on disk. When the user submits a task, the orchestrator compares the task text against the skill descriptions and decides which ones to load. Only then are the full instructions read and injected into the model's context.[^1]
+
+An agent with fifty installed skills does not carry fifty instruction sets into every prompt. It carries fifty short descriptions and the full text of the few skills that matched the current task.
+
+Because the format is just Markdown frontmatter plus a body, any tool that implements the discovery and loading rules can run the same skill. The same `SKILL.md` works in Claude Code, Cursor, OpenCode, and any other compliant orchestrator.[^1] That portability comes from deliberate restraint. The standard defines only what a skill is, not how it behaves once loaded — a minimalism that made adoption possible. Now that the format has proven itself, the next step is to address what it left open.
 
 ---
 
-## Probabilistic Triggers: Skills as Polite Suggestions
+## No Composition: DRY Violations as a Maintenance Tax
 
-The frustration is immediate. An orchestrator decides which skills to load based on the current task. In practice, this decision is probabilistic: the agent reads the skill descriptions, compares them to the conversation context, and makes a judgment call about relevance.
+If a "deployment" skill requires knowledge from a "build" skill, the current standard offers no way to express that dependency. The context has to be duplicated. When the build process changes, every skill that depends on it needs a manual update.
 
-Sometimes that judgment is wrong. A skill with a clear `description` field that matches the current task can still be skipped. The model weighs the skill description against everything else in its context and decides to proceed without it.
+This is what blocked me with `grill-with-docs`. The skill assumes a specific documentation layout: `CONTEXT.md` at the root, ADRs under `docs/adr/`. My project structures documentation differently. The skill's path assumptions are interleaved with its interview logic throughout the Markdown body. There is no way to override just the layout part. I would have to fork the entire skill and maintain my own copy, or rewrite it from scratch. Both options defeat the point of a shared, portable skill format.
 
-Claude Code addresses this with a `paths` field in the frontmatter: glob patterns that limit when a skill is activated.[^2] Set `paths: ["*.dart"]` and Claude Code loads the skill automatically when working with Dart files. This is a deterministic trigger: the file extension matches, so the skill is injected. The orchestrator, not the model, makes the decision.
+In a small project with three skills, this is manageable. In an enterprise codebase with dozens of skills maintained by different teams, it becomes a maintenance nightmare. A change to a foundational concept forces developers to manually find and update every `SKILL.md` that references it.
 
-The Agent Skills specification does not define this mechanism. Claude Code implements it as a client-specific extension, which means the same `paths` field is meaningless to Gemini CLI, OpenHands, or any other tool. Portability breaks where reliability matters most.
+Issue #100 asks how skills should depend on other skills.[^4] The open questions are how to define dependencies, whether dependent skills auto-install, and whether users install them separately. There are no answers yet.
 
-The community has not yet proposed a standardized trigger mechanism for the specification. The `paths` approach is a natural candidate, but it needs to be part of the standard, not a client extension, to preserve the cross-product promise.
+Issue #110 proposes a more formal approach: a `requires` field in the frontmatter that declares dependencies with version validation.[^5] A deployment skill could declare:
+
+```yaml
+requires:
+  - skill: build-conventions
+    version: "1.2.0"
+  - skill: logging-standards
+```
+
+The validation runs at the tooling level, not at the agent level. The orchestrator checks that required skills exist and meet the version constraint before the skill becomes available. Circular dependencies are rejected. The agent never sees the `requires` field.
+
+That is the correct boundary. Dependency resolution is a deterministic problem that belongs in the orchestrator. Delegating it to the model would mean the model sometimes loads dependent skills, sometimes does not, and has no way to report a missing dependency as an error.
+
+Issue #137 raises a related concern: whether a skill can instruct the agent to invoke another skill by name.[^6] The specification is silent. Some implementations support it. Some do not. The behavior is inconsistent, which is exactly the portability problem the standard was designed to solve.
 
 ---
 
@@ -53,7 +95,7 @@ The community has not yet proposed a standardized trigger mechanism for the spec
 
 A `SKILL.md` file is static text. Paths, configurations, tool outputs, environment variables: none of these can be resolved at runtime within the standard. If a skill needs to know the current git branch or the project's package manager, it has two options: hardcode the value, or instruct the model to figure it out.
 
-Hardcoding breaks portability. A skill that references `/home/user/project` works on one machine. Instructing the model to discover the value breaks reliability: the model might use the wrong command, skip the step, or hallucinate a value. The result is the same probabilistic behavior that plagues triggers.
+Hardcoding breaks portability. A skill that references `/home/user/project` works on one machine. Instructing the model to discover the value breaks reliability: the model might use the wrong command, skip the step, or hallucinate a value. The result is the same probabilistic behavior.
 
 Issue #124 on the agentskills repository proposes dynamic context injection: an inline syntax where shell commands execute before the skill content is sent to the model.[^3] The proposal uses `` !`command` `` placeholders that the orchestrator resolves at invocation time. The model receives only the rendered output, never the command itself.
 
@@ -80,34 +122,21 @@ Claude Code already implements this exact mechanism.[^2] The `` !`command` `` sy
 
 The proposal has been open since February 2026 without resolution.[^3] The specification remains silent on dynamic context. Skills that need live data remain either non-portable or unreliable.
 
-The pattern is consistent: the orchestrator, not the model, should resolve dynamic values before the LLM call. This keeps the skill format simple while removing the most common source of context-gathering fragility.
+The orchestrator, not the model, should resolve dynamic values before the LLM call. This keeps the skill format simple while removing the most common source of context-gathering fragility.
 
 ---
 
-## No Composition: DRY Violations as a Maintenance Tax
+## Probabilistic Triggers: Skills as Polite Suggestions
 
-If a "deployment" skill requires knowledge from a "build" skill, the current standard offers no way to express that dependency. The context has to be duplicated. When the build process changes, every skill that depends on it needs a manual update.
+The frustration is immediate. An orchestrator decides which skills to load based on the current task. In practice, this decision is probabilistic: the agent reads the skill descriptions, compares them to the conversation context, and makes a judgment call about relevance.
 
-This is what blocked me with `grill-with-docs`. The skill assumes a specific documentation layout: `CONTEXT.md` at the root, ADRs under `docs/adr/`. My project structures documentation differently. The skill's path assumptions are interleaved with its interview logic throughout the Markdown body. There is no way to override just the layout part. I would have to fork the entire skill and maintain my own copy, or rewrite it from scratch. Both options defeat the point of a shared, portable skill format.
+Sometimes that judgment is wrong. A skill with a clear `description` field that matches the current task can still be skipped. The model weighs the skill description against everything else in its context and decides to proceed without it.
 
-In a small project with three skills, this is manageable. In an enterprise codebase with dozens of skills maintained by different teams, it becomes a maintenance nightmare. A change to a foundational concept forces developers to manually find and update every `SKILL.md` that references it.
+Claude Code addresses this with a `paths` field in the frontmatter: glob patterns that limit when a skill is activated.[^2] Set `paths: ["*.dart"]` and Claude Code loads the skill automatically when working with Dart files. This is a deterministic trigger: the file extension matches, so the skill is injected. The orchestrator, not the model, makes the decision.
 
-Issue #100 asks the direct question: how should skills depend on other skills?[^4] The discussion lists the open questions: how to define dependencies, whether dependent skills auto-install, whether users install them separately. There are no answers yet.
+The Agent Skills specification does not define this mechanism. Claude Code implements it as a client-specific extension, which means the same `paths` field is meaningless to Gemini CLI, OpenHands, or any other tool. Portability breaks where reliability matters most.
 
-Issue #110 proposes a more formal approach: a `requires` field in the frontmatter that declares dependencies with version validation.[^5] A deployment skill could declare:
-
-```yaml
-requires:
-  - skill: build-conventions
-    version: "1.2.0"
-  - skill: logging-standards
-```
-
-The validation runs at the tooling level, not at the agent level. The orchestrator checks that required skills exist and meet the version constraint before the skill becomes available. Circular dependencies are rejected. The agent never sees the `requires` field.
-
-That is the correct boundary. Dependency resolution is a deterministic problem that belongs in the orchestrator. Delegating it to the model would mean the model sometimes loads dependent skills, sometimes does not, and has no way to report a missing dependency as an error.
-
-Issue #137 raises a related concern: whether a skill can instruct the agent to invoke another skill by name.[^6] The specification is silent. Some implementations support it. Some do not. The behavior is inconsistent, which is exactly the portability problem the standard was designed to solve.
+The community has not yet proposed a standardized trigger mechanism for the specification. The `paths` approach is a natural candidate, but it needs to be part of the standard, not a client extension, to preserve the cross-product promise.
 
 ---
 
@@ -165,13 +194,13 @@ This gap gets more expensive as skills get more complex. As skills become more c
 
 ## The Pattern Behind the Gaps
 
-Four gaps, one pattern. Each gap exists because the specification treats the `SKILL.md` file as a static document that the model interprets. Each proposed solution moves the responsibility from the model to the orchestrator.
+Five gaps, one pattern. Each gap exists because the specification treats the `SKILL.md` file as a static document that the model interprets. Each proposed solution moves the responsibility from the model to the orchestrator.
 
-Triggers belong in the orchestrator because they are file-pattern matching, not semantic inference. Variable resolution belongs in the orchestrator because it is shell execution, not language understanding. Dependency resolution belongs in the orchestrator because it is graph validation, not prompt engineering. Scope belongs in the orchestrator because it is path matching, not context interpretation.
+Dependency resolution belongs in the orchestrator because it is graph validation, not prompt engineering. Variable resolution belongs in the orchestrator because it is shell execution, not language understanding. Triggers belong in the orchestrator because they are file-pattern matching, not semantic inference. Scope belongs in the orchestrator because it is path matching, not context interpretation. Test execution belongs in the orchestrator because it is deterministic validation, not subjective evaluation.
 
-The common principle: deterministic operations should happen before the probabilistic LLM call. The model receives resolved, validated, scoped instructions. It does not discover, resolve, or validate them.
+Deterministic operations should happen before the probabilistic LLM call. The model receives resolved, validated, scoped instructions. It does not discover, resolve, or validate them.
 
-This is not a call to bloat the Markdown format into a programming language. The `SKILL.md` body should stay as instructions the model reads. The frontmatter should declare what the orchestrator needs to resolve: triggers, variables, dependencies, scope, tests. The orchestrator does the work. The model reads the result.
+This is not a call to bloat the Markdown format into a programming language. The `SKILL.md` body should stay as instructions the model reads. The frontmatter should declare what the orchestrator needs to resolve: dependencies, variables, triggers, scope, tests. The orchestrator does the work. The model reads the result.
 
 The Agent Skills specification has achieved broad adoption by being minimal. That was the right first move. The second move is to define the orchestrator contract: the set of deterministic operations every compliant tool must support before handing context to the model. Without it, every tool extends the standard in its own direction, and the cross-product promise erodes.
 

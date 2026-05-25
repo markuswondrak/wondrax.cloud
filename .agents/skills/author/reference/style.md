@@ -145,6 +145,7 @@ These are hard bans. If you are about to write any of these, rewrite.
 - **No passive voice where active works.** "It was decided that..." → "The team decided..."
 - **No "it is worth noting that..."** — just say the thing.
 - **No false specificity.** Do not claim precise statistics ("increased by 23.4%") without a source that confirms that exact number.
+- **No colonated framing.** Sentences like "The pattern is consistent: ...", "The common principle: ...", or "The solution is straightforward: ..." use a subject+colon structure as a throat-clearing device. They delay the claim and sound like a slide deck. State the thing directly without the framing prefix.
 - **No AI-validation phrases.** "Great question!", "That's an insightful point", "It's important to consider..." — these are chat artifacts, not article prose.
 
 ### Voice anti-patterns
