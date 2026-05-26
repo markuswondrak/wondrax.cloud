@@ -23,7 +23,9 @@ That experience made me look closer. The Agent Skills specification has achieved
 
 ## What a Skill Is, and What It Is Not
 
-A skill is a directory with a `SKILL.md` file at its root. The frontmatter declares a `name` and a `description`. The `name` is the skill's identifier. The `description` is what the orchestrator uses to decide whether the skill is relevant to the current task.[^1]
+A skill has one job: give the model the right context for a specific kind of task. It is the mechanism behind `grill-with-docs` running a focused interview, a Java test skill enforcing JUnit 5 conventions, or a deployment skill knowing to verify rollback procedures.
+
+On disk, it is a directory with a `SKILL.md` file at its root. The frontmatter declares a `name` and a `description`. The `name` is the skill's identifier. The `description` is what the orchestrator uses to decide whether the skill is relevant to the current task.[^1]
 
 The body of `SKILL.md` contains instructions written for the model: constraints, workflow steps, style rules, or domain context. The format is Markdown. There is no special syntax for variables, conditionals, or includes. Everything the model sees is plain text that the author wrote in advance.[^1]
 
@@ -53,6 +55,8 @@ Optionally, the directory can contain additional files: image assets, Mermaid di
 Skills are discovered in two ways. Global skills sit in a platform-specific directory and are available in every session. Project-local skills live inside the repository itself, typically under a hidden directory like `.opencode/skills/` or `.claude/skills/`.[^2] Project skills travel with the codebase, so a team can commit its conventions to version control and every developer gets the same agent behaviour.
 
 Activation works through progressive disclosure. At startup, the orchestrator scans all skill directories and reads only the `name` and `description` fields. The full body stays on disk. When the user submits a task, the orchestrator compares the task text against the skill descriptions and decides which ones to load. Only then are the full instructions read and injected into the model's context.[^1]
+
+When the model gets this wrong, a skill is silently skipped.
 
 This is the critical boundary. A skill does not execute. It does not call tools, run shell commands, or make decisions about when it applies. It is context that the model reads. Any behaviour beyond that belongs in the orchestrator. The current friction comes from a blurry line where the community asks the skill format to do orchestration work because the orchestrator contract is undefined.
 
@@ -86,7 +90,7 @@ variables:
 Read the architectural decisions from {{ ADR_PATH }} and the domain glossary from {{ CONTEXT_FILE }}. Conduct an interview...
 ```
 
-The orchestrator replaces `{{ ADR_PATH }}` with the actual path from a project-level mapping or environment configuration. The model receives only the rendered text. The skill itself remains stateless, side-effect free, and executable on any compliant orchestrator. The variable is not a command to run. It is a contract that says: this skill needs this piece of context, and the orchestrator must provide it.
+The orchestrator replaces `{{ ADR_PATH }}` with the actual path, resolved from project configuration. That resolution must be deterministic: the same project state always produces the same rendered text. The model receives only the rendered text. The skill itself remains stateless, side-effect free, and executable on any compliant orchestrator. The variable is not a command to run. It is a contract that says: this skill needs this piece of context, and the orchestrator must provide it.
 
 The distinction is architectural. Dynamic context injection asks the skill to gather its own dependencies. Template resolution asks the orchestrator to prepare the context. Gathering belongs in the pipeline. The skill should only describe what it needs. Template placeholders solve portability. They do not solve the question of when a skill should be loaded at all.
 
@@ -132,16 +136,7 @@ These proposals treat skills like software packages that call each other. A depl
 
 The correct model for composition is context merging. If a development task needs domain vocabulary, API conventions, and testing standards, the orchestrator loads all three skill documents and presents them as a unified context block. The model reads the merged text and acts on the combined constraints. There is no "calling" of one skill by another. There is no sequencing or state passing. There is only the orchestrator's responsibility to assemble the right documents before the LLM call.
 
-```yaml
----
-name: full-stack-task
-merge:
-  - skill: domain-vocabulary
-  - skill: api-conventions
-  - skill: testing-standards
-```
-
-The `merge` field is a declaration of intent, not an orchestration script. The orchestrator validates that the referenced skills exist, resolves their template variables, and concatenates their bodies in a defined order. The agent does not see the `merge` field. It sees a single, coherent instruction set.
+The shared-value problem is already solved by template variables. Each skill declares the paths it needs as variables in its frontmatter. The orchestrator resolves them from the same project configuration before injecting any skill into context. Two skills that reference `{{ ARTIFACT_PATH }}` get the same value without knowing about each other. Activation handles the rest: when multiple skills have matching scopes for the current task, the orchestrator loads them all and presents the concatenated text as a single instruction set. The model does not see boundaries between skills. It sees one coherent document.
 
 This preserves the deterministic separation between pipeline and agent. The orchestrator handles graph validation and text assembly. The model handles generative work. That separation is the central argument of the Spec-Kit workflow engine analysis, and it applies directly to skills.[^10] The same separation governs how we validate skills. A skill is not code to execute, so its test is not a unit test for behaviour.
 
