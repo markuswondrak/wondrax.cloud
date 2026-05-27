@@ -138,21 +138,60 @@ Deterministic triggers complement slash commands. The user can still invoke a sk
 
 ---
 
-## Composition: Context Merging, Not Dependency Chains
+## Composition: The Blind Spot Nobody Named
 
-Consider two skills: one that defines deployment conventions, one that defines build verification. Both need to know where build artifacts are placed. Currently each skill must hardcode that path. Change the output directory once, and you hunt through every `SKILL.md` that references it.
+Skills are atomic by design. A Java testing skill knows JUnit 5 conventions. A deployment skill knows rollback procedures. A domain skill knows the project's terminology. When a task touches all three areas, the orchestrator loads all three and appends them into one prompt. The model sees a single instruction set.
 
-This is what blocked me with `grill-with-docs`. The skill assumes a specific documentation layout. My project structures documentation differently. There is no way to override just the layout part. I would have to fork the entire skill and maintain my own copy. Both options defeat the point of a shared, portable format.
+Plain concatenation is the simplest possible composition strategy, and mechanically it holds up. Modern models handle large context windows well and are effective at extracting the relevant subset of instructions from a combined prompt. The bottleneck is not the concatenation. The risk is overlap: two skills in the same prompt that define the same concern.
 
-The obvious response to this duplication and override problem is to let skills share values by referencing one another. The community has followed that instinct, but the resulting proposals drift toward imperative dependency management. Issue #100 asks how skills should depend on other skills.[^4] Issue #110 proposes a `requires` field in the frontmatter that declares dependencies with version validation.[^5] Discussion #210 takes this further with a full `skills.json` manifest and lockfile, modeled on `package.json` and `go.mod`.[^11]
+Overlap produces two failure modes:
 
-These proposals treat skills like software packages that call each other. A deployment skill `requires` a build-conventions skill, which implies an execution chain: load A, then load B, pipe output from A into B. That is not what skills are. Skills do not execute. They do not have outputs to pipe. They are text that the model reads.
+- **Redundancy.** Two skills both state a rule for the same concern, wasting context and creating ambiguity about which wording is authoritative.
+- **Conflict.** Two skills give contradictory instructions for the same operation. The model interpolates between them, and the output is non-deterministic.
 
-The correct model for composition is context merging. If a development task needs domain vocabulary, API conventions, and testing standards, the orchestrator loads all three skill documents and presents them as a unified context block. The model reads the merged text and acts on the combined constraints. There is no "calling" of one skill by another. There is no sequencing or state passing. There is only the orchestrator's responsibility to assemble the right documents before the LLM call.
+Consider a concrete pipeline that shows the second failure mode. An agent is implementing a new REST endpoint in a Go backend that follows a strict `src/` package structure. Two skills are relevant and get concatenated into the prompt:
 
-The shared-value problem is already solved by template variables. Each skill declares the paths it needs as variables in its frontmatter. The orchestrator resolves them from the same project configuration before injecting any skill into context. Two skills that reference `{{ ARTIFACT_PATH }}` get the same value without knowing about each other. Activation handles the rest: when multiple skills have matching scopes for the current task, the orchestrator loads them all and presents the concatenated text as a single instruction set. The model does not see boundaries between skills. It sees one coherent document.
+**`go-http-handlers.md`**
 
-This preserves the deterministic separation between pipeline and agent. The orchestrator handles graph validation and text assembly. The model handles generative work. That separation is the central argument of the Spec-Kit workflow engine analysis, and it applies directly to skills.[^10] The same separation governs how we validate skills. A skill is not code to execute, so its test is not a unit test for behaviour.
+> "Responsibility: HTTP handlers. Place handlers in `src/api/`. Use the `chi` mux framework. On error, return `http.StatusInternalServerError` with a plain text string."
+
+**`go-error-policy.md`** (global project standard)
+
+> "All errors in this project are logged with structure. Every HTTP error must be returned as a JSON payload in the format `{"error": "message", "code": 500}`. Use the project's internal wrapper function for this."
+
+The orchestrator has done its job. Both skills matched the task and were appended together. But the model now holds two contradictory instructions for the same thing: how to return an HTTP error. Because the model is designed to be helpful rather than to fail, it does not raise a conflict. It interpolates. Sometimes the first rule wins. Sometimes the second rule wins. Sometimes the model produces a hybrid. The output is non-deterministic, and neither the developer nor the orchestrator has any record that two rules were in play. When the output is wrong, debugging means guessing which skill the model chose to follow — and why.
+
+The fix is not a smarter concatenation strategy. It is a different way to write skills. The same task, with orthogonal skills:
+
+**`arch-go-routing.md`** — Dimension: Structure & Framework
+
+> "Responsibility: HTTP routing. Place handler packages in `src/api/`. Use `chi` for routing. Do not handle errors here — on failure, call the project's standard error wrapper."
+
+**`arch-go-errors.md`** — Dimension: Error Handling
+
+> "Responsibility: Error handling in HTTP handlers. Use `respondWithError(w http.ResponseWriter, err error)`. This function accepts a standard Go error and generates the correct JSON payload `{"error": "message"}` automatically."
+
+**`arch-go-testing.md`** — Dimension: Quality Assurance
+
+> "Responsibility: Unit tests for Go. For every file in `src/api/`, write a corresponding `_test.go` file. Use table-driven tests exclusively. Mocks are only allowed for external calls."
+
+When the orchestrator concatenates these three, no overlap exists. Skill 1 defines where the file goes and how routing is structured. Skill 2 is the only rule in context that covers error handling. Skill 3 applies when a test is generated. The model has nothing to arbitrate.
+
+The principle is the same one that makes interfaces work in object-oriented design: High Cohesion, Low Coupling. A skill must define exactly one architectural truth. The moment a skill reaches into another skill's domain — a routing skill that specifies how to log errors, an error skill that mentions test conventions — it creates the conditions for silent conflict. The orchestrator cannot detect that conflict. It assembles text, not semantics. The simpler and more focused each individual skill is, the more reliably the agent behaves when those skills are combined.
+
+This is what the community's dependency proposals miss. Every active proposal treats composition as a distribution problem:
+
+- *Issue #100* asks how skills should depend on other skills.[^4]
+- *Issue #110* proposes a `requires` field with version validation.[^5]
+- *Discussion #210* offers a full `skills.json` manifest and lockfile modeled on `package.json` and `go.mod`.[^11]
+- *Discussion #292* specifies skills as OCI artifacts for registry-based distribution.[^12]
+- *Discussion #302* proposes PURL-based identity for lightweight packaging.[^13]
+
+These proposals answer how skills get onto disk. None answer whether the skills that landed there can be safely combined in a single prompt. The community has not yet distinguished distribution from design-time orthogonality. A `requires` field implies a directed graph: Skill A needs Skill B. But skills do not need each other. They are parallel context slices that must not overlap.
+
+The shared-value problem — two skills referencing the same artifact path — is already solved by template variables. Each skill declares `{{ ARTIFACT_PATH }}` in its frontmatter. The orchestrator resolves it from project configuration before injection. Two skills get the same value without knowing about each other.
+
+This preserves the deterministic separation between pipeline and agent. The orchestrator handles text assembly. The model handles generative work. That separation is the central argument of the Spec-Kit workflow engine analysis, and it applies directly to skills.[^10] The same separation governs how we validate skills. A skill is not code to execute, so its test is not a unit test for behaviour.
 
 ---
 
@@ -212,3 +251,5 @@ Skills are context. The orchestrator is the pipeline. Keep them separate, and bo
 [^9]: Markus Wondrak, "From Wiki to Source: How arc42 Becomes the Context Layer for AI Agents," 2026. <https://wondrax.cloud/articles/documentation-agentic-coding>
 [^10]: Markus Wondrak, "The Agent is not the Pipeline: Spec-Kit Workflows and the Enforcement Layer," 2026. <https://wondrax.cloud/articles/deterministic-pipelines>
 [^11]: erdemtuna, "Proposal: Skill Package Manifest for Dependency Resolution and Distribution for Agent Skills," agentskills/agentskills Discussion #210, March 5, 2026. <https://github.com/agentskills/agentskills/discussions/210>
+[^12]: ThomasVitale, "Specification for Skills Packaging and Distributions as OCI Artifacts," agentskills/agentskills Discussion #292, March 2026. <https://github.com/agentskills/agentskills/discussions/292>
+[^13]: maxschulz-COL, "Proposal: Specs for Skills packaging and distribution without infrastructure overhead," agentskills/agentskills Discussion #302, April 2026. <https://github.com/agentskills/agentskills/discussions/302>

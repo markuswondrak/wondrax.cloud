@@ -107,6 +107,22 @@ When an article discusses multiple discrete items in sequence, preview them as a
 
 The reader has no idea what the other four gaps are, and no mental model for how they relate.
 
+## Lists for parallel items
+
+When a sentence enumerates multiple discrete items, convert it to a bullet-point list. Inline enumeration forces the reader to parse boundaries and obscures parallelism.
+
+**Good:**
+> The community has followed that instinct, but every proposal treats it as a dependency management problem:
+>
+> - Issue #100 asks how skills should depend on other skills.
+> - Issue #110 proposes a `requires` field with version validation.
+> - Discussion #210 offers a full `skills.json` manifest and lockfile.
+
+**Bad:**
+> The community has followed that instinct, but every proposal treats it as a dependency management problem. Issue #100 asks how skills should depend on other skills. Issue #110 proposes a `requires` field with version validation. Discussion #210 offers a full `skills.json` manifest and lockfile.
+
+The first version lets the reader scan the structure. The second buries it in prose.
+
 ---
 
 ## Footnotes and citations
