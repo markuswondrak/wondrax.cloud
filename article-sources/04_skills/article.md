@@ -54,13 +54,21 @@ Optionally, the directory can contain additional files: image assets, Mermaid di
 
 Skills are discovered in two ways. Global skills sit in a platform-specific directory and are available in every session. Project-local skills live inside the repository itself, typically under a hidden directory like `.opencode/skills/` or `.claude/skills/`.[^2] Project skills travel with the codebase, so a team can commit its conventions to version control and every developer gets the same agent behaviour.
 
-Activation works through progressive disclosure. At startup, the orchestrator scans all skill directories and reads only the `name` and `description` fields. The full body stays on disk. When the user submits a task, the orchestrator compares the task text against the skill descriptions and decides which ones to load. Only then are the full instructions read and injected into the model's context.[^1]
+Activation works through progressive disclosure. At startup, the orchestrator scans all skill directories and reads only the `name` and `description` fields. The full body stays on disk. When the user submits a task, the orchestrator presents the skill descriptions to the model. The model decides which ones are relevant. Only then are the full instructions read and injected into context.[^1]
 
-When the model gets this wrong, a skill is silently skipped.
+When the model gets this wrong, the right skill is skipped — or the wrong skill is loaded and stays in context for the rest of the session.[^2]
 
-This is the critical boundary. A skill does not execute. It does not call tools, run shell commands, or make decisions about when it applies. It is context that the model reads. Any behaviour beyond that belongs in the orchestrator. The current friction comes from a blurry line where the community asks the skill format to do orchestration work because the orchestrator contract is undefined.
+A skill is not code to execute. It is context to read. The mechanism is intentionally minimal: a description for matching, a body for instruction, and a directory for supporting files. That minimalism made the format portable across tools. It also leaves every question about how to resolve, scope, merge, and validate that context unanswered — which is where the friction begins.
 
-The first of these five gaps appears in the simplest place: variable resolution. Because a `SKILL.md` file is static text, every path and configuration value must be baked directly into the document.
+I identified five areas I want to address in this article:
+
+- **Template resolution.** No contract for substituting externally resolved values into static skill text.
+- **Deterministic triggers.** The model decides relevance instead of the orchestrator.
+- **Scope boundaries.** No rule for which skills apply in which parts of a repository.
+- **Composition.** No clean way to merge multiple skills without dependency chains.
+- **Semantic validation.** No mechanism to verify a skill still works after a change.
+
+Each is a question the specification leaves unanswered. Each has active community proposals that drift toward making the skill format more powerful rather than making the orchestrator more capable.
 
 ---
 
@@ -72,9 +80,9 @@ Hardcoding breaks portability. A skill that references `docs/adr/` fails in any 
 
 Issue #124 proposes dynamic context injection: an inline syntax where shell commands execute before the skill content is sent to the model.[^3] The proposal uses `` !`command` `` placeholders that the orchestrator resolves at invocation time. Claude Code already implements this exact mechanism.[^2]
 
-This is the wrong direction. Embedding shell commands inside a skill turns declarative context into an executable script. The skill now holds runtime state and side effects. It is no longer a portable document that any orchestrator can load. It is a program that requires a specific runtime.
+It solves the hardcoding problem directly. A skill that needs a git hash or a generated path can fetch it at invocation time instead of baking in a default. But the trade-off is architectural. Embedding shell commands inside a skill turns declarative context into an executable script. The skill now holds runtime state and side effects. It is no longer a portable document that any orchestrator can load. It is a program that requires a specific runtime.
 
-The correct mechanism is simpler. A skill should declare template placeholders that the orchestrator resolves from project metadata before the model sees the text.
+A simpler mechanism achieves the same result without that cost. A skill should declare template placeholders that the orchestrator resolves from project metadata before the model sees the text.
 
 ```yaml
 ---
@@ -92,25 +100,31 @@ Read the architectural decisions from {{ ADR_PATH }} and the domain glossary fro
 
 The orchestrator replaces `{{ ADR_PATH }}` with the actual path, resolved from project configuration. That resolution must be deterministic: the same project state always produces the same rendered text. The model receives only the rendered text. The skill itself remains stateless, side-effect free, and executable on any compliant orchestrator. The variable is not a command to run. It is a contract that says: this skill needs this piece of context, and the orchestrator must provide it.
 
-The distinction is architectural. Dynamic context injection asks the skill to gather its own dependencies. Template resolution asks the orchestrator to prepare the context. Gathering belongs in the pipeline. The skill should only describe what it needs. Template placeholders solve portability. They do not solve the question of when a skill should be loaded at all.
+The difference is who gathers the context. Dynamic context injection makes the skill responsible; template resolution keeps that responsibility in the orchestrator. Template placeholders solve portability, but they do not solve the question of when a skill should be loaded at all.
 
 ---
 
 ## Triggers and Scoping: The Orchestrator Decides, Not the Model
 
-The current activation mechanism is probabilistic. The orchestrator presents skill descriptions to the model, and the model decides which ones are relevant. Sometimes it gets this wrong. A skill with a clear `description` that matches the current task can still be skipped because the model weighs it against everything else in the prompt and decides to proceed without it.[^1]
+Slash commands are deterministic. Type `/java-test` and the orchestrator loads that skill. No model inference, no probabilistic matching. The skill name maps directly to the file on disk.[^2]
 
-This is backwards. The model should not guess which context it needs. The orchestrator should know.
+That pattern serves explicit user intent. The user knows which context they want and asks for it directly.
 
-Claude Code addresses this with a `paths` field in the frontmatter: glob patterns that limit when a skill is activated.[^2] Set `paths: ["*.dart"]` and Claude Code loads the skill automatically when working with Dart files. This is a deterministic trigger. The orchestrator matches the file pattern and injects the skill. The model does not get a vote.
+Skills are designed for a second case: context that applies automatically when the work demands it. A project-local skill committed to version control should enforce conventions without the user remembering it exists.
 
-The Agent Skills specification does not define this mechanism. Claude Code implements it as a client-specific extension, which means the same `paths` field is meaningless to Gemini CLI, OpenHands, or any other tool. Portability breaks where reliability matters most.
+Automatic activation today is probabilistic. When the user does not type a slash command, the orchestrator presents skill descriptions to the model and asks it to decide which ones are relevant. Sometimes it gets this wrong. A skill with a clear `description` that matches the current task can still be skipped because the model weighs it against everything else in the prompt and decides to proceed without it.[^1]
+
+For automatic activation, the model should not guess which context it needs. The orchestrator should know.
+
+Claude Code addresses this with a `paths` field in the frontmatter: glob patterns that limit when a skill is activated.[^2] Set `paths: ["*.dart"]` and Claude Code loads the skill automatically when working with Dart files. This is a deterministic trigger. The orchestrator matches the file pattern and injects the skill. 
+
+The Agent Skills specification does not define this mechanism. Claude Code implements it as a client-specific extension, which means the same `paths` field is meaningless to Gemini CLI, OpenHands, or any other tool. 
 
 Portability across tools is only one dimension of the activation problem. Inside a single repository, the same lack of deterministic rules produces a different but equally painful symptom. In a monorepo, different areas have different conventions. The frontend team uses different patterns than the backend team. A `code-style` skill at the root cannot serve both.
 
-Issue #115 proposes path-based, recursive skill discovery.[^7] Skills placed in subdirectories apply only when the agent is working in that area. Claude Code already implements a version of this: project skills load from `.claude/skills/` in the starting directory and in every parent directory up to the repository root.[^2]
+Issue #115 proposes path-based, recursive skill discovery.[^7] Skills placed in subdirectories apply only when the agent is working in that area. Claude Code already implements a version of this: project skills load from `.claude/skills/` in the starting directory and in every parent directory up to the repository root.[^2] This is more flexible than strict subdirectory isolation. A project can define shared conventions at the repository root and override them locally in specific areas, without duplicating the common parts.
 
-Path-based inheritance solves the monorepo problem, but it introduces implicit behaviour that is difficult to debug. A developer working in `src/frontend/components/` inherits skills from four levels. A skill defined at the root two years ago, forgotten by everyone, still applies. When it conflicts with a skill at the component level, the "deepest wins" rule resolves the conflict, but the developer may not know either skill is active.
+Path-based inheritance solves the monorepo problem, but it couples skill activation to directory structure in ways that are invisible to the skill itself. A developer working in `src/frontend/components/` inherits skills from four levels. Which ones apply depends on what exists at every parent directory. A skill cannot declare its own scope. Its activation is determined by where it sits on disk, not by what it claims to govern. When two skills conflict, the "deepest wins" rule resolves it, but that rule is nowhere in the skill files. The developer may not know either skill is active.
 
 Explicit scoping in the frontmatter is the cleaner alternative:
 
@@ -120,7 +134,7 @@ scope: "src/frontend/**"
 
 The orchestrator matches the scope against the current working path. No inheritance chain. No hidden skills from parent directories. The developer can see exactly which skills apply by reading the frontmatter, not by tracing the file system.
 
-Trigger and scope are not suggestions for the model to consider. They are hard rules for the orchestrator to enforce. The model receives only the context that the orchestrator has determined is relevant. It does not select, filter, or override. Deterministic scoping tells the orchestrator which context to load. It does not say how multiple contexts should be combined.
+Deterministic triggers complement slash commands. The user can still invoke a skill explicitly when the context is unusual or when they want control. But for automatic activation, the orchestrator should decide what to load based on rules the skill declares, not on model inference.
 
 ---
 

@@ -89,6 +89,26 @@ Lead with the point, then support it.
 
 ---
 
+## Preview bullets before detail
+
+When an article discusses multiple discrete items in sequence, preview them as a list before diving into the first one. Give the reader a map before the tour.
+
+**Good:**
+> The friction shows up in five areas:
+>
+> - **Variable resolution.** Static text cannot adapt to different project layouts.
+> - **Deterministic triggers.** The model decides relevance instead of the orchestrator.
+> - **Scope boundaries.** No rule for which skills apply in which parts of a repository.
+>
+> Each is a question the specification leaves unanswered...
+
+**Bad:**
+> The first of these five gaps appears in the simplest place: variable resolution. Because a `SKILL.md` file is static text...
+
+The reader has no idea what the other four gaps are, and no mental model for how they relate.
+
+---
+
 ## Footnotes and citations
 
 - Cite claims that are not common knowledge
