@@ -1,8 +1,8 @@
 ---
-title: "Four Gaps in Agent Skills — and What Belongs in the Context Layer"
+title: "Five Gaps in Agent Skills — and What Belongs in the Context Layer"
 author: "Markus Wondrak"
 date: "2026-05-25"
-excerpt: "The Agent Skills specification defines a context layer for AI agents: instructions, domain rules, and supporting files that travel with the codebase and shape agent behaviour. The format succeeded by staying minimal. Four gaps around variables, triggers, scoping, and composition are now generating proposals that would close them by adding execution logic to the format. Each gap has a cleaner answer — one that keeps the context layer honest."
+excerpt: "The Agent Skills specification defines a context layer for AI agents: instructions, domain rules, and supporting files that travel with the codebase and shape agent behaviour. The format succeeded by staying minimal. Five gaps around variables, triggers, scoping, composition, and workflow execution are now generating proposals that would close them by adding execution logic to the format. Each gap has a cleaner answer — one that keeps the context layer honest and the orchestrator responsible."
 tags: ["Agentic Coding", "Skills", "Developer Experience", "Architecture"]
 slug: "agent-skills-gaps"
 ---
@@ -11,7 +11,7 @@ I was adding a new feature to [BriefCheck](https://briefcheck.app): new users sh
 
 I had read about Matt Pocock's `grill-with-docs` skill and wanted to try it for exactly this kind of problem. The skill runs a focused interview session that stress-tests a plan against the project's domain model, sharpens terminology when it drifts, and updates documentation inline so the clarification survives the conversation.[^8] It is exactly the kind of workflow discipline that keeps a context layer honest as the codebase outpaces the docs, the same friction arc42 is meant to solve, and the same reason I had already put it in place as the context layer for agents.[^9]
 
-This is exactly what a skill does well. It is pure context: terminology, constraints, and rules that the model reads before it writes code. No ambiguity about state transitions, no drift in naming.[^8]
+This is exactly what a skill does well — and it is a useful example of what a skill actually is. `grill-with-docs` is not passive documentation. It is a procedural workflow packaged as context: a structured interview the model conducts against the domain model, with the project's terminology anchored so nothing drifts. No ambiguity about state transitions, no guessing at edge cases. The workflow is still context the model reads, not code it runs. But it is doing something more active than enforcing a naming convention.[^8]
 
 So I had a look at the skill and found the wall immediately. It hardcodes a specific layout: the agent looks for a `CONTEXT.md` file at the project root, checks for a `CONTEXT-MAP.md` if the repo has multiple bounded contexts, finds ADRs under `docs/adr/`, and keeps the glossary implementation-free. My files live in different directories, under different names, with different conventions. The path assumptions are interleaved with the interview logic throughout the Markdown body.
 
@@ -58,16 +58,19 @@ Activation works through progressive disclosure. At startup, the orchestrator sc
 
 When the model gets this wrong, the right skill is skipped — or the wrong skill is loaded and stays in context for the rest of the session.[^2]
 
-A skill is not code to execute. It is context to read. The mechanism is intentionally minimal: a description for matching, a body for instruction, and a directory for supporting files. That minimalism made the format portable across tools. It also leaves every question about how to resolve, scope, and merge that context unanswered — which is where the friction begins.
+A skill is not code to execute, rather context to read. That context takes two forms. Some skills are declarative: rules, constraints, and terminology the model draws on as it works — a Java testing skill that enforces JUnit 5 conventions, or a domain skill that pins down what "free month" means in a subscription system. Other skills are procedural: structured workflows the model follows step by step — a `grill-with-docs` interview session, or a deployment skill that walks through rollback verification before releasing. Both forms are plain Markdown. Both are loaded the same way. The format makes no distinction between them, and that is appropriate: from the orchestrator's perspective, the delivery mechanism is identical.
 
-I identified four areas I want to address in this article:
+The mechanism is intentionally minimal: a description for matching, a body for instruction, and a directory for supporting files. That minimalism made the format portable across tools. It also leaves every question about how to resolve, scope, and merge that context unanswered — which is where the friction begins.
+
+I identified five areas I want to address in this article:
 
 - **Template resolution.** No contract for substituting externally resolved values into static skill text.
 - **Deterministic triggers.** The model decides relevance instead of the orchestrator.
 - **Scope boundaries.** No rule for which skills apply in which parts of a repository.
 - **Composition.** No clean way to merge multiple skills without dependency chains.
+- **Workflow execution.** No cross-tool standard for how the orchestrator sequences steps, manages state, and handles errors.
 
-Each is a question the specification leaves unanswered. Each has active community proposals that drift toward making the skill format more powerful rather than making the orchestrator more capable.
+Each is a question the specification leaves unanswered. The first four have generated active community proposals that drift toward making the skill format more powerful rather than making the orchestrator more capable. The fifth has generated an entire ecosystem of incompatible frameworks, each one a different team's answer to the same missing contract.
 
 ---
 
@@ -192,21 +195,56 @@ The shared-value problem — two skills referencing the same artifact path — w
 
 ---
 
+## Workflow Execution: The Protocol Stack Has a Missing Layer
+
+A procedural skill describes a workflow. `grill-with-docs` says: 
+
+1. conduct an interview
+2. stress-test the plan
+3. anchor the terminology
+ 
+A deployment skill says: 
+
+1. verify rollback procedures
+2. confirm the rollout window
+3. check the health endpoint
+
+The instructions are written down in the skills description. The model decides what to do next.
+
+What the skill cannot say — and what the [Agent Skills specification does not define](https://wondrax.cloud/articles/deterministic-pipelines) — is how those steps are executed. When the interview needs to call a documentation tool, how is that invocation structured? When one phase must complete before the next begins, who tracks that state? When the workflow reaches a step that requires human approval before proceeding, how is the pause encoded and the decision fed back in? When a step fails, what gets retried and what gets skipped?
+
+These are orchestration questions. Three protocols now address adjacent territory at the toolchain level. MCP standardises how agents connect to tools and data sources: a JSON-RPC contract that replaces the bespoke integration code every team used to write for every external service.[^14] A2A defines how agents communicate with each other: task delegation, result streaming, and long-running collaboration without sharing internal state.[^15] Agent Skills defines how context is packaged and discovered.[^1]
+
+Together, these three cover tools, communication, and context. None of them covers the execution model — the control flow that uses all three.
+
+Every team answers these questions by choosing a framework. LangGraph uses a Python graph with typed state and conditional edges. CrewAI Flows uses event-driven routing with decorators. Google ADK provides `SequentialAgent`, `ParallelAgent`, and `LoopAgent` primitives. The OpenAI Agents SDK makes no architectural claim — control flow is plain Python code with handoffs. Microsoft shipped Semantic Kernel, deprecated it in favour of AutoGen, then deprecated AutoGen in favour of Microsoft Agent Framework, each with its own orchestration model.
+
+That churn is the strongest signal that no framework has reached the stability of a real standard. Anthropic's own guidance lands in the same place: *"start by using LLM APIs directly. Many patterns can be implemented in a few lines of code."*[^16] The advice to skip frameworks is only reasonable if no framework is yet trustworthy enough to abstract over.
+
+The AI Engineer Foundation named the problem directly. Their Agent Protocol specification reads: *"The AI agent space is young. Most developers are building agents in their own way. This creates a challenge: it's hard to communicate with different agents since the interface is often different every time."*[^17] The protocol's response — a minimal REST contract for task creation and step execution — points at the right solution but stops short of the execution semantics that actually matter: state management, branching logic, human-in-the-loop interrupts, and error recovery.
+
+The four skill-level gaps in this article are all questions about how the orchestrator handles skills. This fifth gap is a question about the orchestrator itself. Even if template resolution, activation, scoping, and composition were fully standardised, the workflow that uses all four would still be a bespoke artefact that only runs in the tool it was built for. 
+
+That question — what a portable, deterministic execution contract for agent workflows would actually look like — deserves its own treatment.
+
+---
+
 ## The Orchestrator Contract: Let Skills Stay Dumb
 
-Four gaps, one cause. Each gap exists because the specification treats the `SKILL.md` file as a document that must do everything itself. The community responds by asking for more features in the format: variables, conditionals, dependencies, execution hooks. That response turns skills into a scripting language and destroys the portability that made them valuable.
+Five gaps, one cause. Each gap exists because the specification treats the `SKILL.md` file as a document that must do everything itself. The community responds by asking for more features in the format: variables, conditionals, dependencies, execution hooks. That response turns skills into a scripting language and destroys the portability that made them valuable.
 
 The correct response is the opposite. The `SKILL.md` format should stay as minimal as possible. It should declare what it is, what it needs, and where it applies. The orchestrator should do everything else.
 
 - *Template resolution* belongs in the orchestrator because it is metadata substitution, not language generation. 
 - *Trigger and scope* belong in the orchestrator because they are pattern matching, not semantic inference. 
 - *Composition* belongs in the orchestrator because it is document assembly, not reasoning.
+- *Workflow execution* belongs in a standardised execution contract because it is control flow, not context.
 
-The community is not really asking for a richer skill format. It is asking for a standardised pipeline specification that lives parallel to the skills and defines how an orchestrator resolves, scopes, merges, and validates them. That specification does not exist yet. The Agent Skills specification defines the document. It does not define the runtime.
+The community is not really asking for a richer skill format. It is asking for a standardised process specification that lives parallel to the skills and defines how an orchestrator resolves, scopes, merges, and validates them. That specification does not exist yet. The Agent Skills specification defines the document. It does not define the runtime.
 
 The first specification made the right call. Minimalism enabled adoption. The second specification must define the orchestrator contract: the set of deterministic operations every compliant tool must perform before handing context to the model. Without that contract, every tool extends the standard in its own direction, and the cross-product promise erodes.
 
-Skills are context. The orchestrator is the pipeline. Keep them separate, and both can stay honest.
+Defining that contract — and specifying what it must do for both declarative and procedural skills — is the work the community has been circling around without yet naming directly.
 
 ---
 
@@ -225,3 +263,7 @@ Skills are context. The orchestrator is the pipeline. Keep them separate, and bo
 [^11]: erdemtuna, "Proposal: Skill Package Manifest for Dependency Resolution and Distribution for Agent Skills," agentskills/agentskills Discussion #210, March 5, 2026. <https://github.com/agentskills/agentskills/discussions/210>
 [^12]: ThomasVitale, "Specification for Skills Packaging and Distributions as OCI Artifacts," agentskills/agentskills Discussion #292, March 2026. <https://github.com/agentskills/agentskills/discussions/292>
 [^13]: maxschulz-COL, "Proposal: Specs for Skills packaging and distribution without infrastructure overhead," agentskills/agentskills Discussion #302, April 2026. <https://github.com/agentskills/agentskills/discussions/302>
+[^14]: Anthropic, "Model Context Protocol," modelcontextprotocol.io. <https://modelcontextprotocol.io>
+[^15]: Google et al., "Agent2Agent Protocol," a2a-protocol.org. <https://a2a-protocol.org>
+[^16]: Anthropic, "Building effective agents," December 2024. <https://www.anthropic.com/research/building-effective-agents>
+[^17]: AI Engineer Foundation, "Agent Protocol," agentprotocol.ai. <https://agentprotocol.ai>
