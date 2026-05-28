@@ -1,5 +1,5 @@
 ---
-title: "Five Gaps in Agent Skills — and What Belongs in the Context Layer"
+title: "Five Gaps in Agent Skills and What Belongs in the Context Layer"
 author: "Markus Wondrak"
 date: "2026-05-25"
 excerpt: "The Agent Skills specification defines a context layer for AI agents: instructions, domain rules, and supporting files that travel with the codebase and shape agent behaviour. The format succeeded by staying minimal. Five gaps around variables, triggers, scoping, composition, and workflow execution are now generating proposals that would close them by adding execution logic to the format. Each gap has a cleaner answer — one that keeps the context layer honest and the orchestrator responsible."
