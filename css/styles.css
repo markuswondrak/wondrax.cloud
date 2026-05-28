@@ -250,6 +250,7 @@ a:focus-visible {
   font-weight: 600;
   margin-bottom: var(--space-3);
   line-height: 1.15;
+  max-width: 60ch;
 }
 
 .article-teaser .article-title a {
@@ -272,6 +273,8 @@ a:focus-visible {
 
 /* Tags */
 .article-tags,
+.article-header__tags,
+.article__tags,
 .work-tags {
   display: flex;
   flex-wrap: wrap;
@@ -279,6 +282,8 @@ a:focus-visible {
 }
 
 .article-tag,
+.article-header__tag,
+.article__tag,
 .work-tag {
   font-family: var(--font-body);
   font-size: var(--text-xs);
