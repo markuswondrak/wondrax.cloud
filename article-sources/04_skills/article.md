@@ -1,10 +1,10 @@
 ---
-title: "Keep Skills Dumb: The Orchestrator Contract for Portable Agent Context"
+title: "Four Gaps in Agent Skills — and What Belongs in the Context Layer"
 author: "Markus Wondrak"
 date: "2026-05-25"
-excerpt: "The SKILL.md standard succeeds because it is minimal. The gaps around variables, composition, scoping, and triggers are real, but the wrong response is to turn Markdown into a scripting language. The right response is a sharp architectural split: skills stay declarative, and the orchestrator grows up."
+excerpt: "The Agent Skills specification defines a context layer for AI agents: instructions, domain rules, and supporting files that travel with the codebase and shape agent behaviour. The format succeeded by staying minimal. Four gaps around variables, triggers, scoping, and composition are now generating proposals that would close them by adding execution logic to the format. Each gap has a cleaner answer — one that keeps the context layer honest."
 tags: ["Agentic Coding", "Skills", "Developer Experience", "Architecture"]
-slug: "agent-skills-devex-gaps"
+slug: "agent-skills-gaps"
 ---
 
 I was adding a new feature to [BriefCheck](https://briefcheck.app): new users should get a month of premium access for free after onboarding. The change touches subscription state, trial periods, upgrade paths, and billing edge cases. The domain language matters. Does "free month" mean a trial that expires, or a grant that converts? Is the user a "trial user" or a "premium user on a promotional period"? Getting the terminology wrong cascades into wrong code. I needed a way to keep the domain model in front of the agent while we worked through the implementation.
@@ -58,15 +58,14 @@ Activation works through progressive disclosure. At startup, the orchestrator sc
 
 When the model gets this wrong, the right skill is skipped — or the wrong skill is loaded and stays in context for the rest of the session.[^2]
 
-A skill is not code to execute. It is context to read. The mechanism is intentionally minimal: a description for matching, a body for instruction, and a directory for supporting files. That minimalism made the format portable across tools. It also leaves every question about how to resolve, scope, merge, and validate that context unanswered — which is where the friction begins.
+A skill is not code to execute. It is context to read. The mechanism is intentionally minimal: a description for matching, a body for instruction, and a directory for supporting files. That minimalism made the format portable across tools. It also leaves every question about how to resolve, scope, and merge that context unanswered — which is where the friction begins.
 
-I identified five areas I want to address in this article:
+I identified four areas I want to address in this article:
 
 - **Template resolution.** No contract for substituting externally resolved values into static skill text.
 - **Deterministic triggers.** The model decides relevance instead of the orchestrator.
 - **Scope boundaries.** No rule for which skills apply in which parts of a repository.
 - **Composition.** No clean way to merge multiple skills without dependency chains.
-- **Semantic validation.** No mechanism to verify a skill still works after a change.
 
 Each is a question the specification leaves unanswered. Each has active community proposals that drift toward making the skill format more powerful rather than making the orchestrator more capable.
 
@@ -149,7 +148,7 @@ Overlap produces two failure modes:
 - **Redundancy.** Two skills both state a rule for the same concern, wasting context and creating ambiguity about which wording is authoritative.
 - **Conflict.** Two skills give contradictory instructions for the same operation. The model interpolates between them, and the output is non-deterministic.
 
-Consider a concrete pipeline that shows the second failure mode. An agent is implementing a new REST endpoint in a Go backend that follows a strict `src/` package structure. Two skills are relevant and get concatenated into the prompt:
+Consider a concrete case that shows the second failure mode. An agent is implementing a new REST endpoint in a Go backend that follows a strict `src/` package structure. Two skills are relevant and get concatenated into the prompt:
 
 **`go-http-handlers.md`**
 
@@ -179,7 +178,7 @@ When the orchestrator concatenates these three, no overlap exists. Skill 1 defin
 
 The principle is the same one that makes interfaces work in object-oriented design: High Cohesion, Low Coupling. A skill must define exactly one architectural truth. The moment a skill reaches into another skill's domain — a routing skill that specifies how to log errors, an error skill that mentions test conventions — it creates the conditions for silent conflict. The orchestrator cannot detect that conflict. It assembles text, not semantics. The simpler and more focused each individual skill is, the more reliably the agent behaves when those skills are combined.
 
-This is what the community's dependency proposals miss. Every active proposal treats composition as a distribution problem:
+The community has followed that instinct, but the active discussions treat composition as a distribution problem:
 
 - *Issue #100* asks how skills should depend on other skills.[^4]
 - *Issue #110* proposes a `requires` field with version validation.[^5]
@@ -189,46 +188,19 @@ This is what the community's dependency proposals miss. Every active proposal tr
 
 These proposals answer how skills get onto disk. None answer whether the skills that landed there can be safely combined in a single prompt. The community has not yet distinguished distribution from design-time orthogonality. A `requires` field implies a directed graph: Skill A needs Skill B. But skills do not need each other. They are parallel context slices that must not overlap.
 
-The shared-value problem — two skills referencing the same artifact path — is already solved by template variables. Each skill declares `{{ ARTIFACT_PATH }}` in its frontmatter. The orchestrator resolves it from project configuration before injection. Two skills get the same value without knowing about each other.
-
-This preserves the deterministic separation between pipeline and agent. The orchestrator handles text assembly. The model handles generative work. That separation is the central argument of the Spec-Kit workflow engine analysis, and it applies directly to skills.[^10] The same separation governs how we validate skills. A skill is not code to execute, so its test is not a unit test for behaviour.
-
----
-
-## Tests: Semantic Validation, Not Code Verification
-
-Verifying that a skill change does not break the agent's behaviour requires prompting the agent and checking the output. If the output is wrong, the developer tweaks the skill and tries again. This is manual trial-and-error applied to a document that is supposed to govern behaviour.
-
-Every other artifact in a software project has a validation mechanism. Code has unit tests. Configuration has linters. Infrastructure has compliance checks. Skills have nothing.
-
-Issue #110 proposes a `test` field that declares test cases for skill validation.[^5] The test format checks whether the output contains or excludes specific strings, matches a regex, or satisfies a semantic criterion evaluated by an LLM judge.
-
-The intuition behind testing is correct. The implementation must respect what a skill actually is. A skill test is not a unit test for code execution. It is a semantic validation of context quality.
-
-Does the model still understand that "promotional period" and "trial" are different states after the skill text was refactored? Does it still respect the rule that ADRs must not reference implementation details when the skill document was shortened to fit a smaller context window? These are the questions a skill test must answer.
-
-```yaml
-test:
-  cases:
-    - name: promotional_period_is_not_trial
-      input: "A user is in a promotional period. What happens to their quota?"
-      assertions:
-        semantic_match: "The response must distinguish a promotional period from a trial and describe the quota reset policy for promotional users."
-```
-
-The assertion checks whether the model's output reflects the domain rule as stated in the skill. It does not check whether the model wrote correct code. It checks whether the context was transmitted intact.
-
-Deterministic assertions catch regressions in the skill's core behaviour. Semantic assertions catch subtler drift in how the model interprets the text. Both belong in the orchestrator, which runs the validation loop before the skill is accepted into the project's trusted context set.
+The shared-value problem — two skills referencing the same artifact path — would be already solved by template variables. Each skill declares `{{ ARTIFACT_PATH }}` in its frontmatter. The orchestrator resolves it from project configuration before injection. Two skills get the same value without knowing about each other.
 
 ---
 
 ## The Orchestrator Contract: Let Skills Stay Dumb
 
-Five gaps, one cause. Each gap exists because the specification treats the `SKILL.md` file as a document that must do everything itself. The community responds by asking for more features in the format: variables, conditionals, dependencies, execution hooks. That response turns skills into a scripting language and destroys the portability that made them valuable.
+Four gaps, one cause. Each gap exists because the specification treats the `SKILL.md` file as a document that must do everything itself. The community responds by asking for more features in the format: variables, conditionals, dependencies, execution hooks. That response turns skills into a scripting language and destroys the portability that made them valuable.
 
 The correct response is the opposite. The `SKILL.md` format should stay as minimal as possible. It should declare what it is, what it needs, and where it applies. The orchestrator should do everything else.
 
-Template resolution belongs in the orchestrator because it is metadata substitution, not language generation. Trigger and scope belong in the orchestrator because they are pattern matching, not semantic inference. Composition belongs in the orchestrator because it is document assembly, not reasoning. Test execution belongs in the orchestrator because it is deterministic validation, not subjective evaluation.
+- *Template resolution* belongs in the orchestrator because it is metadata substitution, not language generation. 
+- *Trigger and scope* belong in the orchestrator because they are pattern matching, not semantic inference. 
+- *Composition* belongs in the orchestrator because it is document assembly, not reasoning.
 
 The community is not really asking for a richer skill format. It is asking for a standardised pipeline specification that lives parallel to the skills and defines how an orchestrator resolves, scopes, merges, and validates them. That specification does not exist yet. The Agent Skills specification defines the document. It does not define the runtime.
 
