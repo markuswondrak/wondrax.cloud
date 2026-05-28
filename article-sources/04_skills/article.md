@@ -5,6 +5,7 @@ date: "2026-05-25"
 excerpt: "The Agent Skills specification defines a context layer for AI agents: instructions, domain rules, and supporting files that travel with the codebase and shape agent behaviour. The format succeeded by staying minimal. Five gaps around variables, triggers, scoping, composition, and workflow execution are now generating proposals that would close them by adding execution logic to the format. Each gap has a cleaner answer — one that keeps the context layer honest and the orchestrator responsible."
 tags: ["Agentic Coding", "Skills", "Developer Experience", "Architecture"]
 slug: "agent-skills-gaps"
+image: infografik.png
 ---
 
 I was adding a new feature to [BriefCheck](https://briefcheck.app): new users should get a month of premium access for free after onboarding. The change touches subscription state, trial periods, upgrade paths, and billing edge cases. The domain language matters. Does "free month" mean a trial that expires, or a grant that converts? Is the user a "trial user" or a "premium user on a promotional period"? Getting the terminology wrong cascades into wrong code. I needed a way to keep the domain model in front of the agent while we worked through the implementation.
