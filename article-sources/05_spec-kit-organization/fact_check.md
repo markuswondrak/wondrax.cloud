@@ -312,3 +312,15 @@ The article has no `## Sources` section. The footnotes sit only behind a horizon
 **Resolution:** Confirmed. Code truth stands: `strategy: replace` in a preset can technically introduce a new command without an extension. However, this is not the intended/designed usage of a preset — it remains an unsupported edge case, not a sanctioned path. The article must stop claiming a hard technical enforcement ("This is not a convention — it is enforced", "No error, no warning") and instead present the extension/preset split as the project's deliberate design convention, while accurately noting that the composition strategies (`prepend`, `append`, `wrap`) do require an existing base layer and emit a warning and skip when one is missing.
 
 **Action for article:** Rewrite lines 19-21 and 124 along the lines suggested in the fact check — frame the boundary as an architectural decision, not an enforced technical rule, and correct the "no error, no warning" claim to reflect the actual warn-and-skip behavior for composition strategies.
+
+### Finding 2 — ".gitignore rules leave installation state in the repository" (lines 71-97)
+
+**Resolution:** Confirmed. Author's operating principle: everything that can be installed (reconstructed by running the installer/bundler) must not be committed — this includes not just the component files themselves but their associated installation-state artifacts (`.specify/extensions/.registry`, `.specify/bundle-records.json`, `.specify/extensions.yml`). Committing any of these risks a fresh clone believing something is installed when it is not, which the bundler cannot recover from safely.
+
+**Action for article:** Extend the proposed `.gitignore` rules to also ignore the three registry/state files identified in the fact check, and state the underlying principle explicitly ("if it can be installed, it should not be committed") as the rationale driving the ignore list, rather than presenting the ignore list as an arbitrary set of paths.
+
+### Finding 3 — "The proposed reconstruction test deletes project intent" (line 110)
+
+**Resolution:** Confirmed, and fixed the same way as Finding 2: the reconstruction test must be run against a real fresh clone (or restricted to deleting only the paths that are actually gitignored per the corrected list above), not by blanket-deleting `.specify/extensions/`, `.specify/presets/`, and `.specify/workflows/`. Blanket deletion also removes versionable content (extension project config, workflow overlays, registries/provenance that are *not* covered by the "installable → not committed" rule), which contradicts the commit policy above.
+
+**Action for article:** Replace the blanket-delete reconstruction test with one performed on an actual fresh clone using the corrected `.gitignore`, and document the verified steps (initial state, checked-in files, commands run, resulting installed versions) rather than asserting the outcome.
