@@ -8,9 +8,11 @@ reading_time: "9 min read"
 slug: "spec-kit-organization"
 ---
 
+I spent the last few days cleaning up my Extended Flow bundle, and the cleanup kept turning into a debugging session for my own assumptions. Half the mess wasn't Spec Kit's fault — it was mine, from installing things without deciding where they belonged. Sorting that out forced me to actually understand the extension/preset boundary instead of gesturing at it.
+
 The Spec-Kit documentation describes extensions, presets, workflows, and bundles thoroughly — what each one is, how catalog resolution works, which CLI flags exist. What it does not answer are the operational questions that appear after the first month: where a specific change belongs, what should be committed, and how a teammate reconstructs your setup from a fresh clone.
 
-These are field notes from building and running the [Spec-Kit Extended Flow](https://github.com/markuswondrak/spec-kit-extended-flow) bundle. Every claim below is tied to a concrete decision in that project.
+These are the field notes from that cleanup — from building and running the [Spec-Kit Extended Flow](https://github.com/markuswondrak/spec-kit-extended-flow) bundle. Every claim below is tied to a concrete decision in that project.
 
 *This article reflects [Spec Kit](https://github.com/github/spec-kit) and its [documentation](https://github.github.io/spec-kit/) as of this writing, and the Extended Flow bundle at bundle/preset/`extendedflow` extension `0.16.0` (`bug` extension `1.0.0`, Feature workflow `0.10.1`, Bugfix workflow `0.2.1`, Quick workflow `0.1.1`). Both projects evolve; re-check current behavior before relying on specifics.*
 
