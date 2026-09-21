@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/styles.css?v=4">
+  <link rel="stylesheet" href="../css/styles.css?v=5">
   <link rel="stylesheet" href="../css/syntax-highlight.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
 </head>
@@ -38,7 +38,7 @@
                     <span class="article-header__tag">Workflow</span>
                     <span class="article-header__tag">Best Practices</span>
                 </div>
-          
+          <div class="article-hero"><img class="article-hero__img" src="images/spec-kit-organization_infografik_spec-kit.png" alt="Managing Spec-Kit Extensions, Presets, Workflows, and Bundles as Packages"></div>
         </div>
       </header>
 
@@ -60,25 +60,21 @@
 <h2 id="choose-the-package-that-owns-the-behavior">Choose the package that owns the behavior</h2>
 <p>The extension-versus-preset distinction becomes confusing when you start from file locations alone. Both can affect what the agent sees, and a preset can technically do more than it should. That is why teams need an ownership rule before they start composing packages.</p>
 <p>Spec Kit distinguishes between extensions and presets. <strong>Extensions are the conventional home for new command names. Presets modify existing commands or template content, and with <code>strategy: replace</code> they can also materialize a brand-new command on their own.</strong> That makes the boundary architectural, not hard-enforced, but the distinction still reflects the intended semantics of the package types. What Spec Kit does enforce are the composition strategies documented in the <a href="https://github.com/github/spec-kit/blob/main/docs/reference/presets.md">presets reference</a>: <code>prepend</code>, <code>append</code>, and <code>wrap</code> require an existing base layer to compose onto. When that base is missing, Spec Kit skips the command and emits a warning. What remains your responsibility is choosing the right package owner.</p>
-<p>That is why Extended Flow is split the way it is. The case study only makes sense after the ownership rule is clear:</p>
 <table>
 <thead>
 <tr>
-<th>Component</th>
 <th>Kind</th>
 <th>Contents</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Seven commands</td>
 <td>Extension</td>
-<td><code>documentation</code>, <code>documentation-init</code>, <code>finish</code>, <code>project-init</code>, <code>quick-implement</code>, <code>quick-review</code>, <code>doc-check</code></td>
+<td>Seven commands: <code>documentation</code>, <code>documentation-init</code>, <code>finish</code>, <code>project-init</code>, <code>quick-implement</code>, <code>quick-review</code>, <code>doc-check</code></td>
 </tr>
 <tr>
-<td>Templates + 14 overrides</td>
 <td>Preset</td>
-<td><code>review-findings.md</code>, <code>documentation.md</code>, and a runtime preamble prepended to existing commands</td>
+<td>Templates + 14 overrides: <code>review-findings.md</code>, <code>documentation.md</code>, and a runtime preamble prepended to existing commands</td>
 </tr>
 </tbody>
 </table>
@@ -92,8 +88,7 @@
 </ul>
 <h3 id="one-runtime-preamble-beats-fourteen-copies">One runtime preamble beats fourteen copies</h3>
 <p>The first problem showed up immediately in Extended Flow. I wanted the automated commands to run unattended, stay inside the project, and not stop to ask a human question. Copying that instruction into every command would have worked for one release and then drifted.</p>
-<p>The better solution was one file composed onto many commands. Extended Flow&rsquo;s preset declares fourteen <code>type: command</code> entries, all pointing at the same file - <code>commands/workflow-runtime.md</code> - each with <code>strategy: prepend</code> (see <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml"><code>preset.yml</code></a>). The preamble is declared once and applied at install time. That keeps the policy in one place and keeps the commands themselves free of duplicated boilerplate.</p>
-<p>Just as important is what it does not touch. <code>project-init</code> and <code>documentation-init</code> are bootstrap commands run by a human before the flows start, so they are deliberately excluded. This is the package-management point in miniature: the preset owns one cross-cutting behavior and composes it where that behavior belongs, not everywhere by reflex.</p>
+<p>So I wrote it once instead. Spec Kit lets one preset entry compose onto many commands, so I pointed fourteen <code>type: command</code> entries at the same file - <code>commands/workflow-runtime.md</code> - each with <code>strategy: prepend</code> (see <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml"><code>preset.yml</code></a>). That keeps the policy in one place; the commands themselves stay free of duplicated boilerplate. I left <code>project-init</code> and <code>documentation-init</code> out because a human runs them before the flows start, so the preamble doesn&rsquo;t apply.</p>
 <h3 id="use-priorities-to-define-how-presets-compose">Use priorities to define how presets compose</h3>
 <p>The second problem is less visible until two presets overlap. Every preset defaults to priority <code>10</code>, and ties break alphabetically by preset id (see the <a href="https://github.com/github/spec-kit/blob/main/docs/reference/presets.md">Spec Kit presets reference</a>). Leave everything at the default and your effective stack is technically valid but operationally arbitrary.</p>
 <p>The fix is to treat priority as policy, not as leftover metadata. I assign bands like this:</p>
@@ -157,7 +152,7 @@ extensions/*/local-config.yml
 <li><strong>Extension project config</strong> (<code>&lt;ext&gt;-config.yml</code>) is project intent. It is not catalog-derived, so it stays tracked. Only the machine-local <code>local-config.yml</code> stays ignored.</li>
 <li><strong>Workflow overlays</strong> (<code>.specify/workflows/overlays/</code>) are project-owned customizations. The <a href="https://github.com/github/spec-kit/blob/main/docs/reference/workflows.md">workflows reference</a> explicitly keeps them outside installed workflow directories so they survive updates.</li>
 </ul>
-<p>The installation-state records matter as much as the installed package copies. The bundler resolves what is already installed primarily through these registries and records, not by inspecting the filesystem tree alone. If they are committed while the components they describe are ignored, a fresh clone can claim a component is already installed when its files are absent. That is the package-management smell to avoid: declared dependencies say one thing, checked-in installation records say another.</p>
+<p>The installation-state records matter as much as the installed package copies. The bundler resolves what is already installed primarily through these registries and records, not by inspecting the filesystem tree alone. If they are committed while the components they describe are ignored, a fresh clone can claim a component is already installed when its files are absent.</p>
 <p>Everything not listed above stays committed: the constitution, templates, <code>.specify/integration.json</code>, catalog configuration such as <code>.specify/*-catalogs.yml</code>, plus specs and bug reports. The negation syntax is part of the design. <code>.specify/extensions/*/*</code> ignores the contents of each extension directory but not the directory itself, which is what allows a top-level config file to be re-included. Ignoring <code>.specify/extensions/</code> wholesale would make that impossible.</p>
 <p>If bundle declarations are the source of truth, the next step is to prove that they are actually sufficient.</p>
 <h2 id="make-a-fresh-clone-the-acceptance-test">Make a fresh clone the acceptance test</h2>
@@ -188,7 +183,7 @@ specify<span class="w"> </span>bundle<span class="w"> </span>install<span class=
 <p>All of these failure modes blur the distinction between declared dependencies and installed artifacts.</p>
 <h2 id="package-management-is-the-operating-model">Package management is the operating model</h2>
 <p>Spec Kit already gives the primitive types. The real design choice is how you operate them together. In my view, the cleanest model is to treat extensions, presets, workflows, and bundles as packages, not as a loose collection of project files under <code>.specify/</code>.</p>
-<p>Treat Spec-Kit artifacts as packages: catalogs declare what is available, bundles declare and pin what the project depends on, and the repository keeps project intent and project-owned customization. Installed copies, installation records, and runtime state are reconstructed. That is the operating model that makes updates deliberate and a fresh clone trustworthy.</p>
+<p>Extended Flow&rsquo;s own repository reflects the split now: extensions and presets are pinned, <code>.specify/extensions/</code> and <code>.specify/presets/</code> are gitignored, and a fresh clone rebuilds them with one install command. The next test is whether it holds up in Workflow Cockpit, the project this cleanup was for.</p>
         </div>
       </div>
 

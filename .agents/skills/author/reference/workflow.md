@@ -197,6 +197,21 @@ Partial drafts are acceptable only if the user explicitly requests incremental d
 
 ---
 
+## Self-Check Gate
+
+Applies to full articles, single-section revisions, and single-sentence rewrites alike. Size is not an exemption.
+
+Before presenting any proposed text to the user:
+
+1. Check the text against the anti-pattern list in style.md one bullet at a time. This is a pass/fail check per item, not a gut-feel read.
+2. A close variant of a banned pattern still fails. "X is simple: ..." has the same shape as "The pattern is consistent: ..." - both are colonated framing; different wording does not exempt it.
+3. When offering multiple options, each one must pass independently. Do not include an option in the list just because another option in the same list passes.
+4. If a proposed fix paraphrases a claim already made earlier in the article, check it against "No unearned summary paragraphs" before presenting it, even if the claim is factually correct and the wording is new.
+
+Skipping this gate and presenting text that violates style.md is a process failure, not a matter of taste.
+
+---
+
 ## Command-specific workflows
 
 ### `draft [topic]`

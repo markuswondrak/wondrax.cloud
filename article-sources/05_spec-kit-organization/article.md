@@ -6,6 +6,7 @@ excerpt: "Spec-Kit artifacts are packages and dependencies: catalogs publish wha
 tags: ["Spec Kit", "Agentic Coding", "Workflow", "Best Practices"]
 reading_time: "9 min read"
 slug: "spec-kit-organization"
+image: infografik_spec-kit.png
 ---
 
 I spent the last few days cleaning up Extended Flow so I can use it in Workflow Cockpit. The hard part was not where files should sit inside `.specify/`. The hard part was that `.specify/` mixes things with different owners and lifecycles, yet it is easy to treat all of them as ordinary project files.
@@ -34,12 +35,10 @@ The extension-versus-preset distinction becomes confusing when you start from fi
 
 Spec Kit distinguishes between extensions and presets. **Extensions are the conventional home for new command names. Presets modify existing commands or template content, and with `strategy: replace` they can also materialize a brand-new command on their own.** That makes the boundary architectural, not hard-enforced, but the distinction still reflects the intended semantics of the package types. What Spec Kit does enforce are the composition strategies documented in the [presets reference](https://github.com/github/spec-kit/blob/main/docs/reference/presets.md): `prepend`, `append`, and `wrap` require an existing base layer to compose onto. When that base is missing, Spec Kit skips the command and emits a warning. What remains your responsibility is choosing the right package owner.
 
-That is why Extended Flow is split the way it is. The case study only makes sense after the ownership rule is clear:
-
-| Component | Kind | Contents |
-|---|---|---|
-| Seven commands | Extension | `documentation`, `documentation-init`, `finish`, `project-init`, `quick-implement`, `quick-review`, `doc-check` |
-| Templates + 14 overrides | Preset | `review-findings.md`, `documentation.md`, and a runtime preamble prepended to existing commands |
+| Kind | Contents |
+|---|---|
+| Extension | Seven commands: `documentation`, `documentation-init`, `finish`, `project-init`, `quick-implement`, `quick-review`, `doc-check` |
+| Preset | Templates + 14 overrides: `review-findings.md`, `documentation.md`, and a runtime preamble prepended to existing commands |
 
 This split matches the shipped manifests: [`extension.yml`](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/extension.yml) contributes named behavior, and [`preset.yml`](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml) changes how existing behavior is rendered and composed. Once ownership is clear, composition stops being accidental.
 
@@ -56,9 +55,7 @@ Two composition problems matter in practice:
 
 The first problem showed up immediately in Extended Flow. I wanted the automated commands to run unattended, stay inside the project, and not stop to ask a human question. Copying that instruction into every command would have worked for one release and then drifted.
 
-The better solution was one file composed onto many commands. Extended Flow's preset declares fourteen `type: command` entries, all pointing at the same file - `commands/workflow-runtime.md` - each with `strategy: prepend` (see [`preset.yml`](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml)). The preamble is declared once and applied at install time. That keeps the policy in one place and keeps the commands themselves free of duplicated boilerplate.
-
-Just as important is what it does not touch. `project-init` and `documentation-init` are bootstrap commands run by a human before the flows start, so they are deliberately excluded. This is the package-management point in miniature: the preset owns one cross-cutting behavior and composes it where that behavior belongs, not everywhere by reflex.
+So I wrote it once instead. Spec Kit lets one preset entry compose onto many commands, so I pointed fourteen `type: command` entries at the same file - `commands/workflow-runtime.md` - each with `strategy: prepend` (see [`preset.yml`](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml)). That keeps the policy in one place; the commands themselves stay free of duplicated boilerplate. I left `project-init` and `documentation-init` out because a human runs them before the flows start, so the preamble doesn't apply.
 
 ### Use priorities to define how presets compose
 
@@ -115,7 +112,7 @@ The exceptions matter because they show this is not a blanket "ignore `.specify/
 - **Extension project config** (`<ext>-config.yml`) is project intent. It is not catalog-derived, so it stays tracked. Only the machine-local `local-config.yml` stays ignored.
 - **Workflow overlays** (`.specify/workflows/overlays/`) are project-owned customizations. The [workflows reference](https://github.com/github/spec-kit/blob/main/docs/reference/workflows.md) explicitly keeps them outside installed workflow directories so they survive updates.
 
-The installation-state records matter as much as the installed package copies. The bundler resolves what is already installed primarily through these registries and records, not by inspecting the filesystem tree alone. If they are committed while the components they describe are ignored, a fresh clone can claim a component is already installed when its files are absent. That is the package-management smell to avoid: declared dependencies say one thing, checked-in installation records say another.
+The installation-state records matter as much as the installed package copies. The bundler resolves what is already installed primarily through these registries and records, not by inspecting the filesystem tree alone. If they are committed while the components they describe are ignored, a fresh clone can claim a component is already installed when its files are absent.
 
 Everything not listed above stays committed: the constitution, templates, `.specify/integration.json`, catalog configuration such as `.specify/*-catalogs.yml`, plus specs and bug reports. The negation syntax is part of the design. `.specify/extensions/*/*` ignores the contents of each extension directory but not the directory itself, which is what allows a top-level config file to be re-included. Ignoring `.specify/extensions/` wholesale would make that impossible.
 
@@ -166,4 +163,4 @@ All of these failure modes blur the distinction between declared dependencies an
 
 Spec Kit already gives the primitive types. The real design choice is how you operate them together. In my view, the cleanest model is to treat extensions, presets, workflows, and bundles as packages, not as a loose collection of project files under `.specify/`.
 
-Treat Spec-Kit artifacts as packages: catalogs declare what is available, bundles declare and pin what the project depends on, and the repository keeps project intent and project-owned customization. Installed copies, installation records, and runtime state are reconstructed. That is the operating model that makes updates deliberate and a fresh clone trustworthy.
+Extended Flow's own repository reflects the split now: extensions and presets are pinned, `.specify/extensions/` and `.specify/presets/` are gitignored, and a fresh clone rebuilds them with one install command. The next test is whether it holds up in Workflow Cockpit, the project this cleanup was for.
