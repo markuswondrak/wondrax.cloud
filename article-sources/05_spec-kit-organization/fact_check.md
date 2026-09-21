@@ -336,3 +336,9 @@ The article has no `## Sources` section. The footnotes sit only behind a horizon
 **Resolution:** Confirmed, and elevated to the article's overarching stance: "if it can be installed, it should not be committed" is the article's own opinionated take, not Spec Kit's official recommendation (Spec Kit explicitly treats the rest of `.specify/` as shareable/versionable). The article must frame this explicitly as the author's personal operating principle for how to handle Spec-Kit-based projects, not as a general technical fact. This same framing/attribution should also be applied consistently to Findings 2 and 3 above, since they rest on the same principle.
 
 **Action for article:** Rewrite "The answer is no" (and related phrasing in lines 69-73) to explicitly attribute the stricter rule to the author (e.g. "For Extended Flow projects, I use a stricter rule than Spec Kit's default: ..."), and make this framing ("this is my take on how to handle it") the connecting thread across the `.gitignore`/reconstruction-test sections (Findings 2 and 3).
+
+### Finding 6 — "Bundles must already be pinned" (line 128)
+
+**Resolution:** Confirmed as a factual correction, but framed plainly rather than as a surprising reveal: state directly that Spec Kit requires extension, preset, and workflow entries in a bundle to be pinned to a version (validation rejects unpinned entries), without presenting it as a discovered gotcha — it is simply how bundle validation works.
+
+**Action for article:** Replace "not reproducible" framing in line 128 with a plain statement that versions must be pinned, e.g. along the lines of "Spec Kit rejects unpinned extension, preset, and workflow entries during bundle validation" — stated as a fact of how bundles work, not as a caveat or surprise. Steps remain the documented exception.
