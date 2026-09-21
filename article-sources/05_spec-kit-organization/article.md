@@ -32,7 +32,7 @@ In practice, that means keeping declarations and project-owned customizations in
 
 The extension-versus-preset distinction becomes confusing when you start from file locations alone. Both can affect what the agent sees, and a preset can technically do more than it should. That is why teams need an ownership rule before they start composing packages.
 
-Spec Kit distinguishes between extensions and presets. **Extensions add new command names. Presets modify existing commands or template content.** The boundary is not technically absolute, but it reflects the intended semantics of the package types. A preset with `strategy: replace` can technically introduce a brand-new command without a matching extension existing. What Spec Kit does enforce are the composition strategies documented in the [presets reference](https://github.com/github/spec-kit/blob/main/docs/reference/presets.md): `prepend`, `append`, and `wrap` require an existing base layer to compose onto. When that base is missing, Spec Kit skips the command and emits a warning. What remains your responsibility is choosing the right package owner.
+Spec Kit distinguishes between extensions and presets. **Extensions are the conventional home for new command names. Presets modify existing commands or template content, and with `strategy: replace` they can also materialize a brand-new command on their own.** That makes the boundary architectural, not hard-enforced, but the distinction still reflects the intended semantics of the package types. What Spec Kit does enforce are the composition strategies documented in the [presets reference](https://github.com/github/spec-kit/blob/main/docs/reference/presets.md): `prepend`, `append`, and `wrap` require an existing base layer to compose onto. When that base is missing, Spec Kit skips the command and emits a warning. What remains your responsibility is choosing the right package owner.
 
 That is why Extended Flow is split the way it is. The case study only makes sense after the ownership rule is clear:
 
@@ -41,7 +41,7 @@ That is why Extended Flow is split the way it is. The case study only makes sens
 | Seven commands | Extension | `documentation`, `documentation-init`, `finish`, `project-init`, `quick-implement`, `quick-review`, `doc-check` |
 | Templates + 14 overrides | Preset | `review-findings.md`, `documentation.md`, and a runtime preamble prepended to existing commands |
 
-This split matches the [Extended Flow reference documentation](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/docs/reference.md). The extension contributes named behavior. The preset changes how existing behavior is rendered and composed. Once ownership is clear, composition stops being accidental.
+This split matches the shipped manifests: [`extension.yml`](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/extension.yml) contributes named behavior, and [`preset.yml`](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml) changes how existing behavior is rendered and composed. Once ownership is clear, composition stops being accidental.
 
 ## Compose packages deliberately
 
@@ -72,7 +72,7 @@ The fix is to treat priority as policy, not as leftover metadata. I assign bands
 | Methodology | 10 | Team process. Extended Flow pins its preset here. |
 | Project | 5 | Localization, project-specific terminology |
 
-Lower wins. When two presets both `replace` the same template, only the lower number is used; the other is ignored, not merged. If two layers should compose, the higher-precedence preset must declare `append`, `prepend`, or `wrap` for that file. Extended Flow's bundle pins its preset at priority `10` with `strategy: append` (see [`bundle.yml`](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/bundle.yml)). That leaves room for project overrides above it and organizational layers below it without changing the bundle itself.
+Lower wins. When two presets both `replace` the same template, only the lower number is used; the other is ignored, not merged. If two layers should compose, the higher-precedence preset, the one with the lower number, must declare `append`, `prepend`, or `wrap` for that file. Extended Flow's [`bundle.yml`](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/bundle.yml) pins its preset at priority `10`, while the actual file-level composition strategies live in [`preset.yml`](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml). That leaves room for project overrides above it and organizational layers below it without changing the bundle itself.
 
 Once ownership and precedence are clear, repository boundaries become a dependency-management question rather than a generic Git question.
 
@@ -142,7 +142,7 @@ That reconstruction test answers the present-tense question. Reproducibility ove
 
 Package management is temporal as well as structural. It is not enough that a project can be reconstructed today. The reconstructed result needs to mean the same thing when someone repeats the install later.
 
-That is why bundles matter. The [Spec Kit bundles reference](https://github.com/github/spec-kit/blob/main/docs/reference/bundles.md) defines a bundle as a versioned composition layer over extensions, presets, workflows, and steps, and `bundle info` expands the pinned component set. If installed components carry one version in their own manifest and a different one in the bundle pin, the bundle stops being a trustworthy description of the environment.
+That is why bundles matter. The [Spec Kit bundles reference](https://github.com/github/spec-kit/blob/main/docs/reference/bundles.md) defines a bundle as a versioned composition layer over extensions, presets, workflows, and steps, and `bundle info` expands the pinned component set. Spec Kit rejects unpinned extension, preset, and workflow entries during bundle validation. If installed components carry one version in their own manifest and a different one in the bundle pin, the bundle stops being a trustworthy description of the environment.
 
 Extended Flow keeps a hybrid release model, and this is my policy, not something Spec Kit enforces. The components the project itself publishes - the bundle manifest, the preset, and its own `extendedflow` extension - are released together and share one version number. Workflows and third-party extensions are different. They are foreign components, maintained on their own cadence, so forcing them onto the bundle's version would misstate ownership of that release cycle.
 
@@ -156,7 +156,7 @@ The anti-patterns here are not disconnected style mistakes. Each one is a way of
 
 - **Commands from a preset.** A preset that registers `speckit.someext.cmd` via `replace` without `someext` installed can work technically, but it hides new behavior inside the wrong package type.
 - **Everything at default priority.** Five presets at priority `10` resolve alphabetically. That is a tie-breaker, not a composition policy.
-- **Unpinned bundle entries.** A bundle that does not pin the versions it installs stops being a reproducible dependency declaration.
+- **Missing or stale bundle pins.** Spec Kit expects extension, preset, and workflow entries to be pinned, and stale pins still break reproducibility by describing a different environment than the one people actually install.
 - **Logic in workflow YAML.** Shell steps that grow beyond one command blur the boundary between orchestration and packaged runtime behavior. The workflow should declare sequence; scripts shipped by a preset or extension should implement the logic.
 - **Committing installed components or their registries.** A checked-in copy of a catalog extension, preset, or workflow drifts from the declared dependency the moment someone updates it.
 
