@@ -145,4 +145,4 @@ The alternative — independent semver per primitive with strict pins in `bundle
 
 The primitives are deliberately separated, and the docs explain why. What the docs leave to you is the operating model: where a change belongs (extension for new commands, preset for content changes), what is shared intent versus reconstructable install, and how a teammate gets from a clone to a running setup.
 
-Decide those three things explicitly and `.specify/` stays predictable. Leave them implicit and the setup becomes harder to explain, reproduce, and update safely.
+Treat Spec-Kit artifacts as packages: declare them in catalogs and bundles, pin the versions you depend on, and reconstruct installations instead of committing them. That keeps the repository focused on project intent while making the toolchain reproducible and updates deliberate.
