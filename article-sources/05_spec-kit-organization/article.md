@@ -28,13 +28,11 @@ I have found it more useful to separate them into three categories:
 
 In practice, that means keeping declarations and project-owned customizations in the repository, while installed packages and runtime state can be recreated when needed. Spec Kit does not enforce that repository policy for you. It gives you the primitives. You still need to decide which files are the declaration of a dependency and which files are only the materialized result.
 
-Once that model is explicit, the next question becomes ownership: which package should carry which behavior in the first place?
-
 ## Choose the package that owns the behavior
 
 The extension-versus-preset distinction becomes confusing when you start from file locations alone. Both can affect what the agent sees, and a preset can technically do more than it should. That is why teams need an ownership rule before they start composing packages.
 
-I use a simple distinction. **A new command name belongs in an extension. A change to existing command or template content belongs in a preset.** This is a design convention, not a hard technical wall. A preset with `strategy: replace` can technically introduce a brand-new command without a matching extension existing. What Spec Kit does enforce are the composition strategies documented in the [presets reference](https://github.com/github/spec-kit/blob/main/docs/reference/presets.md): `prepend`, `append`, and `wrap` require an existing base layer to compose onto. When that base is missing, Spec Kit skips the command and emits a warning. What remains your responsibility is choosing the right package owner.
+Spec Kit distinguishes between extensions and presets. **Extensions add new command names. Presets modify existing commands or template content.** The boundary is not technically absolute, but it reflects the intended semantics of the package types. A preset with `strategy: replace` can technically introduce a brand-new command without a matching extension existing. What Spec Kit does enforce are the composition strategies documented in the [presets reference](https://github.com/github/spec-kit/blob/main/docs/reference/presets.md): `prepend`, `append`, and `wrap` require an existing base layer to compose onto. When that base is missing, Spec Kit skips the command and emits a warning. What remains your responsibility is choosing the right package owner.
 
 That is why Extended Flow is split the way it is. The case study only makes sense after the ownership rule is clear:
 
