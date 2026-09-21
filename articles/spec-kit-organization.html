@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Spec-Kit artifacts are packages and dependencies: catalogs publish what is available, bundles pin what a project installs, and the repository keeps only project intent and project-owned customization.">
+  <title>Managing Spec-Kit Extensions, Presets, Workflows, and Bundles as Packages — Markus Wondrak</title>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css?v=4">
+  <link rel="stylesheet" href="../css/syntax-highlight.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
+</head>
+<body>
+  <div class="reading-progress" id="reading-progress"></div>
+
+  <header class="masthead masthead--compact">
+    <div class="container">
+      <a href="../index.html" class="logo">Markus Wondrak</a>
+    </div>
+  </header>
+
+  <main>
+    <article class="article-page">
+      <header class="article-header">
+        <div class="container container--narrow">
+          <a href="../index.html" class="back-link">← Back to all writing</a>
+          <div class="article-meta">
+            <time datetime="2026-09-21">21 Sep 2026</time>
+            <span class="article-header__time">9 min read</span>
+          </div>
+          <h1 class="article-headline">Managing Spec-Kit Extensions, Presets, Workflows, and Bundles as Packages</h1>
+          <div class="article-header__tags">
+                    <span class="article-header__tag">Spec Kit</span>
+                    <span class="article-header__tag">Agentic Coding</span>
+                    <span class="article-header__tag">Workflow</span>
+                    <span class="article-header__tag">Best Practices</span>
+                </div>
+          
+        </div>
+      </header>
+
+      <div class="article-body">
+        <div class="container container--narrow">
+          <p>I spent the last few days cleaning up Extended Flow so I can use it in Workflow Cockpit. The hard part was not where files should sit inside <code>.specify/</code>. The hard part was that <code>.specify/</code> mixes things with different owners and lifecycles, yet it is easy to treat all of them as ordinary project files.</p>
+<p>That mistake creates practical uncertainty fast. What belongs in git, what should be reconstructed from catalogs, and what needs a pinned version so a fresh clone means the same thing next week? The Spec-Kit documentation describes extensions, presets, workflows, and bundles thoroughly - what each primitive is, how catalog resolution works, and which CLI flags exist. It does not necessarily answer the operating question that appears after a few installations of your own: what is package source, what is project intent, and what is only the result of an installation?</p>
+<p>This article uses the Extended Flow cleanup as a case study, but the point is broader. I think Spec-Kit extensions, presets, workflows, and bundles should be handled as packages and dependencies. Catalogs declare what is available. Bundles declare and pin what a project depends on. The repository tracks project intent and project-owned customization. Installed package copies, installation records, and runtime state are reconstructed.</p>
+<p><em>This article reflects <a href="https://github.com/github/spec-kit">Spec Kit</a> and its <a href="https://github.github.io/spec-kit/">documentation</a> as of this writing, and the Extended Flow bundle at bundle/preset/<code>extendedflow</code> extension <code>0.16.0</code> (<code>bug</code> extension <code>1.0.0</code>, Feature workflow <code>0.10.1</code>, Bugfix workflow <code>0.2.1</code>, Quick workflow <code>0.1.1</code>). Both projects evolve; re-check current behavior before relying on specifics.</em></p>
+<h2 id="treat-spec-kit-artifacts-as-packages-not-project-files">Treat Spec-Kit artifacts as packages, not project files</h2>
+<p>The core problem is that one directory tree hides three different kinds of things. If they are all treated as &ldquo;files under <code>.specify/</code>&rdquo;, repository boundaries become arbitrary and updates become harder to reason about.</p>
+<p>I have found it more useful to separate them into three categories:</p>
+<ul>
+<li><strong>Package definitions and catalog-published components.</strong> Extensions, presets, workflows, and bundles are versioned artifacts with their own manifests and release cadence. Catalogs answer one question: which packages are available to install?</li>
+<li><strong>Project intent and project-owned customizations.</strong> Bundle declarations, catalog configuration, constitution, specs, extension project config, and workflow overlays describe what this project wants and which local customizations it owns.</li>
+<li><strong>Installed artifacts and runtime state.</strong> Installed copies under <code>.specify/extensions/</code>, <code>.specify/presets/</code>, and <code>.specify/workflows/</code>, plus registries, bundle records, caches, and run state, are outputs of installation and execution.</li>
+</ul>
+<p>In practice, that means keeping declarations and project-owned customizations in the repository, while installed packages and runtime state can be recreated when needed. Spec Kit does not enforce that repository policy for you. It gives you the primitives. You still need to decide which files are the declaration of a dependency and which files are only the materialized result.</p>
+<h2 id="choose-the-package-that-owns-the-behavior">Choose the package that owns the behavior</h2>
+<p>The extension-versus-preset distinction becomes confusing when you start from file locations alone. Both can affect what the agent sees, and a preset can technically do more than it should. That is why teams need an ownership rule before they start composing packages.</p>
+<p>Spec Kit distinguishes between extensions and presets. <strong>Extensions are the conventional home for new command names. Presets modify existing commands or template content, and with <code>strategy: replace</code> they can also materialize a brand-new command on their own.</strong> That makes the boundary architectural, not hard-enforced, but the distinction still reflects the intended semantics of the package types. What Spec Kit does enforce are the composition strategies documented in the <a href="https://github.com/github/spec-kit/blob/main/docs/reference/presets.md">presets reference</a>: <code>prepend</code>, <code>append</code>, and <code>wrap</code> require an existing base layer to compose onto. When that base is missing, Spec Kit skips the command and emits a warning. What remains your responsibility is choosing the right package owner.</p>
+<p>That is why Extended Flow is split the way it is. The case study only makes sense after the ownership rule is clear:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Kind</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Seven commands</td>
+<td>Extension</td>
+<td><code>documentation</code>, <code>documentation-init</code>, <code>finish</code>, <code>project-init</code>, <code>quick-implement</code>, <code>quick-review</code>, <code>doc-check</code></td>
+</tr>
+<tr>
+<td>Templates + 14 overrides</td>
+<td>Preset</td>
+<td><code>review-findings.md</code>, <code>documentation.md</code>, and a runtime preamble prepended to existing commands</td>
+</tr>
+</tbody>
+</table>
+<p>This split matches the shipped manifests: <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/extension.yml"><code>extension.yml</code></a> contributes named behavior, and <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml"><code>preset.yml</code></a> changes how existing behavior is rendered and composed. Once ownership is clear, composition stops being accidental.</p>
+<h2 id="compose-packages-deliberately">Compose packages deliberately</h2>
+<p>Choosing the right owner solves only the first half of the problem. A Spec-Kit project usually installs multiple packages, and their interaction is where drift and surprise appear.</p>
+<p>Two composition problems matter in practice:</p>
+<ul>
+<li>Shared cross-cutting instructions copied into many commands drift over time.</li>
+<li>Competing preset changes need a deliberate precedence policy or resolution becomes arbitrary.</li>
+</ul>
+<h3 id="one-runtime-preamble-beats-fourteen-copies">One runtime preamble beats fourteen copies</h3>
+<p>The first problem showed up immediately in Extended Flow. I wanted the automated commands to run unattended, stay inside the project, and not stop to ask a human question. Copying that instruction into every command would have worked for one release and then drifted.</p>
+<p>The better solution was one file composed onto many commands. Extended Flow&rsquo;s preset declares fourteen <code>type: command</code> entries, all pointing at the same file - <code>commands/workflow-runtime.md</code> - each with <code>strategy: prepend</code> (see <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml"><code>preset.yml</code></a>). The preamble is declared once and applied at install time. That keeps the policy in one place and keeps the commands themselves free of duplicated boilerplate.</p>
+<p>Just as important is what it does not touch. <code>project-init</code> and <code>documentation-init</code> are bootstrap commands run by a human before the flows start, so they are deliberately excluded. This is the package-management point in miniature: the preset owns one cross-cutting behavior and composes it where that behavior belongs, not everywhere by reflex.</p>
+<h3 id="use-priorities-to-define-how-presets-compose">Use priorities to define how presets compose</h3>
+<p>The second problem is less visible until two presets overlap. Every preset defaults to priority <code>10</code>, and ties break alphabetically by preset id (see the <a href="https://github.com/github/spec-kit/blob/main/docs/reference/presets.md">Spec Kit presets reference</a>). Leave everything at the default and your effective stack is technically valid but operationally arbitrary.</p>
+<p>The fix is to treat priority as policy, not as leftover metadata. I assign bands like this:</p>
+<table>
+<thead>
+<tr>
+<th>Band</th>
+<th>Priority</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base</td>
+<td>20</td>
+<td>Organizational standards, compliance</td>
+</tr>
+<tr>
+<td>Methodology</td>
+<td>10</td>
+<td>Team process. Extended Flow pins its preset here.</td>
+</tr>
+<tr>
+<td>Project</td>
+<td>5</td>
+<td>Localization, project-specific terminology</td>
+</tr>
+</tbody>
+</table>
+<p>Lower wins. When two presets both <code>replace</code> the same template, only the lower number is used; the other is ignored, not merged. If two layers should compose, the higher-precedence preset, the one with the lower number, must declare <code>append</code>, <code>prepend</code>, or <code>wrap</code> for that file. Extended Flow&rsquo;s <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/bundle.yml"><code>bundle.yml</code></a> pins its preset at priority <code>10</code>, while the actual file-level composition strategies live in <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml"><code>preset.yml</code></a>. That leaves room for project overrides above it and organizational layers below it without changing the bundle itself.</p>
+<p>Once ownership and precedence are clear, repository boundaries become a dependency-management question rather than a generic Git question.</p>
+<h2 id="commit-intent-reconstruct-installations">Commit intent; reconstruct installations</h2>
+<p>The practical failure mode here is ending up with two competing truths. Catalogs and bundle manifests describe which packages the project depends on and which versions it expects. The other lives in checked-in installed copies and registries. The moment those drift apart, the repository no longer tells you which truth to trust.</p>
+<p>Spec Kit&rsquo;s own default is intentionally narrow. <code>specify init</code> scaffolds a managed <code>.specify/.gitignore</code> that contains exactly two patterns (see the <a href="https://github.com/github/spec-kit/blob/main/docs/reference/core.md">Spec Kit core reference</a>):</p>
+<div class="codehilite"><pre><span></span><code>feature.json
+extensions/*/local-config.yml
+</code></pre></div>
+
+<p>That excludes only machine-local state. For Extended Flow projects, I use a stricter policy: ignore anything that can be recreated by installing a declared dependency. Anything pulled from a catalog and not meant to be edited locally should not be committed. </p>
+<p>Add these rules to the managed file:</p>
+<div class="codehilite"><pre><span></span><code># Installed from catalogs. Reconstructed with `specify bundle install`.
+.specify/extensions/*/*
+!.specify/extensions/*/*-config.yml
+.specify/presets/*
+.specify/workflows/*
+!.specify/workflows/overlays/
+
+# Runtime state and caches.
+.specify/workflows/runs/
+.specify/workflows/.cache/
+
+# Installation-state records. Rebuilt by the bundler on reconstruction,
+# and stale copies can make it believe an ignored component is present.
+.specify/extensions/.registry
+.specify/bundle-records.json
+.specify/extensions.yml
+</code></pre></div>
+
+<p>The exceptions matter because they show this is not a blanket &ldquo;ignore <code>.specify/</code>&rdquo; rule:</p>
+<ul>
+<li><strong>Extension project config</strong> (<code>&lt;ext&gt;-config.yml</code>) is project intent. It is not catalog-derived, so it stays tracked. Only the machine-local <code>local-config.yml</code> stays ignored.</li>
+<li><strong>Workflow overlays</strong> (<code>.specify/workflows/overlays/</code>) are project-owned customizations. The <a href="https://github.com/github/spec-kit/blob/main/docs/reference/workflows.md">workflows reference</a> explicitly keeps them outside installed workflow directories so they survive updates.</li>
+</ul>
+<p>The installation-state records matter as much as the installed package copies. The bundler resolves what is already installed primarily through these registries and records, not by inspecting the filesystem tree alone. If they are committed while the components they describe are ignored, a fresh clone can claim a component is already installed when its files are absent. That is the package-management smell to avoid: declared dependencies say one thing, checked-in installation records say another.</p>
+<p>Everything not listed above stays committed: the constitution, templates, <code>.specify/integration.json</code>, catalog configuration such as <code>.specify/*-catalogs.yml</code>, plus specs and bug reports. The negation syntax is part of the design. <code>.specify/extensions/*/*</code> ignores the contents of each extension directory but not the directory itself, which is what allows a top-level config file to be re-included. Ignoring <code>.specify/extensions/</code> wholesale would make that impossible.</p>
+<p>If bundle declarations are the source of truth, the next step is to prove that they are actually sufficient.</p>
+<h2 id="make-a-fresh-clone-the-acceptance-test">Make a fresh clone the acceptance test</h2>
+<p>A declarative dependency story is only real if a new checkout can reconstruct it. Otherwise the repository still depends on human memory.</p>
+<p>A useful acceptance test is whether a fresh clone can reach a working state with an easy init command:</p>
+<div class="codehilite"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>&lt;repo&gt;<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>&lt;repo&gt;
+specify<span class="w"> </span>bundle<span class="w"> </span>install<span class="w"> </span>spec-kit-extended-flow
+</code></pre></div>
+
+<p>If restoring the project requires more than that - manual <code>specify extension add</code> calls, remembered priorities, or a wiki page that lists extra steps - the dependency declaration is incomplete. A missing step usually means one of three things is absent from the package model: a bundle dependency, a version pin, or project-owned customization that should have been committed.</p>
+<p>Run this test against a real fresh clone, not by deleting directories from an existing checkout. Deleting <code>.specify/extensions/</code>, <code>.specify/presets/</code>, and <code>.specify/workflows/</code> from a working tree also deletes tracked project intent such as extension project config, workflow overlays, and installation metadata that this article treats deliberately. Clone into a clean directory, run the install command, and confirm the resulting installed versions match what the bundle pins.</p>
+<p>That reconstruction test answers the present-tense question. Reproducibility over time depends on versioning discipline.</p>
+<h2 id="pin-versions-so-reconstruction-means-the-same-thing-tomorrow">Pin versions so reconstruction means the same thing tomorrow</h2>
+<p>Package management is temporal as well as structural. It is not enough that a project can be reconstructed today. The reconstructed result needs to mean the same thing when someone repeats the install later.</p>
+<p>That is why bundles matter. The <a href="https://github.com/github/spec-kit/blob/main/docs/reference/bundles.md">Spec Kit bundles reference</a> defines a bundle as a versioned composition layer over extensions, presets, workflows, and steps, and <code>bundle info</code> expands the pinned component set. Spec Kit rejects unpinned extension, preset, and workflow entries during bundle validation. If installed components carry one version in their own manifest and a different one in the bundle pin, the bundle stops being a trustworthy description of the environment.</p>
+<p>Extended Flow keeps a hybrid release model, and this is my policy, not something Spec Kit enforces. The components the project itself publishes - the bundle manifest, the preset, and its own <code>extendedflow</code> extension - are released together and share one version number. Workflows and third-party extensions are different. They are foreign components, maintained on their own cadence, so forcing them onto the bundle&rsquo;s version would misstate ownership of that release cycle.</p>
+<p>An alternative is to version each primitive independently and pin those versions in <code>bundle.yml</code>. That works when components genuinely evolve on different cadences. What does not work is an accidental mixture with no stated rule - some primitives share versions, others float loosely, and the bundle version no longer describes its contents. Reconstruction then becomes time-sensitive in exactly the wrong way.</p>
+<p>The easiest way to see whether the model holds is to look at what breaks when it does not.</p>
+<h2 id="failure-modes-come-from-breaking-the-package-model">Failure modes come from breaking the package model</h2>
+<p>The anti-patterns here are not disconnected style mistakes. Each one is a way of smuggling package behavior back into ad hoc project files.</p>
+<ul>
+<li><strong>Commands from a preset.</strong> A preset that registers <code>speckit.someext.cmd</code> via <code>replace</code> without <code>someext</code> installed can work technically, but it hides new behavior inside the wrong package type.</li>
+<li><strong>Everything at default priority.</strong> Five presets at priority <code>10</code> resolve alphabetically. That is a tie-breaker, not a composition policy.</li>
+<li><strong>Missing or stale bundle pins.</strong> Spec Kit expects extension, preset, and workflow entries to be pinned, and stale pins still break reproducibility by describing a different environment than the one people actually install.</li>
+<li><strong>Logic in workflow YAML.</strong> Shell steps that grow beyond one command blur the boundary between orchestration and packaged runtime behavior. The workflow should declare sequence; scripts shipped by a preset or extension should implement the logic.</li>
+<li><strong>Committing installed components or their registries.</strong> A checked-in copy of a catalog extension, preset, or workflow drifts from the declared dependency the moment someone updates it.</li>
+</ul>
+<p>All of these failure modes blur the distinction between declared dependencies and installed artifacts.</p>
+<h2 id="package-management-is-the-operating-model">Package management is the operating model</h2>
+<p>Spec Kit already gives the primitive types. The real design choice is how you operate them together. In my view, the cleanest model is to treat extensions, presets, workflows, and bundles as packages, not as a loose collection of project files under <code>.specify/</code>.</p>
+<p>Treat Spec-Kit artifacts as packages: catalogs declare what is available, bundles declare and pin what the project depends on, and the repository keeps project intent and project-owned customization. Installed copies, installation records, and runtime state are reconstructed. That is the operating model that makes updates deliberate and a fresh clone trustworthy.</p>
+        </div>
+      </div>
+
+      <footer class="article-footer">
+        <div class="container container--narrow">
+          <a href="../index.html" class="back-link">← Back to all writing</a>
+        </div>
+      </footer>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>© 2026 Markus Wondrak</p>
+    </div>
+  </footer>
+
+  <div class="lightbox" aria-hidden="true">
+    <img src="" alt="">
+  </div>
+
+  <script>
+    (function() {
+      var progressBar = document.getElementById('reading-progress');
+      if (!progressBar) return;
+      function updateProgress() {
+        var scrollTop = window.scrollY || document.documentElement.scrollTop;
+        var docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        var progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+        progressBar.style.width = progress + '%';
+      }
+      window.addEventListener('scroll', updateProgress, { passive: true });
+      updateProgress();
+    })();
+
+    // Lightbox for article hero images
+    (function() {
+      var lightbox = document.querySelector('.lightbox');
+      var lightboxImg = lightbox.querySelector('img');
+      var heroImages = document.querySelectorAll('.article-hero img');
+
+      heroImages.forEach(function(img) {
+        img.addEventListener('click', function() {
+          lightboxImg.src = img.src;
+          lightboxImg.alt = img.alt;
+          lightbox.classList.add('is-active');
+          lightbox.setAttribute('aria-hidden', 'false');
+        });
+      });
+
+      lightbox.addEventListener('click', function() {
+        lightbox.classList.remove('is-active');
+        lightbox.setAttribute('aria-hidden', 'true');
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && lightbox.classList.contains('is-active')) {
+          lightbox.classList.remove('is-active');
+          lightbox.setAttribute('aria-hidden', 'true');
+        }
+      });
+    })();
+
+    // Copy button for code blocks
+    (function() {
+      var codeBlocks = document.querySelectorAll('.article-body .codehilite');
+      
+      codeBlocks.forEach(function(block) {
+        var pre = block.querySelector('pre');
+        if (!pre) return;
+        
+        var button = document.createElement('button');
+        button.className = 'code-copy-btn';
+        button.setAttribute('aria-label', 'Copy code');
+        button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+        
+        block.style.position = 'relative';
+        block.appendChild(button);
+        
+        button.addEventListener('click', function() {
+          var code = pre.querySelector('code');
+          var text = code ? code.textContent : pre.textContent;
+          
+          navigator.clipboard.writeText(text).then(function() {
+            button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8DB580" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            setTimeout(function() {
+              button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+            }, 2000);
+          });
+        });
+      });
+    })();
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ]
+    });"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#EDE8DC',
+        primaryTextColor: '#1A1714',
+        primaryBorderColor: '#DDD8CE',
+        lineColor: '#7C766E',
+        secondaryColor: '#F3EFE6',
+        tertiaryColor: '#F3EFE6',
+        fontFamily: "'Source Serif 4', Georgia, serif"
+      },
+      flowchart: { useMaxWidth: true },
+      sequence: { useMaxWidth: true },
+      c4: { useMaxWidth: true }
+    });
+    mermaid.run().catch(function (err) { console.error('Mermaid:', err); });
+  </script>
+</body>
+</html>
