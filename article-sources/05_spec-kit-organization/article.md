@@ -2,17 +2,17 @@
 title: "How to Organize Your Spec-Kit Extensions, Presets, Workflows and Bundles"
 author: "Markus Wondrak"
 date: "2026-09-21"
-excerpt: "The Spec-Kit docs explain each primitive. They do not tell you where a change belongs, what to version-control, or how a teammate reconstructs your setup from a clone. Field notes from running the Extended Flow bundle."
+excerpt: "Field notes from cleaning up Extended Flow for Workflow Cockpit: what to commit, what catalogs should reconstruct, and how to pin versions for a reproducible setup."
 tags: ["Spec Kit", "Agentic Coding", "Workflow", "Best Practices"]
 reading_time: "9 min read"
 slug: "spec-kit-organization"
 ---
 
-I spent the last few days cleaning up my Extended Flow bundle, and the cleanup kept turning into a debugging session for my own assumptions. Half the mess wasn't Spec Kit's fault — it was mine, from installing things without deciding where they belonged. Sorting that out forced me to actually understand the extension/preset boundary instead of gesturing at it.
+I spent the last few days cleaning up Extended Flow so I can use it in Workflow Cockpit. What started as practical preparation raised a few more fundamental questions: what belongs in the repository, and what should be reconstructed from catalogs? What exactly do those catalogs provide? And how do I pin versions so that a project remains reproducible over time?
 
-The Spec-Kit documentation describes extensions, presets, workflows, and bundles thoroughly — what each one is, how catalog resolution works, which CLI flags exist. What it does not answer are the operational questions that appear after the first month: where a specific change belongs, what should be committed, and how a teammate reconstructs your setup from a fresh clone.
+The Spec-Kit documentation describes extensions, presets, workflows, and bundles thoroughly - what each primitive is, how catalog resolution works, and which CLI flags exist. It does not necessarily answer the questions that arise after a few installations of your own: where does a change belong, what should be committed, and how can someone reconstruct the setup from a fresh clone?
 
-These are the field notes from that cleanup — from building and running the [Spec-Kit Extended Flow](https://github.com/markuswondrak/spec-kit-extended-flow) bundle. Every claim below is tied to a concrete decision in that project.
+This article records the lessons from that cleanup - and the conclusions and best practices I drew for working with extensions, presets, workflows, catalogs, and bundles. Every point is grounded in a concrete decision in the <a href="https://github.com/markuswondrak/spec-kit-extended-flow">Spec-Kit Extended Flow</a> bundle.
 
 *This article reflects [Spec Kit](https://github.com/github/spec-kit) and its [documentation](https://github.github.io/spec-kit/) as of this writing, and the Extended Flow bundle at bundle/preset/`extendedflow` extension `0.16.0` (`bug` extension `1.0.0`, Feature workflow `0.10.1`, Bugfix workflow `0.2.1`, Quick workflow `0.1.1`). Both projects evolve; re-check current behavior before relying on specifics.*
 
@@ -145,4 +145,4 @@ The alternative — independent semver per primitive with strict pins in `bundle
 
 The primitives are deliberately separated, and the docs explain why. What the docs leave to you is the operating model: where a change belongs (extension for new commands, preset for content changes), what is shared intent versus reconstructable install, and how a teammate gets from a clone to a running setup.
 
-Decide those three things explicitly and `.specify/` stays predictable. Leave them implicit and you get the failure this article started from: a stack nobody can resolve, a bundle whose version means nothing, and a setup that only works on the machine where it was built.
+Decide those three things explicitly and `.specify/` stays predictable. Leave them implicit and the setup becomes harder to explain, reproduce, and update safely.
