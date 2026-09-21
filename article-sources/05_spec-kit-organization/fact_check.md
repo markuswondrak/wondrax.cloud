@@ -348,3 +348,9 @@ The article has no `## Sources` section. The footnotes sit only behind a horizon
 **Resolution:** The original "scripts belong in an extension" rule has no clear origin and does not hold up — no authoritative Spec Kit community consensus was found prescribing scripts strictly to extensions over presets (official docs describe extensions for new commands/capabilities and presets for template/command customization; both packaging types can ship scripts). Drop the strict "extension only" rule since it contradicts Extended Flow's own architecture (scripts live in the preset). Author's own recommendation, given explicitly as a recommendation and not a hard rule: once scripts pass a certain complexity threshold, publish and maintain them as their own external package/tool rather than embedding them in preset or extension source.
 
 **Action for article:** Remove the unsupported blanket claim ("scripts belong in an extension"). Replace with: scripts can live in either a preset or an extension, whichever installs the runtime the workflow orchestrates. Add the author's own recommendation, explicitly framed as a recommendation/opinion: past a certain complexity, extract scripts into a separately versioned and published package rather than keeping them inline in a preset or extension.
+
+### Finding 8 — "Bundle pins are not checked on every install"
+
+**Resolution:** Rejected as not worth a dedicated correction. This behavior (pin/version enforcement only on first install or explicit refresh, not on every routine install) is standard package-manager behavior — analogous to `npm install` not re-verifying every already-installed package against the lockfile on every run. It does not need to be called out as a special caveat in the article; no change required for this finding.
+
+**Action for article:** None. Do not add a callout for this behavior — treat it as unremarkable, standard package-manager semantics.
