@@ -302,3 +302,67 @@ All sources point at `main`. Several discrepancies in this check became visible 
 ## Additional formal finding
 
 The article has no `## Sources` section. The footnotes sit only behind a horizontal rule. That contradicts the repository convention, according to which sources belong in an explicit `## Sources` section.
+
+---
+
+## 4. Clarifications (resolved with author)
+
+### Finding 1 — "The extension/preset boundary is no longer technically enforced" (lines 15-30, 124)
+
+**Resolution:** Confirmed. Code truth stands: `strategy: replace` in a preset can technically introduce a new command without an extension. However, this is not the intended/designed usage of a preset — it remains an unsupported edge case, not a sanctioned path. The article must stop claiming a hard technical enforcement ("This is not a convention — it is enforced", "No error, no warning") and instead present the extension/preset split as the project's deliberate design convention, while accurately noting that the composition strategies (`prepend`, `append`, `wrap`) do require an existing base layer and emit a warning and skip when one is missing.
+
+**Action for article:** Rewrite lines 19-21 and 124 along the lines suggested in the fact check — frame the boundary as an architectural decision, not an enforced technical rule, and correct the "no error, no warning" claim to reflect the actual warn-and-skip behavior for composition strategies.
+
+### Finding 2 — ".gitignore rules leave installation state in the repository" (lines 71-97)
+
+**Resolution:** Confirmed. Author's operating principle: everything that can be installed (reconstructed by running the installer/bundler) must not be committed — this includes not just the component files themselves but their associated installation-state artifacts (`.specify/extensions/.registry`, `.specify/bundle-records.json`, `.specify/extensions.yml`). Committing any of these risks a fresh clone believing something is installed when it is not, which the bundler cannot recover from safely.
+
+**Action for article:** Extend the proposed `.gitignore` rules to also ignore the three registry/state files identified in the fact check, and state the underlying principle explicitly ("if it can be installed, it should not be committed") as the rationale driving the ignore list, rather than presenting the ignore list as an arbitrary set of paths.
+
+### Finding 3 — "The proposed reconstruction test deletes project intent" (line 110)
+
+**Resolution:** Confirmed, and fixed the same way as Finding 2: the reconstruction test must be run against a real fresh clone (or restricted to deleting only the paths that are actually gitignored per the corrected list above), not by blanket-deleting `.specify/extensions/`, `.specify/presets/`, and `.specify/workflows/`. Blanket deletion also removes versionable content (extension project config, workflow overlays, registries/provenance that are *not* covered by the "installable → not committed" rule), which contradicts the commit policy above.
+
+**Action for article:** Replace the blanket-delete reconstruction test with one performed on an actual fresh clone using the corrected `.gitignore`, and document the verified steps (initial state, checked-in files, commands run, resulting installed versions) rather than asserting the outcome.
+
+### Finding 4 — "The release policy is invented or stale" (lines 116-120)
+
+**Resolution:** Partially confirmed, partially disputed. The fact check's factual finding stands (no `check-release.py`, no CI check on an identical version string — the article must stop claiming these exist). However, the underlying intent is correct as the project's own policy, not a fabrication: the single-version sync is scoped deliberately to the components the project itself publishes (bundle, preset, and its own `extendedflow` extension). Workflows and third-party extensions (e.g. the external `bug` extension) are intentionally out of scope for that sync — they are foreign/independent components with their own release cadence, and it would be wrong to force them onto the maintainer's version. This is a general question every project depending on component libraries/registries must answer: sync your own published units, but never claim ownership over versioning of dependencies you do not publish.
+
+**Action for article:** Replace the invented tooling claims (`check-release.py`, CI version-identity check) with an accurate description of the actual hybrid model: bundle + preset + own extension are kept in lockstep as the project's own released units; workflows and third-party/foreign extensions retain independent versions by design, not as an oversight. Make explicit that this "own vs. foreign" boundary is the generalizable principle, applicable to any project composing its own components with third-party ones.
+
+### Finding 5 — "The recommendation contradicts the official version-control policy" (lines 69-73)
+
+**Resolution:** Confirmed, and elevated to the article's overarching stance: "if it can be installed, it should not be committed" is the article's own opinionated take, not Spec Kit's official recommendation (Spec Kit explicitly treats the rest of `.specify/` as shareable/versionable). The article must frame this explicitly as the author's personal operating principle for how to handle Spec-Kit-based projects, not as a general technical fact. This same framing/attribution should also be applied consistently to Findings 2 and 3 above, since they rest on the same principle.
+
+**Action for article:** Rewrite "The answer is no" (and related phrasing in lines 69-73) to explicitly attribute the stricter rule to the author (e.g. "For Extended Flow projects, I use a stricter rule than Spec Kit's default: ..."), and make this framing ("this is my take on how to handle it") the connecting thread across the `.gitignore`/reconstruction-test sections (Findings 2 and 3).
+
+### Finding 6 — "Bundles must already be pinned" (line 128)
+
+**Resolution:** Confirmed as a factual correction, but framed plainly rather than as a surprising reveal: state directly that Spec Kit requires extension, preset, and workflow entries in a bundle to be pinned to a version (validation rejects unpinned entries), without presenting it as a discovered gotcha — it is simply how bundle validation works.
+
+**Action for article:** Replace "not reproducible" framing in line 128 with a plain statement that versions must be pinned, e.g. along the lines of "Spec Kit rejects unpinned extension, preset, and workflow entries during bundle validation" — stated as a fact of how bundles work, not as a caveat or surprise. Steps remain the documented exception.
+
+### Finding 7 — "Scripts do not live in the extension in this project" (line 130)
+
+**Resolution:** The original "scripts belong in an extension" rule has no clear origin and does not hold up — no authoritative Spec Kit community consensus was found prescribing scripts strictly to extensions over presets (official docs describe extensions for new commands/capabilities and presets for template/command customization; both packaging types can ship scripts). Drop the strict "extension only" rule since it contradicts Extended Flow's own architecture (scripts live in the preset). Author's own recommendation, given explicitly as a recommendation and not a hard rule: once scripts pass a certain complexity threshold, publish and maintain them as their own external package/tool rather than embedding them in preset or extension source.
+
+**Action for article:** Remove the unsupported blanket claim ("scripts belong in an extension"). Replace with: scripts can live in either a preset or an extension, whichever installs the runtime the workflow orchestrates. Add the author's own recommendation, explicitly framed as a recommendation/opinion: past a certain complexity, extract scripts into a separately versioned and published package rather than keeping them inline in a preset or extension.
+
+### Finding 8 — "Bundle pins are not checked on every install"
+
+**Resolution:** Rejected as not worth a dedicated correction. This behavior (pin/version enforcement only on first install or explicit refresh, not on every routine install) is standard package-manager behavior — analogous to `npm install` not re-verifying every already-installed package against the lockfile on every run. It does not need to be called out as a special caveat in the article; no change required for this finding.
+
+**Action for article:** None. Do not add a callout for this behavior — treat it as unremarkable, standard package-manager semantics.
+
+### Finding 9 — "Mutable `main` links"
+
+**Resolution:** Deprioritized. Author does not want heavy source-reference restructuring (pinning every citation to a commit/tag). Instead, add a single version note to the article stating which concrete versions of Spec Kit and Extended Flow the article's claims are based on, so the article is anchored to a point in time without requiring every link to be pinned.
+
+**Action for article:** Add a short note (e.g. near the top or in a closing note) stating the reference versions this article is based on: Spec Kit `github/spec-kit@d4229c0`, Extended Flow bundle/preset/`extendedflow` extension `0.16.0`, `bug` extension `1.0.0`, Feature workflow `0.10.1`, Bugfix workflow `0.2.1`, Quick workflow `0.1.1` (per the fact check's verified manifest state). Links themselves can remain pointed at `main`.
+
+### Finding 10 — "Article has no `## Sources` section" (formal)
+
+**Resolution:** Superseded by the Finding 9 decision. The article will not use a dedicated footnote/`## Sources` section with pinned deep links. Instead, replace footnotes with inline links directly in the body text, pointing at broad, stable pages — repository main page, documentation index/homepage — rather than specific commits, files, or lines.
+
+**Action for article:** Remove the footnote markers (`[^1]`, `[^2]`, etc.) and the trailing footnote block. Replace each with an inline link in the sentence itself, targeting general pages (e.g. the `spec-kit` repo root, its docs site, the `spec-kit-extended-flow` repo root) instead of pinned files/commits. No separate `## Sources` section is needed under this approach.
