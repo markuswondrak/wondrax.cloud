@@ -354,3 +354,9 @@ The article has no `## Sources` section. The footnotes sit only behind a horizon
 **Resolution:** Rejected as not worth a dedicated correction. This behavior (pin/version enforcement only on first install or explicit refresh, not on every routine install) is standard package-manager behavior — analogous to `npm install` not re-verifying every already-installed package against the lockfile on every run. It does not need to be called out as a special caveat in the article; no change required for this finding.
 
 **Action for article:** None. Do not add a callout for this behavior — treat it as unremarkable, standard package-manager semantics.
+
+### Finding 9 — "Mutable `main` links"
+
+**Resolution:** Deprioritized. Author does not want heavy source-reference restructuring (pinning every citation to a commit/tag). Instead, add a single version note to the article stating which concrete versions of Spec Kit and Extended Flow the article's claims are based on, so the article is anchored to a point in time without requiring every link to be pinned.
+
+**Action for article:** Add a short note (e.g. near the top or in a closing note) stating the reference versions this article is based on: Spec Kit `github/spec-kit@d4229c0`, Extended Flow bundle/preset/`extendedflow` extension `0.16.0`, `bug` extension `1.0.0`, Feature workflow `0.10.1`, Bugfix workflow `0.2.1`, Quick workflow `0.1.1` (per the fact check's verified manifest state). Links themselves can remain pointed at `main`.
