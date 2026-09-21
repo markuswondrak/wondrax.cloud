@@ -302,3 +302,13 @@ All sources point at `main`. Several discrepancies in this check became visible 
 ## Additional formal finding
 
 The article has no `## Sources` section. The footnotes sit only behind a horizontal rule. That contradicts the repository convention, according to which sources belong in an explicit `## Sources` section.
+
+---
+
+## 4. Clarifications (resolved with author)
+
+### Finding 1 — "The extension/preset boundary is no longer technically enforced" (lines 15-30, 124)
+
+**Resolution:** Confirmed. Code truth stands: `strategy: replace` in a preset can technically introduce a new command without an extension. However, this is not the intended/designed usage of a preset — it remains an unsupported edge case, not a sanctioned path. The article must stop claiming a hard technical enforcement ("This is not a convention — it is enforced", "No error, no warning") and instead present the extension/preset split as the project's deliberate design convention, while accurately noting that the composition strategies (`prepend`, `append`, `wrap`) do require an existing base layer and emit a warning and skip when one is missing.
+
+**Action for article:** Rewrite lines 19-21 and 124 along the lines suggested in the fact check — frame the boundary as an architectural decision, not an enforced technical rule, and correct the "no error, no warning" claim to reflect the actual warn-and-skip behavior for composition strategies.
