@@ -360,3 +360,9 @@ The article has no `## Sources` section. The footnotes sit only behind a horizon
 **Resolution:** Deprioritized. Author does not want heavy source-reference restructuring (pinning every citation to a commit/tag). Instead, add a single version note to the article stating which concrete versions of Spec Kit and Extended Flow the article's claims are based on, so the article is anchored to a point in time without requiring every link to be pinned.
 
 **Action for article:** Add a short note (e.g. near the top or in a closing note) stating the reference versions this article is based on: Spec Kit `github/spec-kit@d4229c0`, Extended Flow bundle/preset/`extendedflow` extension `0.16.0`, `bug` extension `1.0.0`, Feature workflow `0.10.1`, Bugfix workflow `0.2.1`, Quick workflow `0.1.1` (per the fact check's verified manifest state). Links themselves can remain pointed at `main`.
+
+### Finding 10 — "Article has no `## Sources` section" (formal)
+
+**Resolution:** Superseded by the Finding 9 decision. The article will not use a dedicated footnote/`## Sources` section with pinned deep links. Instead, replace footnotes with inline links directly in the body text, pointing at broad, stable pages — repository main page, documentation index/homepage — rather than specific commits, files, or lines.
+
+**Action for article:** Remove the footnote markers (`[^1]`, `[^2]`, etc.) and the trailing footnote block. Replace each with an inline link in the sentence itself, targeting general pages (e.g. the `spec-kit` repo root, its docs site, the `spec-kit-extended-flow` repo root) instead of pinned files/commits. No separate `## Sources` section is needed under this approach.
