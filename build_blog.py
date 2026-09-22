@@ -5,6 +5,7 @@ import glob
 import os
 import re
 import html
+import json
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +19,42 @@ TEMPLATE_PATH = SITE_ROOT / "article_template.html"
 BLOG_PATH = SITE_ROOT / "blog.html"
 INDEX_PATH = SITE_ROOT / "index.html"
 OUTPUT_DIR = SITE_ROOT / "articles"
+
+# Canonical site identity, used for sitemap, feed, JSON-LD and llms.txt.
+SITE_URL = "https://markus.wondrax.cloud"
+SITE_TITLE = "Markus Wondrak"
+SITE_AUTHOR = "Markus Wondrak"
+SITE_DESCRIPTION = (
+    "Writing on agentic coding, software architecture, "
+    "and building meaningful tools."
+)
+FEED_TITLE = f"{SITE_TITLE} — Articles"
+LLMS_PATH = SITE_ROOT / "llms.txt"
+LLMS_FULL_PATH = SITE_ROOT / "llms-full.txt"
+SITEMAP_PATH = SITE_ROOT / "sitemap.xml"
+FEED_PATH = SITE_ROOT / "feed.xml"
+ROBOTS_PATH = SITE_ROOT / "robots.txt"
+
+# AI crawlers we explicitly welcome (see robots.txt).
+AI_CRAWLERS = [
+    "GPTBot",
+    "OAI-SearchBot",
+    "ChatGPT-User",
+    "ClaudeBot",
+    "Claude-User",
+    "anthropic-ai",
+    "PerplexityBot",
+    "Google-Extended",
+    "Applebot-Extended",
+    "CCBot",
+    "meta-externalagent",
+]
+
+_RFC822_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+_RFC822_MONTHS = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+]
 
 MARKER_START = "<!-- ARTICLES:START -->"
 MARKER_END = "<!-- ARTICLES:END -->"
@@ -210,6 +247,9 @@ def build_article_page(article: dict, template: str) -> str:
     page = page.replace("{{excerpt}}", html.escape(article["excerpt"]))
     page = page.replace("{{date_iso}}", date_iso)
     page = page.replace("{{date_display}}", date_display)
+    page = page.replace("{{slug}}", article["slug"])
+    page = page.replace("{{canonical_url}}", html.escape(article_url(article), quote=True))
+    page = page.replace("{{json_ld}}", build_article_json_ld(article))
     page = page.replace("{{reading_time_html}}", reading_time_html)
     page = page.replace("{{tags_html}}", tags_html)
     page = page.replace("{{hero_image_html}}", hero_image_html)
@@ -327,6 +367,198 @@ def update_index_latest_writing(articles: list[dict], max_items: int = 2) -> Non
     print(f"  Updated index.html with {len(latest)} latest article(s)")
 
 
+def article_url(article: dict) -> str:
+    """Absolute URL of the rendered article page."""
+    return f"{SITE_URL}/articles/{article['slug']}.html"
+
+
+def article_markdown_url(article: dict) -> str:
+    """Absolute URL of the raw markdown source for an article."""
+    return f"{SITE_URL}/articles/{article['slug']}.md"
+
+
+def build_article_json_ld(article: dict) -> str:
+    """Return a schema.org BlogPosting JSON-LD script block for an article."""
+    data = {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "headline": article["title"],
+        "description": article["excerpt"],
+        "datePublished": article["date"].strftime("%Y-%m-%d"),
+        "dateModified": article["date"].strftime("%Y-%m-%d"),
+        "inLanguage": "en",
+        "author": {
+            "@type": "Person",
+            "name": article["author"] or SITE_AUTHOR,
+            "url": f"{SITE_URL}/",
+        },
+        "mainEntityOfPage": {"@type": "WebPage", "@id": article_url(article)},
+        "url": article_url(article),
+    }
+    if article["tags"]:
+        data["keywords"] = article["tags"]
+    if article["image"]:
+        data["image"] = f"{SITE_URL}/articles/{article['image']}"
+    # Escape "</" so a stray sequence in the data can't close the script tag.
+    payload = json.dumps(data, ensure_ascii=False, indent=2).replace("</", "<\\/")
+    return f'<script type="application/ld+json">\n{payload}\n</script>'
+
+
+def build_llms_txt(articles: list[dict]) -> str:
+    """Build the llms.txt index: a curated, machine-readable map of the site."""
+    lines = [
+        f"# {SITE_TITLE}",
+        "",
+        f"> {SITE_DESCRIPTION}",
+        "",
+        f"Articles are available as markdown; every link below points to the "
+        f"raw source. The full corpus is at {SITE_URL}/llms-full.txt.",
+        "",
+        "## Articles",
+        "",
+    ]
+    for article in articles:
+        lines.append(
+            f"- [{article['title']}]({article_markdown_url(article)}): "
+            f"{article['excerpt']}"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def build_llms_full_txt(articles: list[dict]) -> str:
+    """Build llms-full.txt: the entire article corpus as plain markdown."""
+    parts = [
+        f"# {SITE_TITLE}",
+        "",
+        f"> {SITE_DESCRIPTION}",
+        "",
+    ]
+    for article in articles:
+        meta = [f"Source: {article_url(article)}"]
+        meta.append(f"Published: {article['date'].strftime('%Y-%m-%d')}")
+        if article["tags"]:
+            meta.append(f"Tags: {', '.join(article['tags'])}")
+        parts.extend(
+            [
+                f"## {article['title']}",
+                "",
+                "\n".join(meta),
+                "",
+                article["body"],
+                "",
+                "---",
+                "",
+            ]
+        )
+    return "\n".join(parts).rstrip() + "\n"
+
+
+def build_sitemap(articles: list[dict]) -> str:
+    """Build a sitemap.xml covering the home, blog listing and every article."""
+    entries = [
+        (f"{SITE_URL}/", None),
+        (f"{SITE_URL}/blog.html", None),
+    ]
+    entries += [
+        (article_url(a), a["date"].strftime("%Y-%m-%d")) for a in articles
+    ]
+
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ]
+    for loc, lastmod in entries:
+        lines.append("  <url>")
+        lines.append(f"    <loc>{html.escape(loc)}</loc>")
+        if lastmod:
+            lines.append(f"    <lastmod>{lastmod}</lastmod>")
+        lines.append("  </url>")
+    lines.append("</urlset>")
+    return "\n".join(lines) + "\n"
+
+
+def _rfc822(date_obj: datetime) -> str:
+    """Format a date as an RFC 822 timestamp without depending on the locale."""
+    return (
+        f"{_RFC822_DAYS[date_obj.weekday()]}, {date_obj.day:02d} "
+        f"{_RFC822_MONTHS[date_obj.month - 1]} {date_obj.year} 00:00:00 +0000"
+    )
+
+
+def build_feed(articles: list[dict]) -> str:
+    """Build an RSS 2.0 feed of the newest articles."""
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<rss version="2.0" '
+        'xmlns:atom="http://www.w3.org/2005/Atom" '
+        'xmlns:dc="http://purl.org/dc/elements/1.1/">',
+        "  <channel>",
+        f"    <title>{html.escape(FEED_TITLE)}</title>",
+        f"    <link>{html.escape(SITE_URL)}/</link>",
+        f"    <description>{html.escape(SITE_DESCRIPTION)}</description>",
+        "    <language>en</language>",
+        f'    <atom:link href="{SITE_URL}/feed.xml" rel="self" '
+        'type="application/rss+xml"/>',
+    ]
+    for article in articles:
+        lines.extend(
+            [
+                "    <item>",
+                f"      <title>{html.escape(article['title'])}</title>",
+                f"      <link>{html.escape(article_url(article))}</link>",
+                f"      <guid isPermaLink=\"true\">{html.escape(article_url(article))}</guid>",
+                f"      <pubDate>{_rfc822(article['date'])}</pubDate>",
+                f"      <description>{html.escape(article['excerpt'])}</description>",
+            ]
+        )
+        if article["author"]:
+            lines.append(f"      <dc:creator>{html.escape(article['author'])}</dc:creator>")
+        for tag in article["tags"]:
+            lines.append(f"      <category>{html.escape(tag)}</category>")
+        lines.append("    </item>")
+    lines.extend(["  </channel>", "</rss>"])
+    return "\n".join(lines) + "\n"
+
+
+def build_robots_txt() -> str:
+    """Build robots.txt that welcomes search engines and AI crawlers."""
+    lines = [
+        "# All crawlers are welcome.",
+        "User-agent: *",
+        "Allow: /",
+        "",
+        "# AI crawlers, explicitly named so a future blanket rule can't hide intent.",
+    ]
+    for bot in AI_CRAWLERS:
+        lines.extend([f"User-agent: {bot}", "Allow: /", ""])
+    lines.append(f"Sitemap: {SITE_URL}/sitemap.xml")
+    return "\n".join(lines) + "\n"
+
+
+def write_article_markdown(article: dict) -> None:
+    """Copy the raw markdown source next to the rendered article page."""
+    source = Path(article["source"])
+    dest = OUTPUT_DIR / f"{article['slug']}.md"
+    dest.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+
+
+def write_machine_readable_outputs(articles: list[dict]) -> None:
+    """Write the artifacts that make the site accessible to search and LLMs."""
+    for article in articles:
+        write_article_markdown(article)
+
+    outputs = {
+        LLMS_PATH: build_llms_txt(articles),
+        LLMS_FULL_PATH: build_llms_full_txt(articles),
+        SITEMAP_PATH: build_sitemap(articles),
+        FEED_PATH: build_feed(articles),
+        ROBOTS_PATH: build_robots_txt(),
+    }
+    for path, content in outputs.items():
+        path.write_text(content, encoding="utf-8")
+        print(f"  Generated: {path.name}")
+
+
 def main():
     print("Building blog articles...")
     print(f"  Source: {ARTICLES_SOURCE}")
@@ -373,6 +605,9 @@ def main():
     # Update blog listing
     update_blog_listing(articles)
     update_index_latest_writing(articles, max_items=2)
+
+    # Machine-readable outputs for search engines and LLMs
+    write_machine_readable_outputs(articles)
 
     print("Done!")
 

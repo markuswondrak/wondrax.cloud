@@ -1,15 +1,43 @@
 #!/usr/bin/env python3
-"""Tests for build_blog.py image handling."""
+"""Tests for build_blog.py image handling and machine-readable outputs."""
 
-import os
+import json
 import shutil
 import tempfile
+import xml.etree.ElementTree as ET
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
+from build_blog import (
+    build_article_json_ld,
+    build_feed,
+    build_llms_full_txt,
+    build_llms_txt,
+    build_robots_txt,
+    build_sitemap,
+    resolve_article_image,
+    write_article_markdown,
+)
 
-from build_blog import resolve_article_image
+
+def make_article(**overrides):
+    """A representative article dict as produced by parse_article()."""
+    article = {
+        "title": "The Agent is not the Pipeline",
+        "author": "Markus Wondrak",
+        "date": datetime(2026, 5, 14),
+        "date_str": "2026-05-14",
+        "excerpt": "Agents are probabilistic by design.",
+        "tags": ["Agentic Coding", "Spec Kit"],
+        "reading_time": "13 min read",
+        "image": "images/deterministic-pipelines_infografik.png",
+        "slug": "deterministic-pipelines",
+        "body": "The agent had been running for forty minutes.",
+        "source": "/tmp/article-sources/03_deterministic_pipelines/article.md",
+    }
+    article.update(overrides)
+    return article
 
 
 class TestResolveArticleImage:
@@ -109,3 +137,92 @@ class TestResolveArticleImage:
 
         assert article["image"] == ""
         assert not self.images_dir.exists()
+
+
+class TestArticleJsonLd:
+    def test_json_ld_is_valid_and_typed(self):
+        script = build_article_json_ld(make_article())
+        assert script.startswith('<script type="application/ld+json">')
+        payload = script.split(">", 1)[1].rsplit("</script>", 1)[0]
+        data = json.loads(payload)
+
+        assert data["@type"] == "BlogPosting"
+        assert data["headline"] == "The Agent is not the Pipeline"
+        assert data["datePublished"] == "2026-05-14"
+        assert data["author"]["name"] == "Markus Wondrak"
+        assert data["keywords"] == ["Agentic Coding", "Spec Kit"]
+        assert data["url"].endswith("/articles/deterministic-pipelines.html")
+        assert data["image"].endswith(
+            "/articles/images/deterministic-pipelines_infografik.png"
+        )
+
+    def test_script_closing_sequence_is_escaped(self):
+        article = make_article(excerpt="</script><script>alert(1)</script>")
+        script = build_article_json_ld(article)
+        assert "</script><script>alert" not in script
+        assert "<\\/script>" in script
+
+
+class TestLlmsTxt:
+    def test_index_links_markdown_sources(self):
+        content = build_llms_txt([make_article()])
+        assert content.startswith("# Markus Wondrak")
+        assert "https://markus.wondrax.cloud/articles/deterministic-pipelines.md" in content
+        assert "Agents are probabilistic by design." in content
+
+    def test_full_text_contains_every_body(self):
+        articles = [
+            make_article(slug="one", body="First body."),
+            make_article(slug="two", body="Second body."),
+        ]
+        content = build_llms_full_txt(articles)
+        assert content.count("## The Agent is not the Pipeline") == 2
+        assert "First body." in content
+        assert "Second body." in content
+
+
+class TestSitemap:
+    def test_sitemap_parses_and_lists_pages(self):
+        root = ET.fromstring(build_sitemap([make_article()]))
+        locs = [
+            url.find("{http://www.sitemaps.org/schemas/sitemap/0.9}loc").text
+            for url in root
+        ]
+        assert "https://markus.wondrax.cloud/" in locs
+        assert "https://markus.wondrax.cloud/blog.html" in locs
+        assert "https://markus.wondrax.cloud/articles/deterministic-pipelines.html" in locs
+
+
+class TestFeed:
+    def test_feed_parses_and_has_items(self):
+        root = ET.fromstring(build_feed([make_article()]))
+        channel = root.find("channel")
+        titles = [item.find("title").text for item in channel.findall("item")]
+
+        assert titles == ["The Agent is not the Pipeline"]
+        assert channel.find("atom:link", {"atom": "http://www.w3.org/2005/Atom"}) is not None
+
+
+class TestRobotsTxt:
+    def test_allows_ai_crawlers_and_points_to_sitemap(self):
+        content = build_robots_txt()
+        assert "User-agent: GPTBot" in content
+        assert "User-agent: ClaudeBot" in content
+        assert "Sitemap: https://markus.wondrax.cloud/sitemap.xml" in content
+
+
+class TestWriteArticleMarkdown:
+    def test_copies_source_verbatim(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "article.md"
+            source.write_text("---\ntitle: X\n---\n\nBody.\n", encoding="utf-8")
+            output_dir = Path(tmp) / "articles"
+            output_dir.mkdir()
+            article = make_article(source=str(source))
+
+            with patch("build_blog.OUTPUT_DIR", output_dir):
+                write_article_markdown(article)
+
+            dest = output_dir / "deterministic-pipelines.md"
+            assert dest.read_text(encoding="utf-8") == source.read_text(encoding="utf-8")
+

@@ -1,0 +1,13 @@
+# Markus Wondrak
+
+> Writing on agentic coding, software architecture, and building meaningful tools.
+
+Articles are available as markdown; every link below points to the raw source. The full corpus is at https://markus.wondrax.cloud/llms-full.txt.
+
+## Articles
+
+- [Managing Spec-Kit Extensions, Presets, Workflows, and Bundles as Packages](https://markus.wondrax.cloud/articles/spec-kit-organization.md): Spec-Kit artifacts are packages and dependencies: catalogs publish what is available, bundles pin what a project installs, and the repository keeps only project intent and project-owned customization.
+- [Five Gaps in Agent Skills and What Belongs in the Context Layer](https://markus.wondrax.cloud/articles/agent-skills-gaps.md): The Agent Skills specification defines a context layer for AI agents: instructions, domain rules, and supporting files that travel with the codebase and shape agent behaviour. The format succeeded by staying minimal. Five gaps around variables, triggers, scoping, composition, and workflow execution are now generating proposals that would close them by adding execution logic to the format. Each gap has a cleaner answer — one that keeps the context layer honest and the orchestrator responsible.
+- [The Agent is not the Pipeline: Spec-Kit Workflows and the Enforcement Layer](https://markus.wondrax.cloud/articles/deterministic-pipelines.md): Agents are probabilistic by design. Hard workflow guarantees — phase gates, enforced sequencing, human checkpoints — cannot be achieved by giving an agent better instructions. They require a runtime the agent cannot override. Spec-Kit's workflow engine provides one.
+- [From Wiki to Source: How arc42 Becomes the Context Layer for AI Agents](https://markus.wondrax.cloud/articles/documentation-agentic-coding.md): Agentic coding scales output — and, without the right context layer, scales misalignment at the same rate. arc42's twelve structured sections already satisfy most of what agents need from documentation. The missing piece is not a new framework: it's putting the documentation in the repository, as Markdown files, where agents can actually find it.
+- [Re-evaluating GitHub's Spec Kit: Structured SDLC Automation](https://markus.wondrax.cloud/articles/spec-kit-reevaluation.md): GitHub's Spec Kit promises structured SDLC automation for agentic coding. After a second evaluation, here's what improved — and three enterprise gaps that still remain.

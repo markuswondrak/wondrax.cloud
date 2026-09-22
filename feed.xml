@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Markus Wondrak — Articles</title>
+    <link>https://markus.wondrax.cloud/</link>
+    <description>Writing on agentic coding, software architecture, and building meaningful tools.</description>
+    <language>en</language>
+    <atom:link href="https://markus.wondrax.cloud/feed.xml" rel="self" type="application/rss+xml"/>
+    <item>
+      <title>Managing Spec-Kit Extensions, Presets, Workflows, and Bundles as Packages</title>
+      <link>https://markus.wondrax.cloud/articles/spec-kit-organization.html</link>
+      <guid isPermaLink="true">https://markus.wondrax.cloud/articles/spec-kit-organization.html</guid>
+      <pubDate>Mon, 21 Sep 2026 00:00:00 +0000</pubDate>
+      <description>Spec-Kit artifacts are packages and dependencies: catalogs publish what is available, bundles pin what a project installs, and the repository keeps only project intent and project-owned customization.</description>
+      <dc:creator>Markus Wondrak</dc:creator>
+      <category>Spec Kit</category>
+      <category>Agentic Coding</category>
+      <category>Workflow</category>
+      <category>Best Practices</category>
+    </item>
+    <item>
+      <title>Five Gaps in Agent Skills and What Belongs in the Context Layer</title>
+      <link>https://markus.wondrax.cloud/articles/agent-skills-gaps.html</link>
+      <guid isPermaLink="true">https://markus.wondrax.cloud/articles/agent-skills-gaps.html</guid>
+      <pubDate>Mon, 25 May 2026 00:00:00 +0000</pubDate>
+      <description>The Agent Skills specification defines a context layer for AI agents: instructions, domain rules, and supporting files that travel with the codebase and shape agent behaviour. The format succeeded by staying minimal. Five gaps around variables, triggers, scoping, composition, and workflow execution are now generating proposals that would close them by adding execution logic to the format. Each gap has a cleaner answer — one that keeps the context layer honest and the orchestrator responsible.</description>
+      <dc:creator>Markus Wondrak</dc:creator>
+      <category>Agentic Coding</category>
+      <category>Skills</category>
+      <category>Developer Experience</category>
+      <category>Architecture</category>
+    </item>
+    <item>
+      <title>The Agent is not the Pipeline: Spec-Kit Workflows and the Enforcement Layer</title>
+      <link>https://markus.wondrax.cloud/articles/deterministic-pipelines.html</link>
+      <guid isPermaLink="true">https://markus.wondrax.cloud/articles/deterministic-pipelines.html</guid>
+      <pubDate>Thu, 14 May 2026 00:00:00 +0000</pubDate>
+      <description>Agents are probabilistic by design. Hard workflow guarantees — phase gates, enforced sequencing, human checkpoints — cannot be achieved by giving an agent better instructions. They require a runtime the agent cannot override. Spec-Kit&#x27;s workflow engine provides one.</description>
+      <dc:creator>Markus Wondrak</dc:creator>
+      <category>Agentic Coding</category>
+      <category>Spec Kit</category>
+      <category>Architecture</category>
+      <category>Workflows</category>
+    </item>
+    <item>
+      <title>From Wiki to Source: How arc42 Becomes the Context Layer for AI Agents</title>
+      <link>https://markus.wondrax.cloud/articles/documentation-agentic-coding.html</link>
+      <guid isPermaLink="true">https://markus.wondrax.cloud/articles/documentation-agentic-coding.html</guid>
+      <pubDate>Thu, 30 Apr 2026 00:00:00 +0000</pubDate>
+      <description>Agentic coding scales output — and, without the right context layer, scales misalignment at the same rate. arc42&#x27;s twelve structured sections already satisfy most of what agents need from documentation. The missing piece is not a new framework: it&#x27;s putting the documentation in the repository, as Markdown files, where agents can actually find it.</description>
+      <dc:creator>Markus Wondrak</dc:creator>
+      <category>Agentic Coding</category>
+      <category>arc42</category>
+      <category>Architecture</category>
+      <category>Documentation</category>
+    </item>
+    <item>
+      <title>Re-evaluating GitHub&#x27;s Spec Kit: Structured SDLC Automation</title>
+      <link>https://markus.wondrax.cloud/articles/spec-kit-reevaluation.html</link>
+      <guid isPermaLink="true">https://markus.wondrax.cloud/articles/spec-kit-reevaluation.html</guid>
+      <pubDate>Sun, 26 Apr 2026 00:00:00 +0000</pubDate>
+      <description>GitHub&#x27;s Spec Kit promises structured SDLC automation for agentic coding. After a second evaluation, here&#x27;s what improved — and three enterprise gaps that still remain.</description>
+      <dc:creator>Markus Wondrak</dc:creator>
+      <category>Agentic Coding</category>
+      <category>Spec Kit</category>
+      <category>Architecture</category>
+      <category>Enterprise</category>
+    </item>
+  </channel>
+</rss>

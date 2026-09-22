@@ -24,3 +24,11 @@ slug: "article-slug"                # Optional — derived from folder name if m
 ```
 
 The `date` field should use ISO format (`YYYY-MM-DD`) to enable correct chronological sorting on the blog.
+
+## Build
+
+After adding or editing an article, run `python3 build_blog.py`. It regenerates
+the article HTML pages, the blog/index listings, and the machine-readable
+artifacts (`llms.txt`, `llms-full.txt`, `sitemap.xml`, `feed.xml`, and per-article
+`.md` copies). Commit the generated files — GitHub Pages serves them directly.
+

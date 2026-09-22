@@ -1,0 +1,1212 @@
+# Markus Wondrak
+
+> Writing on agentic coding, software architecture, and building meaningful tools.
+
+## Managing Spec-Kit Extensions, Presets, Workflows, and Bundles as Packages
+
+Source: https://markus.wondrax.cloud/articles/spec-kit-organization.html
+Published: 2026-09-21
+Tags: Spec Kit, Agentic Coding, Workflow, Best Practices
+
+I spent the last few days cleaning up [Extended Flow](https://github.com/markuswondrak/spec-kit-extended-flow), the Spec-Kit bundle I maintain for a full agentic development pipeline, so I could install a clean copy into [Workflow Cockpit](https://github.com/markuswondrak/spec-kit-workflow-cockpit), a terminal UI I'm building for running and reviewing Spec-Kit workflow runs. Cockpit's own repository runs on *Extended Flow* as its Spec-Kit setup, so problems in the bundle show up directly in Cockpit's development loop.
+
+`.specify/` is the directory a Spec-Kit project uses to hold its extensions, presets, workflows, and configuration. Setting one up, I kept asking myself the same questions: how do I manage this folder, and how do I avoid committing every file in it? The trap is treating all of it as ordinary project files. What belongs in git, what should be reconstructed from catalogs, and what needs a pinned version so a fresh clone means the same thing next week?
+
+Maintainers have answered a narrower version of this before. A [GitHub discussion](https://github.com/github/spec-kit/discussions/2304) on what to commit under `.specify/` settled on a short rule: ignore the local feature pointer and per-machine config overrides, commit everything else - constitution, specs, extension config, templates, scripts. That answer makes perfect sense for a single preset or extension. It says less once a project assembles several catalog-installed bundles, presets, extensions, and workflows at once, each with its own installed copy, registry, and provenance record - the case that two still-open feature requests ([#2612](https://github.com/github/spec-kit/issues/2612), [#2681](https://github.com/github/spec-kit/issues/2681)) ask Spec Kit to address by formally separating tool-managed assets from project-owned state. 
+
+I think Spec-Kit artifacts should be handled as packages and dependencies. Catalogs declare what is available. Bundles declare and pin what a project depends on. The repository tracks project intent and project-owned customization. Installed package copies, installation records, and runtime state should be reconstructed.
+
+*This article reflects [Spec Kit](https://github.com/github/spec-kit) and its [documentation](https://github.github.io/spec-kit/) as of this writing, and the Extended Flow bundle at bundle/preset/`extendedflow` extension `0.16.0` (`bug` extension `1.0.0`, Feature workflow `0.10.1`, Bugfix workflow `0.2.1`, Quick workflow `0.1.1`). Both projects evolve; re-check current behavior before relying on specifics.*
+
+## Treat Spec-Kit artifacts as packages, not project files
+
+The core problem is that one directory tree hides three different kinds of things. If they are all treated as "files under `.specify/`", repository boundaries become arbitrary and updates become harder to reason about.
+
+I have found it more useful to separate them into three categories:
+
+- **Package definitions and catalog-published components.** Extensions, presets, workflows, and bundles are versioned artifacts with their own manifests and release cadence. Catalogs declare which packages are available to install.
+- **Project intent and project-owned customizations.** Bundle declarations, catalog configuration, constitution, specs, extension project config, and workflow overlays describe what this project wants and which local customizations it owns.
+- **Installed artifacts and runtime state.** Installed copies under `.specify/extensions/`, `.specify/presets/`, and `.specify/workflows/`, plus registries, bundle records, caches, and run state, are outputs of installation and execution.
+
+A catalog is a plain JSON index. Each entry names a package, pins its version, and points at where to download it. This is the `bugfix` bundle entry as published in Spec Kit's own [bundle catalog](https://github.com/github/spec-kit/blob/main/bundles/catalog.json):
+
+```json
+{
+  "schema_version": "1.0",
+  "catalog_url": "https://raw.githubusercontent.com/github/spec-kit/main/bundles/catalog.json",
+  "bundles": {
+    "bugfix": {
+      "id": "bugfix",
+      "name": "Guided Bug Fix",
+      "version": "1.0.0",
+      "description": "Orchestrated bug triage: assess a bug report, review behind a human gate, apply the fix, and verify with tests.",
+      "author": "GitHub",
+      "license": "MIT",
+      "download_url": "https://raw.githubusercontent.com/github/spec-kit/main/bundles/bugfix/bundle.yml",
+      "repository": "https://github.com/github/spec-kit",
+      "requires": { "speckit_version": ">=0.9.0" },
+      "provides": { "extensions": 1, "presets": 0, "steps": 0, "workflows": 1 },
+      "tags": ["bug", "triage", "workflow", "qa"],
+      "verified": true
+    }
+  }
+}
+```
+
+Extensions, presets, and workflows are listed the same way under their own top-level key in their own `catalog.json`. The download location can point at any host the project can reach, so a company can serve the same entries from an internal catalog instead of GitHub. A project points at the catalogs it trusts through its `.specify/*-catalogs.yml` files, which are project intent and stay committed.
+
+In practice, that means keeping declarations and project-owned customizations in the repository, while installed packages and runtime state can be recreated when needed. Spec Kit does not enforce that repository policy for you. It gives you the primitives. Which files declare a dependency and which are only the materialized result is still a decision for the project.
+
+## Choose the package that owns the behavior
+
+The extension-versus-preset distinction becomes confusing when you start from file locations alone. Both can affect what the agent sees, and a preset can technically do more than it should. That is why teams need an ownership rule before they start composing packages.
+
+Spec Kit distinguishes between extensions and presets. **Extensions are the conventional home for new command names. Presets modify existing commands or template content, and with `strategy: replace` they can also materialize a brand-new command on their own.** That makes the boundary architectural, not hard-enforced, but the distinction still reflects the intended semantics of the package types. What Spec Kit does enforce are the composition strategies documented in the [presets reference](https://github.com/github/spec-kit/blob/main/docs/reference/presets.md): `prepend`, `append`, and `wrap` require an existing base layer to compose onto. When that base is missing, Spec Kit skips the command and emits a warning. 
+
+This split matches the shipped manifests: [`extension.yml`](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/extension.yml) contributes named behavior, and [`preset.yml`](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml) changes how existing behavior is rendered and composed. Once ownership is clear, composition stops being accidental.
+
+## Compose packages deliberately
+
+A Spec-Kit project usually installs multiple packages, and their interaction is where drift can appear. Two composition problems show up in practice:
+
+- Shared cross-cutting instructions copied into many commands drift over time.
+- Competing preset changes need a deliberate precedence policy or resolution becomes arbitrary.
+
+### One runtime preamble instead of multiple copies
+
+The first problem showed up immediately in *Extended Flow*. Spec Kit workflows execute their commands in batch mode by design, so they run unattended and do not stop to ask a human question. I also wanted that behavior to stay inside the project. Copying the instruction into every command would have worked for one release and then drifted.
+
+So I wrote it once instead. Spec Kit lets one preset entry compose onto many commands, so I pointed fourteen `type: command` entries at the same file - `commands/workflow-runtime.md` - each with `strategy: prepend` (see [`preset.yml`](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml)). That keeps the policy in one place; the commands themselves stay free of duplicated boilerplate. I left `project-init` and `documentation-init` out because a human runs them before the flows start, so the preamble doesn't apply.
+
+### Use priorities to define how presets compose
+
+The second problem is less visible until two presets overlap. Every preset defaults to priority `10`, and ties break alphabetically by preset id (see the [Spec Kit presets reference](https://github.com/github/spec-kit/blob/main/docs/reference/presets.md)). Leave everything at the default and your effective stack is technically valid but operationally arbitrary.
+
+Use priority to actually control the layering these artifacts create. Lower priority wins. The strategies fall into two groups that behave differently against the layer below. `replace` overrides: when two presets both `replace` the same template, only the lower number takes effect and the other is ignored rather than merged. `append`, `prepend`, and `wrap` compose: the higher-precedence preset, the one with the lower number, adds to that layer instead of overwriting it. 
+
+*Extended Flow*'s [`bundle.yml`](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/bundle.yml) pins its preset at priority `10`, while the actual file-level composition strategies live in [`preset.yml`](https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml). That leaves room for project overrides above it and organizational layers below it without changing the bundle itself.
+
+## Commit intent; reconstruct installations
+
+The practical failure mode here is ending up with two competing truths. Catalogs and bundle manifests describe which packages the project depends on and which versions it expects. The other lives in checked-in installed copies and registries. The moment those drift apart, the repository no longer tells you which truth to trust.
+
+Spec Kit's own default is intentionally narrow. `specify init` scaffolds a managed `.specify/.gitignore` that contains exactly two patterns (see the [Spec Kit core reference](https://github.com/github/spec-kit/blob/main/docs/reference/core.md)):
+
+```gitignore
+feature.json
+extensions/*/local-config.yml
+```
+
+That excludes only machine-local state. For *Extended Flow* projects, I use a stricter policy: ignore anything that can be recreated by installing a declared dependency. Anything pulled from a catalog and not meant to be edited locally should not be committed. 
+
+Add these rules to the managed file:
+
+```gitignore
+# Installed from catalogs. Reconstructed with `specify bundle install`.
+.specify/extensions/*/*
+!.specify/extensions/*/*-config.yml
+.specify/presets/*
+.specify/workflows/*
+!.specify/workflows/overlays/
+
+# Runtime state, caches, and backups.
+.specify/workflows/runs/
+.specify/workflows/.cache/
+.specify/extensions/.cache/
+.specify/extensions/.backup/
+
+# Installation-state records. Rebuilt by the bundler on reconstruction,
+# and stale copies can make it believe an ignored component is present.
+.specify/extensions/.registry
+.specify/bundle-records.json
+```
+
+We need to be specific here:
+
+- **Extension project config** (`<ext>-config.yml`) is project intent. It is not catalog-derived, so it stays tracked. Only the machine-local `local-config.yml` stays ignored.
+- **Workflow overlays** (`.specify/workflows/overlays/`) are project-owned customizations. The [workflows reference](https://github.com/github/spec-kit/blob/main/docs/reference/workflows.md) explicitly keeps them outside installed workflow directories so they survive updates.
+
+The installation-state records need the same treatment as the installed package copies. The bundler resolves what is already installed primarily through these registries and records, not by inspecting the filesystem tree alone. If they are committed while the components they describe are ignored, a fresh clone can claim a component is already installed when its files are absent.
+
+`.specify/extensions.yml` looks like it belongs on that list - it does record which extensions are installed - but it is not what gates a fresh install. That check reads only `.specify/extensions/.registry`; `extensions.yml` is enablement and hook configuration, which is why the [extension user guide](https://github.com/github/spec-kit/blob/main/extensions/EXTENSION-USER-GUIDE.md#1-version-control) recommends committing it.
+
+The three categories map onto concrete paths as follows:
+
+| Path or pattern | Category | Commit | Restored by |
+|---|---|---|---|
+| `constitution`, `templates` | Project intent | ✅ | - |
+| `specs/`, bug reports | Project intent | ✅ | - |
+| Bundle declaration | Project intent | ✅ | - |
+| `.specify/*-catalogs.yml` | Project intent | ✅ | - |
+| `.specify/integration.json` | Project intent | ✅ | - |
+| `.specify/extensions.yml` | Project intent | ✅ | - |
+| `.specify/extensions/<ext>/<ext>-config.yml` | Project intent | ✅ | - |
+| `.specify/workflows/overlays/` | Project-owned customization | ✅ | - |
+| `.specify/extensions/*/*` | Installed extension copies | ❌ | `specify bundle install` |
+| `.specify/presets/*` | Installed presets | ❌ | `specify bundle install` |
+| `.specify/workflows/*` | Installed workflows | ❌ | `specify bundle install` |
+| `.specify/extensions/.registry` | Installation record | ❌ | rebuilt by the bundler |
+| `.specify/bundle-records.json` | Installation record | ❌ | rebuilt by the bundler |
+| `.specify/workflows/runs/` | Runtime state | ❌ | regenerated on run |
+| `.specify/workflows/.cache/`, `.specify/extensions/.cache/`, `.specify/extensions/.backup/` | Runtime state | ❌ | regenerated by the tooling |
+| `.specify/feature.json` | Machine-local pointer | ❌ | recreated locally |
+| `.specify/extensions/*/local-config.yml` | Machine-local override | ❌ | recreated locally |
+
+The negation syntax is part of the design. `.specify/extensions/*/*` ignores the contents of each extension directory but not the directory itself, which is what allows a top-level config file to be re-included. Ignoring `.specify/extensions/` wholesale would make that impossible.
+
+If bundle declarations are the source of truth, the next step is to prove that they are actually sufficient.
+
+## Make a fresh clone the acceptance test
+
+A declarative dependency story is only real if a new checkout can reconstruct it. Otherwise the repository still depends on human memory.
+
+A useful acceptance test is whether a fresh clone can reach a working state with an easy init command:
+
+```bash
+git clone <repo> && cd <repo>
+specify bundle install spec-kit-extended-flow
+```
+
+If restoring the project requires more than that - manual `specify extension add` calls, remembered priorities, or a wiki page that lists extra steps - the dependency declaration is incomplete. A missing step usually means one of three things is absent from the package model: a bundle dependency, a version pin, or project-owned customization that should have been committed.
+
+Run this test against a real fresh clone, not by deleting directories from an existing checkout. Deleting `.specify/extensions/`, `.specify/presets/`, and `.specify/workflows/` from a working tree also deletes tracked project intent such as extension project config, workflow overlays, and installation metadata that should stay committed. Clone into a clean directory, run the install command, and confirm the resulting installed versions match what the bundle pins.
+
+That reconstruction test answers the present-tense question. Reproducibility over time depends on versioning discipline.
+
+## Pin versions so reconstruction means the same thing tomorrow
+
+Package management is temporal as well as structural. It is not enough that a project can be reconstructed today. The reconstructed result needs to mean the same thing when someone repeats the install later.
+
+That is why bundles matter. The [Spec Kit bundles reference](https://github.com/github/spec-kit/blob/main/docs/reference/bundles.md) defines a bundle as a versioned composition layer over extensions, presets, workflows, and steps, and `bundle info` expands the pinned component set. Spec Kit rejects unpinned extension, preset, and workflow entries during bundle validation. If installed components carry one version in their own manifest and a different one in the bundle pin, the bundle stops being a trustworthy description of the environment.
+
+*Extended Flow* keeps a hybrid release model, and this is my policy, not something Spec Kit enforces. The components the project itself publishes - the bundle manifest, the preset, and its own `extendedflow` extension - are released together and share one version number. Workflows and third-party extensions are different. They are foreign components, maintained on their own cadence, so forcing them onto the bundle's version would misstate ownership of that release cycle.
+
+An alternative is to version each primitive independently and pin those versions in `bundle.yml`. That works when components genuinely evolve on different cadences. What does not work is an accidental mixture with no stated rule - some primitives share versions, others float loosely, and the bundle version no longer describes its contents. Reconstruction then becomes time-sensitive in exactly the wrong way.
+
+The easiest way to see whether the model holds is to look at what breaks when it does not.
+
+## Failure modes come from breaking the package model
+
+The anti-patterns here share one cause: each treats package behavior as ad hoc project files.
+
+- **Commands from a preset.** A preset that registers `speckit.someext.cmd` via `replace` without `someext` installed can work technically, but it hides new behavior inside the wrong package type.
+- **Undeclared preset precedence.** When two presets change the same template and both keep the default priority `10`, resolution falls back to alphabetical order by preset id.
+- **Missing or stale bundle pins.** Spec Kit expects extension, preset, and workflow entries to be pinned, and stale pins still break reproducibility by describing a different environment than the one people actually install.
+- **Logic in workflow YAML.** Shell steps that grow beyond one command blur the boundary between orchestration and packaged runtime behavior. The workflow should declare sequence; scripts shipped by a preset or extension should implement the logic. My own recommendation once those scripts grow past a handful of lines: extract them into a separately versioned, published package rather than letting them keep growing inside a preset or extension.
+- **Committing installed components or their registries.** A checked-in copy of a catalog extension, preset, or workflow drifts from the declared dependency the moment someone updates it.
+
+All of these failure modes blur the distinction between declared dependencies and installed artifacts.
+
+## Package management is the operating model
+
+Spec Kit already gives the primitive types. The real design choice is how you operate them together. In my view, the cleanest model is to treat extensions, presets, workflows, and bundles as packages, not as a loose collection of project files under `.specify/`.
+
+*Extended Flow*'s own repository reflects the split now: extensions and presets are pinned, `.specify/extensions/` and `.specify/presets/` are gitignored, and a fresh clone rebuilds them with one install command. The next test is whether it holds up in *Workflow Cockpit*, the project this cleanup was for.
+
+---
+
+## Five Gaps in Agent Skills and What Belongs in the Context Layer
+
+Source: https://markus.wondrax.cloud/articles/agent-skills-gaps.html
+Published: 2026-05-25
+Tags: Agentic Coding, Skills, Developer Experience, Architecture
+
+I was adding a new feature to [BriefCheck](https://briefcheck.app): new users should get a month of premium access for free after onboarding. The change touches subscription state, trial periods, upgrade paths, and billing edge cases. The domain language matters. Does "free month" mean a trial that expires, or a grant that converts? Is the user a "trial user" or a "premium user on a promotional period"? Getting the terminology wrong cascades into wrong code. I needed a way to keep the domain model in front of the agent while we worked through the implementation.
+
+I had read about Matt Pocock's `grill-with-docs` skill and wanted to try it for exactly this kind of problem. The skill runs a focused interview session that stress-tests a plan against the project's domain model, sharpens terminology when it drifts, and updates documentation inline so the clarification survives the conversation.[^8] It is exactly the kind of workflow discipline that keeps a context layer honest as the codebase outpaces the docs, the same friction arc42 is meant to solve, and the same reason I had already put it in place as the context layer for agents.[^9]
+
+This is exactly what a skill does well — and it is a useful example of what a skill actually is. `grill-with-docs` is not passive documentation. It is a procedural workflow packaged as context: a structured interview the model conducts against the domain model, with the project's terminology anchored so nothing drifts. No ambiguity about state transitions, no guessing at edge cases. The workflow is still context the model reads, not code it runs. But it is doing something more active than enforcing a naming convention.[^8]
+
+So I had a look at the skill and found the wall immediately. It hardcodes a specific layout: the agent looks for a `CONTEXT.md` file at the project root, checks for a `CONTEXT-MAP.md` if the repo has multiple bounded contexts, finds ADRs under `docs/adr/`, and keeps the glossary implementation-free. My files live in different directories, under different names, with different conventions. The path assumptions are interleaved with the interview logic throughout the Markdown body.
+
+The skill is not wrong. It is a perfectly good piece of declarative context. The problem is that static text cannot adapt to different project layouts. A skill that assumes `docs/adr/` breaks in a repository that uses `architecture/decisions/`. This is a portability problem, not a missing language feature. The solution is not to make the skill smarter. It is to make the orchestrator responsible for bridging the gap between the skill's abstract intent and the project's concrete reality.
+
+That experience made me look closer. The Agent Skills specification has achieved broad adoption by staying minimal.[^1] It defines what a skill is: a Markdown file with frontmatter that an orchestrator loads into context. It deliberately does not define how the orchestrator resolves, scopes, or adapts that context. That restraint made portability possible. Now the same restraint creates friction in five areas where the orchestrator contract is undefined.
+
+---
+
+## What a Skill Is, and What It Is Not
+
+A skill has one job: give the model the right context for a specific kind of task. It is the mechanism behind `grill-with-docs` running a focused interview, a Java test skill enforcing JUnit 5 conventions, or a deployment skill knowing to verify rollback procedures.
+
+On disk, it is a directory with a `SKILL.md` file at its root. The frontmatter declares a `name` and a `description`. The `name` is the skill's identifier. The `description` is what the orchestrator uses to decide whether the skill is relevant to the current task.[^1]
+
+The body of `SKILL.md` contains instructions written for the model: constraints, workflow steps, style rules, or domain context. The format is Markdown. There is no special syntax for variables, conditionals, or includes. Everything the model sees is plain text that the author wrote in advance.[^1]
+
+A minimal skill looks like this:
+
+```markdown
+---
+name: java-tests
+description: Generate JUnit 5 unit tests for Java classes
+---
+
+## Instructions
+
+When asked to write tests for a Java class:
+
+1. Use JUnit 5. Prefer `@ParameterizedTest` over duplicated test cases
+2. Mirror the package structure: `src/main/java/com/example/Foo.java` -> `src/test/java/com/example/FooTest.java`
+3. Name the test class `{ClassUnderTest}Test`
+4. Use the `@DisplayName` annotation to describe intent in plain English
+5. Use AssertJ for assertions: `assertThat(result).isEqualTo(expected)`
+6. Mock external dependencies with Mockito. Do not mock value objects or internal helpers
+7. Cover: null inputs, empty collections, boundary values, and the happy path
+```
+
+Optionally, the directory can contain additional files: image assets, Mermaid diagrams, or supplementary Markdown files. The skill may instruct the model to read these files, but the specification does not enforce how they are structured or when they are loaded.[^1]
+
+Skills are discovered in two ways. Global skills sit in a platform-specific directory and are available in every session. Project-local skills live inside the repository itself, typically under a hidden directory like `.opencode/skills/` or `.claude/skills/`.[^2] Project skills travel with the codebase, so a team can commit its conventions to version control and every developer gets the same agent behaviour.
+
+Activation works through progressive disclosure. At startup, the orchestrator scans all skill directories and reads only the `name` and `description` fields. The full body stays on disk. When the user submits a task, the orchestrator presents the skill descriptions to the model. The model decides which ones are relevant. Only then are the full instructions read and injected into context.[^1]
+
+When the model gets this wrong, the right skill is skipped — or the wrong skill is loaded and stays in context for the rest of the session.[^2]
+
+A skill is not code to execute, rather context to read. That context takes two forms. Some skills are declarative: rules, constraints, and terminology the model draws on as it works — a Java testing skill that enforces JUnit 5 conventions, or a domain skill that pins down what "free month" means in a subscription system. Other skills are procedural: structured workflows the model follows step by step — a `grill-with-docs` interview session, or a deployment skill that walks through rollback verification before releasing. Both forms are plain Markdown. Both are loaded the same way. The format makes no distinction between them, and that is appropriate: from the orchestrator's perspective, the delivery mechanism is identical.
+
+The mechanism is intentionally minimal: a description for matching, a body for instruction, and a directory for supporting files. That minimalism made the format portable across tools. It also leaves every question about how to resolve, scope, and merge that context unanswered — which is where the friction begins.
+
+I identified five areas I want to address in this article:
+
+- **Template resolution.** No contract for substituting externally resolved values into static skill text.
+- **Deterministic triggers.** The model decides relevance instead of the orchestrator.
+- **Scope boundaries.** No rule for which skills apply in which parts of a repository.
+- **Composition.** No clean way to merge multiple skills without dependency chains.
+- **Workflow execution.** No cross-tool standard for how the orchestrator sequences steps, manages state, and handles errors.
+
+Each is a question the specification leaves unanswered. The first four have generated active community proposals that drift toward making the skill format more powerful rather than making the orchestrator more capable. The fifth has generated an entire ecosystem of incompatible frameworks, each one a different team's answer to the same missing contract.
+
+---
+
+## Variables: Template Placeholders, Not Runtime State
+
+A `SKILL.md` file is static text. Paths, configurations, and conventions are baked into the document. If a skill needs to know where architectural decisions are recorded, it has two bad options: hardcode the path, or instruct the model to discover it.
+
+Hardcoding breaks portability. A skill that references `docs/adr/` fails in any project that uses a different layout. Instructing the model to discover the value breaks reliability. The model might search the wrong directory, skip the step, or hallucinate a path. Both options undermine the cross-product promise.
+
+Issue #124 proposes dynamic context injection: an inline syntax where shell commands execute before the skill content is sent to the model.[^3] The proposal uses `` !`command` `` placeholders that the orchestrator resolves at invocation time. Claude Code already implements this exact mechanism.[^2]
+
+It solves the hardcoding problem directly. A skill that needs a git hash or a generated path can fetch it at invocation time instead of baking in a default. But the trade-off is architectural. Embedding shell commands inside a skill turns declarative context into an executable script. The skill now holds runtime state and side effects. It is no longer a portable document that any orchestrator can load. It is a program that requires a specific runtime.
+
+A simpler mechanism achieves the same result without that cost. A skill should declare template placeholders that the orchestrator resolves from project metadata before the model sees the text.
+
+```yaml
+---
+name: grill-with-docs
+description: Stress-test plans against the domain model
+variables:
+  ADR_PATH: "docs/adr/"
+  CONTEXT_FILE: "CONTEXT.md"
+---
+
+## Instructions
+
+Read the architectural decisions from {{ ADR_PATH }} and the domain glossary from {{ CONTEXT_FILE }}. Conduct an interview...
+```
+
+The orchestrator replaces `{{ ADR_PATH }}` with the actual path, resolved from project configuration. That resolution must be deterministic: the same project state always produces the same rendered text. The model receives only the rendered text. The skill itself remains stateless, side-effect free, and executable on any compliant orchestrator. The variable is not a command to run. It is a contract that says: this skill needs this piece of context, and the orchestrator must provide it.
+
+The difference is who gathers the context. Dynamic context injection makes the skill responsible; template resolution keeps that responsibility in the orchestrator. Template placeholders solve portability, but they do not solve the question of when a skill should be loaded at all.
+
+---
+
+## Triggers and Scoping: The Orchestrator Decides, Not the Model
+
+Slash commands are deterministic. Type `/java-test` and the orchestrator loads that skill. No model inference, no probabilistic matching. The skill name maps directly to the file on disk.[^2]
+
+That pattern serves explicit user intent. The user knows which context they want and asks for it directly.
+
+Skills are designed for a second case: context that applies automatically when the work demands it. A project-local skill committed to version control should enforce conventions without the user remembering it exists.
+
+Automatic activation today is probabilistic. When the user does not type a slash command, the orchestrator presents skill descriptions to the model and asks it to decide which ones are relevant. Sometimes it gets this wrong. A skill with a clear `description` that matches the current task can still be skipped because the model weighs it against everything else in the prompt and decides to proceed without it.[^1]
+
+For automatic activation, the model should not guess which context it needs. The orchestrator should know.
+
+Claude Code addresses this with a `paths` field in the frontmatter: glob patterns that limit when a skill is activated.[^2] Set `paths: ["*.dart"]` and Claude Code loads the skill automatically when working with Dart files. This is a deterministic trigger. The orchestrator matches the file pattern and injects the skill. 
+
+The Agent Skills specification does not define this mechanism. Claude Code implements it as a client-specific extension, which means the same `paths` field is meaningless to Gemini CLI, OpenHands, or any other tool. 
+
+Portability across tools is only one dimension of the activation problem. Inside a single repository, the same lack of deterministic rules produces a different but equally painful symptom. In a monorepo, different areas have different conventions. The frontend team uses different patterns than the backend team. A `code-style` skill at the root cannot serve both.
+
+Issue #115 proposes path-based, recursive skill discovery.[^7] Skills placed in subdirectories apply only when the agent is working in that area. Claude Code already implements a version of this: project skills load from `.claude/skills/` in the starting directory and in every parent directory up to the repository root.[^2] This is more flexible than strict subdirectory isolation. A project can define shared conventions at the repository root and override them locally in specific areas, without duplicating the common parts.
+
+Path-based inheritance solves the monorepo problem, but it couples skill activation to directory structure in ways that are invisible to the skill itself. A developer working in `src/frontend/components/` inherits skills from four levels. Which ones apply depends on what exists at every parent directory. A skill cannot declare its own scope. Its activation is determined by where it sits on disk, not by what it claims to govern. When two skills conflict, the "deepest wins" rule resolves it, but that rule is nowhere in the skill files. The developer may not know either skill is active.
+
+Explicit scoping in the frontmatter is the cleaner alternative:
+
+```yaml
+scope: "src/frontend/**"
+```
+
+The orchestrator matches the scope against the current working path. No inheritance chain. No hidden skills from parent directories. The developer can see exactly which skills apply by reading the frontmatter, not by tracing the file system.
+
+Deterministic triggers complement slash commands. The user can still invoke a skill explicitly when the context is unusual or when they want control. But for automatic activation, the orchestrator should decide what to load based on rules the skill declares, not on model inference.
+
+---
+
+## Composition: The Blind Spot Nobody Named
+
+Skills are atomic by design. A Java testing skill knows JUnit 5 conventions. A deployment skill knows rollback procedures. A domain skill knows the project's terminology. When a task touches all three areas, the orchestrator loads all three and appends them into one prompt. The model sees a single instruction set.
+
+Plain concatenation is the simplest possible composition strategy, and mechanically it holds up. Modern models handle large context windows well and are effective at extracting the relevant subset of instructions from a combined prompt. The bottleneck is not the concatenation. The risk is overlap: two skills in the same prompt that define the same concern.
+
+Overlap produces two failure modes:
+
+- **Redundancy.** Two skills both state a rule for the same concern, wasting context and creating ambiguity about which wording is authoritative.
+- **Conflict.** Two skills give contradictory instructions for the same operation. The model interpolates between them, and the output is non-deterministic.
+
+Consider a concrete case that shows the second failure mode. An agent is implementing a new REST endpoint in a Go backend that follows a strict `src/` package structure. Two skills are relevant and get concatenated into the prompt:
+
+**`go-http-handlers.md`**
+
+> "Responsibility: HTTP handlers. Place handlers in `src/api/`. Use the `chi` mux framework. On error, return `http.StatusInternalServerError` with a plain text string."
+
+**`go-error-policy.md`** (global project standard)
+
+> "All errors in this project are logged with structure. Every HTTP error must be returned as a JSON payload in the format `{"error": "message", "code": 500}`. Use the project's internal wrapper function for this."
+
+The orchestrator has done its job. Both skills matched the task and were appended together. But the model now holds two contradictory instructions for the same thing: how to return an HTTP error. Because the model is designed to be helpful rather than to fail, it does not raise a conflict. It interpolates. Sometimes the first rule wins. Sometimes the second rule wins. Sometimes the model produces a hybrid. The output is non-deterministic, and neither the developer nor the orchestrator has any record that two rules were in play. When the output is wrong, debugging means guessing which skill the model chose to follow — and why.
+
+The fix is not a smarter concatenation strategy. It is a different way to write skills. The same task, with orthogonal skills:
+
+**`arch-go-routing.md`** — Dimension: Structure & Framework
+
+> "Responsibility: HTTP routing. Place handler packages in `src/api/`. Use `chi` for routing. Do not handle errors here — on failure, call the project's standard error wrapper."
+
+**`arch-go-errors.md`** — Dimension: Error Handling
+
+> "Responsibility: Error handling in HTTP handlers. Use `respondWithError(w http.ResponseWriter, err error)`. This function accepts a standard Go error and generates the correct JSON payload `{"error": "message"}` automatically."
+
+**`arch-go-testing.md`** — Dimension: Quality Assurance
+
+> "Responsibility: Unit tests for Go. For every file in `src/api/`, write a corresponding `_test.go` file. Use table-driven tests exclusively. Mocks are only allowed for external calls."
+
+When the orchestrator concatenates these three, no overlap exists. Skill 1 defines where the file goes and how routing is structured. Skill 2 is the only rule in context that covers error handling. Skill 3 applies when a test is generated. The model has nothing to arbitrate.
+
+The principle is the same one that makes interfaces work in object-oriented design: High Cohesion, Low Coupling. A skill must define exactly one architectural truth. The moment a skill reaches into another skill's domain — a routing skill that specifies how to log errors, an error skill that mentions test conventions — it creates the conditions for silent conflict. The orchestrator cannot detect that conflict. It assembles text, not semantics. The simpler and more focused each individual skill is, the more reliably the agent behaves when those skills are combined.
+
+The community has followed that instinct, but the active discussions treat composition as a distribution problem:
+
+- *Issue #100* asks how skills should depend on other skills.[^4]
+- *Issue #110* proposes a `requires` field with version validation.[^5]
+- *Discussion #210* offers a full `skills.json` manifest and lockfile modeled on `package.json` and `go.mod`.[^11]
+- *Discussion #292* specifies skills as OCI artifacts for registry-based distribution.[^12]
+- *Discussion #302* proposes PURL-based identity for lightweight packaging.[^13]
+
+These proposals answer how skills get onto disk. None answer whether the skills that landed there can be safely combined in a single prompt. The community has not yet distinguished distribution from design-time orthogonality. A `requires` field implies a directed graph: Skill A needs Skill B. But skills do not need each other. They are parallel context slices that must not overlap.
+
+The shared-value problem — two skills referencing the same artifact path — would be already solved by template variables. Each skill declares `{{ ARTIFACT_PATH }}` in its frontmatter. The orchestrator resolves it from project configuration before injection. Two skills get the same value without knowing about each other.
+
+---
+
+## Workflow Execution: The Protocol Stack Has a Missing Layer
+
+A procedural skill describes a workflow. `grill-with-docs` says: 
+
+1. conduct an interview
+2. stress-test the plan
+3. anchor the terminology
+ 
+A deployment skill says: 
+
+1. verify rollback procedures
+2. confirm the rollout window
+3. check the health endpoint
+
+The instructions are written down in the skills description. The model decides what to do next.
+
+What the skill cannot say — and what the [Agent Skills specification does not define](https://wondrax.cloud/articles/deterministic-pipelines) — is how those steps are executed. When the interview needs to call a documentation tool, how is that invocation structured? When one phase must complete before the next begins, who tracks that state? When the workflow reaches a step that requires human approval before proceeding, how is the pause encoded and the decision fed back in? When a step fails, what gets retried and what gets skipped?
+
+These are orchestration questions. Three protocols now address adjacent territory at the toolchain level. MCP standardises how agents connect to tools and data sources: a JSON-RPC contract that replaces the bespoke integration code every team used to write for every external service.[^14] A2A defines how agents communicate with each other: task delegation, result streaming, and long-running collaboration without sharing internal state.[^15] Agent Skills defines how context is packaged and discovered.[^1]
+
+Together, these three cover tools, communication, and context. None of them covers the execution model — the control flow that uses all three.
+
+Every team answers these questions by choosing a framework. LangGraph uses a Python graph with typed state and conditional edges. CrewAI Flows uses event-driven routing with decorators. Google ADK provides `SequentialAgent`, `ParallelAgent`, and `LoopAgent` primitives. The OpenAI Agents SDK makes no architectural claim — control flow is plain Python code with handoffs. Microsoft shipped Semantic Kernel, deprecated it in favour of AutoGen, then deprecated AutoGen in favour of Microsoft Agent Framework, each with its own orchestration model.
+
+That churn is the strongest signal that no framework has reached the stability of a real standard. Anthropic's own guidance lands in the same place: *"start by using LLM APIs directly. Many patterns can be implemented in a few lines of code."*[^16] The advice to skip frameworks is only reasonable if no framework is yet trustworthy enough to abstract over.
+
+The AI Engineer Foundation named the problem directly. Their Agent Protocol specification reads: *"The AI agent space is young. Most developers are building agents in their own way. This creates a challenge: it's hard to communicate with different agents since the interface is often different every time."*[^17] The protocol's response — a minimal REST contract for task creation and step execution — points at the right solution but stops short of the execution semantics that actually matter: state management, branching logic, human-in-the-loop interrupts, and error recovery.
+
+The four skill-level gaps in this article are all questions about how the orchestrator handles skills. This fifth gap is a question about the orchestrator itself. Even if template resolution, activation, scoping, and composition were fully standardised, the workflow that uses all four would still be a bespoke artefact that only runs in the tool it was built for. 
+
+That question — what a portable, deterministic execution contract for agent workflows would actually look like — deserves its own treatment.
+
+---
+
+## The Orchestrator Contract: Let Skills Stay Dumb
+
+Five gaps, one cause. Each gap exists because the specification treats the `SKILL.md` file as a document that must do everything itself. The community responds by asking for more features in the format: variables, conditionals, dependencies, execution hooks. That response turns skills into a scripting language and destroys the portability that made them valuable.
+
+The correct response is the opposite. The `SKILL.md` format should stay as minimal as possible. It should declare what it is, what it needs, and where it applies. The orchestrator should do everything else.
+
+- *Template resolution* belongs in the orchestrator because it is metadata substitution, not language generation. 
+- *Trigger and scope* belong in the orchestrator because they are pattern matching, not semantic inference. 
+- *Composition* belongs in the orchestrator because it is document assembly, not reasoning.
+- *Workflow execution* belongs in a standardised execution contract because it is control flow, not context.
+
+The community is not really asking for a richer skill format. It is asking for a standardised process specification that lives parallel to the skills and defines how an orchestrator resolves, scopes, merges, and validates them. That specification does not exist yet. The Agent Skills specification defines the document. It does not define the runtime.
+
+The first specification made the right call. Minimalism enabled adoption. The second specification must define the orchestrator contract: the set of deterministic operations every compliant tool must perform before handing context to the model. Without that contract, every tool extends the standard in its own direction, and the cross-product promise erodes.
+
+Defining that contract — and specifying what it must do for both declarative and procedural skills — is the work the community has been circling around without yet naming directly.
+
+---
+
+## Sources
+
+[^1]: Agent Skills Specification, agentskills.io. <https://agentskills.io/specification>
+[^2]: Anthropic, "Extend Claude with skills," Claude Code Documentation. <https://docs.anthropic.com/en/docs/claude-code/skills>
+[^3]: digitarald, "Proposal: Dynamic context injection in SKILL.md," agentskills/agentskills Issue #124, February 6, 2026. <https://github.com/agentskills/agentskills/issues/124>
+[^4]: marcofranssen, "Best practice on having a skill use/depend on other skills," agentskills/agentskills Issue #100, January 22, 2026. <https://github.com/agentskills/agentskills/issues/100>
+[^5]: AndoSan84, "Adding Skill Dependencies with Version Validation + Testing Specification," agentskills/agentskills Issue #110, January 28, 2026. <https://github.com/agentskills/agentskills/issues/110>
+[^6]: PaulRBerg, "Clarify whether nested skills are allowed," agentskills/agentskills Issue #137, February 12, 2026. <https://github.com/agentskills/agentskills/issues/137>
+[^7]: lcs-bdr, "Proposal: add path-based, recursive skill discovery," agentskills/agentskills Issue #115, February 2, 2026. <https://github.com/agentskills/agentskills/issues/115>
+[^8]: Matt Pocock, "grill-with-docs" skill, mattpocock/skills repository. <https://github.com/mattpocock/skills/blob/main/skills/engineering/grill-with-docs/SKILL.md>
+[^9]: Markus Wondrak, "From Wiki to Source: How arc42 Becomes the Context Layer for AI Agents," 2026. <https://wondrax.cloud/articles/documentation-agentic-coding>
+[^10]: Markus Wondrak, "The Agent is not the Pipeline: Spec-Kit Workflows and the Enforcement Layer," 2026. <https://wondrax.cloud/articles/deterministic-pipelines>
+[^11]: erdemtuna, "Proposal: Skill Package Manifest for Dependency Resolution and Distribution for Agent Skills," agentskills/agentskills Discussion #210, March 5, 2026. <https://github.com/agentskills/agentskills/discussions/210>
+[^12]: ThomasVitale, "Specification for Skills Packaging and Distributions as OCI Artifacts," agentskills/agentskills Discussion #292, March 2026. <https://github.com/agentskills/agentskills/discussions/292>
+[^13]: maxschulz-COL, "Proposal: Specs for Skills packaging and distribution without infrastructure overhead," agentskills/agentskills Discussion #302, April 2026. <https://github.com/agentskills/agentskills/discussions/302>
+[^14]: Anthropic, "Model Context Protocol," modelcontextprotocol.io. <https://modelcontextprotocol.io>
+[^15]: Google et al., "Agent2Agent Protocol," a2a-protocol.org. <https://a2a-protocol.org>
+[^16]: Anthropic, "Building effective agents," December 2024. <https://www.anthropic.com/research/building-effective-agents>
+[^17]: AI Engineer Foundation, "Agent Protocol," agentprotocol.ai. <https://agentprotocol.ai>
+
+---
+
+## The Agent is not the Pipeline: Spec-Kit Workflows and the Enforcement Layer
+
+Source: https://markus.wondrax.cloud/articles/deterministic-pipelines.html
+Published: 2026-05-14
+Tags: Agentic Coding, Spec Kit, Architecture, Workflows
+
+The agent had been running for forty minutes on a straightforward task: refactor the authentication module, write tests, open a PR.
+
+By minute twelve, it had drifted — not dramatically. It still produced code, ran the test suite, committed incrementally. But the spec called for an architecture review before touching the token validation logic. The agent skipped it, not because it decided to, but because it moved to the next plausible step. That is what the model does.
+
+By minute forty, the test suite was passing. The authentication module had been refactored in a way that was syntactically correct, functionally coherent, and architecturally incompatible with the planned microservices migration. The errors had compounded quietly across every commit, each one optimizing for the current state rather than the intended one.
+
+This is agentic drift. It is not a model quality problem but a structural consequence of asking a probabilistic system to manage its own workflow — and it compounds the longer the session runs.
+
+When you ask your agent how to mitigate that risk, it will suggest writing better instructions. Add emphasis. Make the constraint louder. I have done this. The system prompt began accumulating things like 
+
+```
+IMPORTANT: DO NOT proceed to implementation before the architecture review is complete. 
+
+YOU MUST ASK THE USER TO CONFIRM FIRST!!
+```
+
+All caps. Exclamation marks. The model read those instructions with the same probabilistic attention it applied to everything else in the context window. Sometimes it complied. Under a long context with competing signals, it did not. The instructions had weight — not authority.
+
+---
+
+## Why Agents Drift
+
+The underlying mechanism is how attention works. Models do not process context uniformly — tokens at the beginning and end of the context window receive systematically more weight than those in the middle.[^1] Recency is a further pull: the closer a token is to the current generation point, the stronger its influence on the next prediction. This means a constraint written in the system prompt does not get read once and retained. It competes continuously against everything that has accumulated between it and the current step — and that competition is structural, not a failure of model quality.
+
+Session length is the practical consequence. The longer the session, the more tool outputs, intermediate results, and generated content accumulate between early instructions and the current generation point. A constraint established in the first ten minutes may have no practical weight by minute sixty — not because the agent decided to ignore it, but because it has been progressively outweighed by more recent material.
+
+Phase discipline breaks down for the same reason. A workflow that requires design before planning before implementation is a sequence of commitments. In a human workflow, something enforces those commitments: a ticket system, a review gate, a process that withholds the next step until the previous one is signed off. In an agent workflow that exists only as instructions in a prompt, the mechanism is the model's compliance with those instructions. Compliance is probabilistic. Under pressure — a long context, a complex task, conflicting signals — it degrades.
+
+The third factor is stochastic divergence. Run the same agentic workflow twice with identical inputs and you will not get identical outputs. This is expected — it is not a defect. But it means that any workflow property you rely on is a statistical tendency, not a guarantee. The agent will usually check architecture constraints. It will usually run linting before committing. Under the load of a long context or an unlucky sampling path, it won't.
+
+And the compounding dynamic in long sessions makes this worse: a small drift in step three becomes a larger constraint violation in step seven, because subsequent steps optimize for the current state — however that state was arrived at. By the end of a multi-hour session, the distance between what was intended and what was produced can be substantial, even though every individual step looked plausible.[^2]
+
+---
+
+## The Architecture That Should Work
+
+The obvious engineering response follows directly from the drift diagnosis: if an agent drifts because it carries too much — too many phases, too many concerns, too long a session — the fix is to narrow its scope. Give each agent exactly one job. A *researcher* that only retrieves and summarizes. A *coder* that only implements a bounded task against a given spec. A *reviewer* that only evaluates output against defined criteria. Each worker has a short context, a single responsibility, and only the tools that responsibility requires.
+
+This is the specialist-worker architecture. The researcher receives a question and returns structured findings. The coder receives a spec and a file list and returns a diff. The reviewer receives code and acceptance criteria and returns a pass/fail with notes. The context window for each call stays narrow. The drift surface shrinks proportionally. Each invocation is short enough that recency effects and the "lost in the middle" problem don't dominate. On paper, the architecture solves the problem that the single-agent approach could not.
+
+But the workers don't coordinate themselves. Something has to decide which worker runs next, what output gets passed as input to the following step, whether the reviewer's rejection means retry or abort. The natural answer — the answer most teams reach — is to handle coordination with another agent. An orchestrator that receives the original goal, maintains the overall plan, dispatches workers in sequence, and synthesizes their outputs into a coherent result. It is a reasonable design. It is also the point where the original problem re-enters the system.
+
+The orchestrator is an agent. It is subject to exactly the same attention mechanics established above. Its context window accumulates the outputs of every worker it has dispatched — research summaries, generated diffs, reviewer notes. Early decisions recede into the middle of a growing context: the architectural constraints agreed on at the start of the session, the scope boundaries defined before any code was written. The orchestrator's judgment about what the reviewer's output means, whether a failed test warrants a retry or a replanning, which worker should handle an unexpected edge case — all of that is probabilistic inference against a context that degrades over time. The specialist workers reduced drift at the leaf level. The orchestrator reintroduces it at the root.
+
+The underlying assumption is that the orchestrator manages state coherently across the full session. In a short session with a tightly scoped task, this holds. Scale either dimension — session length or task complexity — and the assumption breaks for the same reasons it broke with the single agent.
+
+---
+
+## Structure Cannot Live Inside the Agent
+
+The structural issue is straightforward: a deterministic property cannot be achieved through a probabilistic mechanism.
+
+Software engineering requires determinism in specific places. A function call either succeeds or raises an exception. An API contract is met or it is not. A test passes or it fails. These are not approximations. They are boolean facts on which the rest of the system depends. When an agent is asked to *guarantee* that planning was completed before implementation began, the guarantee is only as strong as the model's disposition to comply.
+
+Matthew Thompson's *Dual-State Agent Process framework* formalizes this as a separation between two state spaces.[^3] The first is $S_{workflow}$: the deterministic control flow — what states are legal, what transitions are permitted, what happens when a guard condition fails. The second is $S_{env}$: the stochastic environment where content is generated. These are fundamentally different concerns. $S_{env}$ is where the agent operates, and probabilistic behavior is appropriate there — that is the space where language model capabilities are relevant. $S_{workflow}$ must be engineered, not modeled.
+
+Post-condition guards follow from this separation. Instead of trusting the agent to self-certify that a phase is complete, a deterministic guard function evaluates the output against defined criteria before the workflow advances. The agent produces content; the runtime decides what happens next based on those criteria, not on the agent's self-assessment.
+
+There is a cost beyond correctness when this separation is absent. Without enforced state, every agent call must carry enough workflow context for the model to orient itself: current phase, completed phases, applicable rules, transition criteria. It all goes into the system prompt. With a workflow state machine managing transitions externally, each call receives only the instructions scoped to the current state. The context is narrower, cheaper, and less susceptible to instruction decay toward the end of a long window.
+
+You cannot make an agent more deterministic by giving it better instructions. Instructions are processed by the same probabilistic mechanism that causes drift in the first place. The only way to enforce workflow structure is to move it outside the agent entirely — into an execution environment the agent cannot override.
+
+---
+
+## Engineering Already Has a Framework for This
+
+The software development lifecycle is a system of enforced handoffs, not a set of recommendations. Decades of practice produced explicit gates because teams learned that advancing on a broken foundation compounds errors faster than fixing them early.
+
+Those gates take two forms. Phase gates control sequencing: Scrum's Definition of Ready means a requirement cannot enter a sprint until it is specified well enough to be implemented. Large changes must be designed and decomposed into tasks before implementation begins. No skipping, no self-certification. Quality gates control output: the CI pipeline does not ask the developer whether the code is correct — it runs the tests, evaluates the result, and either blocks the merge or allows it. The developer's intent is not a factor. The outcome is a fact.
+
+Agents need the same structure, for the same reasons. An agent is a capable, generative worker — exactly the kind of worker you want inside a well-defined pipeline. But it should not be the pipeline. It should not decide when phases transition, whether its own output met the required criteria, or how many iterations a loop should run. Those are runtime properties. A human team enforces them with process and tooling. An agentic system needs the same enforcement — built into the execution environment, not requested of the model.
+
+The agentic workflow engine is the piece that most implementations are missing. It is what makes the rest of the architecture coherent.
+
+---
+
+## Spec-Kit: Specification as the Primary Artifact
+
+GitHub's Spec-Kit is an open-source toolkit for spec-driven development with AI. The central premise is straightforward: before an agent writes code, it should produce a formal specification of what it intends to build — and that specification should be reviewed and agreed on before implementation begins. The spec is not documentation added after the fact. It is the primary artifact from which everything downstream — the plan, the task list, the implementation — is derived.
+
+The toolkit structures agentic work into four sequential phases. Specify produces a written statement of intent: what is being built and why. Plan translates that into a technical approach: how it will be built. Tasks decomposes the plan into atomic, implementable units. Implement executes them. Each phase produces a distinct artifact; each artifact is the input to the next phase. A `constitution` file sits alongside the phases as a persistent layer of project-level constraints — architecture rules, naming conventions, boundaries the agent must not cross — that applies across all phases without being re-stated in every prompt.
+
+Each phase is invoked through a scoped slash command — `/specify`, `/plan`, `/tasks`, `/implement`. These are not free-text prompts. They are predefined agent instructions, each loading only the context relevant to that phase. The agent handling `/plan` knows it is planning — it does not carry the implementation instructions, the testing criteria, or anything outside its current responsibility. The cognitive surface is narrow by design: the same principle as the specialist workers described earlier, applied at the phase level rather than the system level.
+
+Each phase writes its output as a Markdown file in the `.specify/` directory: `spec.md`, `plan.md`, `tasks.md`. These are human-readable artifacts — not opaque database entries, not serialized agent state. The spec can be opened, edited, and approved before the next phase begins. When `/plan` runs, it receives `spec.md` and the constitution as its input. When `/tasks` runs, it receives `plan.md`. Each phase call is a bounded, stateless invocation against a concrete file. The continuity between phases lives in the files, not in the agent's memory. `specify init` sets up the directory structure and installs the built-in workflow automatically.
+
+The phase structure is recognizable. It is the SDLC logic from the previous chapter applied to agentic work: separate concerns, produce verifiable artifacts, advance only when the previous step is complete. At the time of the earlier article on Spec-Kit, this structure was well-designed and clearly documented. What it lacked was enforcement. The phases were a convention the agent was expected to follow — not a sequence the runtime controlled. Nothing prevented an agent from skipping directly to implementation. That is the gap the workflow engine was built to close.
+
+---
+
+## Spec-Kit's Workflow Engine
+
+A few weeks ago I published a re-evaluation of Spec-Kit.[^4] Shortly after it went out, one of the maintainers reached out — and pointed me to the workflow engine that had just shipped.[^5] It addressed the enforcement gap described above.
+
+The architecture is straight forward: a workflow is a YAML file with a defined schema. The runtime is a deterministic orchestrator that reads the YAML, executes steps in sequence, and dispatches AI integrations as needed. The AI calls are one step type among several. The orchestrator delegates a bounded task, collects the output, and decides what happens next.
+
+**Step types** define the vocabulary:
+
+| Type | Purpose |
+|---|---|
+| `command` | Invokes a Spec-Kit command (e.g., `speckit.plan`) |
+| `gate` | Pauses for human review; `on_reject: abort` halts the workflow |
+| `shell` | Executes shell commands without involving an agent |
+| `prompt` | Sends a free-form prompt to the configured AI integration |
+| `if` / `switch` | Conditional branching based on step outputs |
+| `while` / `do-while` | Loops while a condition evaluates to true; `max_iterations` sets a hard upper bound |
+| `fan-out` | Dispatches a step for each item in a collection; `max_concurrency` controls parallelism |
+| `fan-in` | Collects all fan-out branches before proceeding |
+
+The gate step is how the human-in-the-loop checkpoint is implemented ([`workflow.yml`](https://github.com/markuswondrak/spec-kit-workflows-demo/blob/main/workflow.yml)):
+
+```yaml
+- id: review-spec
+  type: gate
+  message: "Review the generated spec before planning."
+  options: [approve, reject]
+  on_reject: abort
+```
+
+When the workflow reaches a gate step, execution pauses. The runtime checks whether it is connected to an interactive terminal (`sys.stdin.isatty()`). If it is, the gate prints its message, lists the options, and waits for input — `approve` or `reject`. Choosing `reject` triggers `on_reject: abort` and halts the run. If there is no TTY, there is no prompt. The step records its paused state to disk and the process exits. The run can be resumed later with `specify workflow resume <run-id>`. The same checkpoint works in CI without workflow changes — an adapter can bridge the paused run to any review channel, and the runtime accepts `resume` regardless of how the reviewer was reached. In neither path does the model participate. The checkpoint is between the human and the runtime.[^7]
+
+The `shell` step makes the separation concrete in a different way ([`workflow-from-file.yml`](https://github.com/markuswondrak/spec-kit-workflows-demo/blob/main/workflow-from-file.yml)):
+
+```yaml
+# Spec-Kit currently lacks native file-reference inputs,
+# so reading a file into the workflow requires a shell step.
+- id: load-spec
+  type: shell
+  run: "cat \"{{ inputs.spec_file }}\""
+```
+
+A `shell` step runs entirely outside the AI integration. The runtime executes it, captures the `stdout`, and makes it available as `steps.load-spec.output.stdout` — a concrete string that every downstream `speckit.*` command receives as its input. The agent at the next step gets text, not a file path it has to resolve. It has no knowledge of whether that text came from a file, an inline argument, or any other source. The runtime resolved the value before the AI call was made.
+
+The `do-while` loop shows how the same runtime authority applies to iteration ([`workflow.yml`](https://github.com/markuswondrak/spec-kit-workflows-demo/blob/main/workflow.yml)):
+
+```yaml
+- id: review-fix-loop
+  type: do-while
+  max_iterations: 3
+  condition: "{{ steps.check-verdict.output.choice == 'fix' }}"
+  steps:
+    - id: code-review
+      command: speckit.code-review.review
+      integration: "{{ inputs.integration }}"
+      input:
+        args: "{{ inputs.spec }}"
+
+    - id: check-verdict
+      type: gate
+      message: "Open the feature directory's review.md, then decide: approve (done) or fix (run a fix pass)."
+      options: [approve, fix]
+      on_reject: abort
+
+    - id: fix-implementation
+      type: if
+      condition: "{{ steps.check-verdict.output.choice == 'fix' }}"
+      then:
+        - id: fix
+          command: speckit.code-review.fix
+          integration: "{{ inputs.integration }}"
+          input:
+            args: "{{ inputs.spec }}"
+```
+
+Three constraints govern this loop deterministically:
+
+- `max_iterations: 3` sets a hard ceiling. The loop cannot exceed three passes regardless of what happens inside it.
+- The continuation condition evaluates a human verdict. The loop continues only when the reviewer chooses `fix`; choosing `approve` ends it.
+- The `if/then` dispatches the fix pass only on a `fix` verdict. On an approval, the fix step does not run.
+
+**Expressions** pass typed data between steps. `{{ steps.specify.output.file }}` routes a previous step's output as the next step's input. Branching conditions like `{{ steps.plan.output.task_count > 5 }}` are evaluated against concrete step outputs. The expression language is a custom Jinja2-like engine with a deliberately narrow feature set: dot-path access, comparisons, boolean logic, and four filters (`default`, `join`, `contains`, `map`).
+
+**Multi-integration dispatch** allows different AI models per step. The `integration` field is per-step configuration — a research step and an implementation step can use different models. The workflow declares this; each model at its step has no knowledge of what model ran before or will run after. The cognitive specialization is explicit in the configuration, not emergent from agent coordination.
+
+**State persistence** ties the whole design together. Every workflow run stores its state under `.specify/workflows/runs/<run-id>/`: a `state.json` with the current step index and all step outputs, an `inputs.json` with resolved input values, and a `log.jsonl` append-only execution log. A paused run — whether paused at a gate or failed mid-execution — can be resumed exactly at the last completed step.[^6]
+
+This is what the Dual-State separation looks like in practice. $S_{workflow}$ is the YAML definition plus the runtime's execution state. $S_{env}$ is what happens inside each AI step. The two spaces are explicitly bounded, with no leakage in either direction.
+
+**Quality gates as workflow steps** extend the same principle. The `shell` step that loads a file above uses deterministic execution for plumbing. The same mechanism applies to verification: any check the team already runs in CI can be embedded as a workflow step, enforced before the agent proceeds.
+
+- A test suite either passes or fails.
+- A linter either reports violations or it does not.
+- ArchUnit[^9] validates architecture rules against compiled bytecode -- package dependency constraints, cycle detection, access restrictions.
+
+These are boolean outcomes. They do not require interpretation, and they do not benefit from an agent's judgment. They are exactly the kind of check that belongs in the runtime, not delegated to the model.
+
+In a conventional SDLC, the CI pipeline runs these checks after code is written. The workflow engine moves them inside the agentic pipeline. A `shell` step that runs `./gradlew test` after the implement step produces a concrete exit code. An `if` condition branches on that result: pass continues to the next phase, fail routes back to a fix loop or aborts. The agent never sees the test output as context to interpret. The runtime evaluates it and decides.
+
+This is the quality gate from the SDLC analogy, made executable. The CI pipeline does not ask the developer whether the code is correct. The test suite should not be a suggestion in the system prompt. It should be a step the agent cannot skip.
+
+---
+
+## Getting Started
+
+A workflow run starts with a single command:
+
+```bash
+specify workflow run speckit -i spec="Build a kanban board with drag-and-drop"
+```
+
+The built-in `speckit` workflow runs the full SDD cycle: specify → gate → plan → gate → tasks → implement, with two human review checkpoints before any code is written. A paused workflow resumes with `specify workflow resume <run-id>`.
+
+Additional workflows are distributed through the catalog system. `specify workflow add <source>` installs a workflow from a URL, local file, or catalog entry. The catalog resolves sources in priority order — environment variable, project config, user config, then the built-in defaults — which makes org-wide workflow overrides possible without touching individual project files.
+
+A working implementation of the patterns described in this article — including an extended SDD workflow with an AI code-review step and a human verdict gate — is available at [markuswondrak/spec-kit-workflows-demo](https://github.com/markuswondrak/spec-kit-workflows-demo).
+
+---
+
+## Conclusion
+
+The shift from asking agents to produce code toward asking them to first produce, and then execute, a formal specification is a meaningful structural improvement. Intention stated explicitly before implementation begins is more auditable, more consistent, and more aligned with how engineering teams actually want to work.
+
+Without enforcement, though, an intention statement has the same effect as documentation: it describes what should happen but does not ensure it. Teams have always documented their intentions. A spec file does not stop an agent from skipping the planning phase, and a prompt instruction does not terminate a loop or create a checkpoint the model cannot bypass.
+
+What the workflow engine adds is the enforcement layer. The spec is reviewed before planning begins because the gate step withholds execution. The review-fix loop terminates because the exit condition is evaluated by the runtime against a human's explicit choice — not inferred from model output. Each AI step receives a bounded task; the runtime determines what happens next.
+
+This separation — agents for generative work, a deterministic runtime for control flow — is what makes the overall system predictable. The model's probabilistic nature is appropriate and useful inside each step. It is only a problem when that same probabilistic behavior is asked to manage the transitions between steps.
+
+[^1]: Nelson F. Liu et al., "Lost in the Middle: How Language Models Use Long Contexts," arXiv:2307.03172, 2023. <https://arxiv.org/abs/2307.03172>
+[^2]: Matthew Thompson, "Managing the Stochastic: A Dual-State Agent Process Framework," arXiv:2512.20660, 2024. <https://arxiv.org/abs/2512.20660>
+[^3]: Ibid. The paper formalizes the separation as $S_{workflow} \times S_{env}$, with guard functions $g: S_{workflow} \times Output \to \{pass, fail\}$ evaluated deterministically before any state transition. <https://arxiv.org/abs/2512.20660>
+[^4]: Markus Wondrak, "Re-evaluating GitHub's Spec Kit: Structured SDLC Automation," wondrax.cloud, April 2026. <https://markus.wondrax.cloud/articles/spec-kit-reevaluation.html>
+[^5]: GitHub, "Workflow Engine — spec-kit Issue #2142," github.com, April 2026. <https://github.com/github/spec-kit/issues/2142>
+[^6]: GitHub, "Workflow Reference — github/spec-kit," github.com. <https://github.com/github/spec-kit/blob/main/docs/reference/workflows.md>
+[^7]: GitHub, "Gate step — `GateStep` (stdin TTY check)," github/spec-kit. <https://github.com/github/spec-kit/blob/main/src/specify_cli/workflows/steps/gate/__init__.py> State persistence and resume: [Workflow System Architecture](https://github.com/github/spec-kit/blob/main/workflows/ARCHITECTURE.md); gate and resume usage: [Workflows README](https://github.com/github/spec-kit/blob/main/workflows/README.md).
+[^8]: GitHub, "Support file references for workflow inputs," github.com, April 2026. <https://github.com/github/spec-kit/issues/2405>
+[^9]: TNG Technology Consulting, "ArchUnit -- A Java Architecture Test Library," github.com. <https://github.com/TNG/ArchUnit>
+
+---
+
+## From Wiki to Source: How arc42 Becomes the Context Layer for AI Agents
+
+Source: https://markus.wondrax.cloud/articles/documentation-agentic-coding.html
+Published: 2026-04-30
+Tags: Agentic Coding, arc42, Architecture, Documentation
+
+An agent gets a straightforward ticket: "Display the available overdraft limit on the mobile banking dashboard." It does what any good engineer would — it looks for existing patterns. It explores the AccountOrchestration API, spots dozens of existing synchronous REST calls to the CoreBanking_Legacy endpoint, and replicates the pattern to fetch the overdraft data. The code is clean, the unit tests pass, and the agent opens a Pull Request.
+
+Twenty minutes later, a senior engineer rejects it.
+
+What the agent never knew — because it wasn't written anywhere in the code — is that the legacy core banking API cannot handle the mobile app's peak traffic volume. The architecture board decided three months ago that all new mobile read-requests must route through the new asynchronous caching layer. The agent didn't fail. It optimized for what was explicit: the most prevalent orchestration pattern in the repository. But in the absence of architectural context, the agent's speed just generated technical debt that a human reviewer had to catch.
+
+This happens whenever throughput, compliance, or architecture lives only in meetings and chat, while the repo stays the only artifact the agent can trust. Agentic coding scales output. If the only legible context is the repository, it also scales misalignment. Agents optimize for what is explicit. What is intended is invisible to them.
+
+The instinctive industry response is Spec-Driven Development — shifting the source of truth away from code into natural-language specifications, and letting agents generate the implementation.
+
+The appeal is understandable: if agents lack intent, give them a document that captures intent and make that document the source of truth. The problem is that this conflates two different things.
+
+The distinction that matters is between Code as Truth of State (what the system actually does) and Documentation as Truth of Intent (what it is allowed to do). The agent in this scenario had perfect knowledge of the first and none of the second.
+
+---
+
+## The Source of Truth Is Source Code
+
+Code is the only thing that executes. Tests validate its behavior. Deployment confirms it. No document can contradict what the machine does. When a specification says one thing and the code does another, the specification is stale. The code runs.
+
+This is a technical position, not a philosophical one. A spec cannot be compiled, tested, or deployed. A diagram cannot have a bug. The moment any artifact other than the code is treated as authoritative, you introduce a synchronization problem you can never fully close.
+
+Spec-Driven Development misunderstands this. Tools like [Kiro](https://aws.amazon.com/documentation-overview/kiro/), [spec-kit](https://github.github.com/spec-kit/), and [Tessl](https://tessl.io) propose that specifications become the primary artifact — that code is generated *from* the spec, and that the spec is what you change when the system needs to change.
+
+The parallel to Model-Driven Architecture is instructive. MDA made the same argument two decades ago, with similar promises about abstraction and generation.[^1][^2] The approaches differ in important ways. MDA used formal DSLs and deterministic transformations; SDD uses natural language and non-deterministic LLMs. SDD is more iterative, allowing refinement rather than requiring complete specifications upfront. Tools like Tessl attempt to make the specification formally verifiable or executable, which partially addresses the synchronization problem MDA never solved.
+
+Both share the same foundational bet: that shifting complexity into a less precise medium eliminates it rather than relocating it. That bet has not paid off yet at scale, in either generation. Natural language is less precise than code. And unlike MDA's deterministic compiler, SDD's LLM-based generation introduces a new kind of unpredictability that MDA never had to account for.
+
+Beyond the technical problem is a structural one. SDD specs start at the feature level — they describe *what* to build, not *why*. Without anchoring to business objectives, OKRs, or architectural constraints, agents generate technically correct but strategically irrelevant code. When Birgitta Böckeler evaluated Kiro for a trivial, isolated bug fix, the tool generated four user stories with sixteen acceptance criteria.[^2] A sledgehammer for a nail. Because the spec doesn't know why the feature matters, neither does the agent. The result is reactive engineering — significant development capacity spent on features whose value was never validated.
+
+This is the point where the argument could stop — and where most of the SDD debate does stop, with one side insisting code is all that matters and the other insisting specs must govern. Both positions miss the same thing. Code is authoritative about what the system does. That authority does not extend to explaining why it does it, what it is forbidden from doing, or what constraints shaped it.
+
+Recognizing code as the source of truth is not the same as claiming code is self-explanatory. Code tells you what the system does. It does not tell you why decisions were made, what constraints apply, or what the architecture forbids. Those are distinct claims — and conflating them is what SDD exploits. The problem is that code is a poor map of its own context. Expecting an agent to derive system architecture purely from source code is like expecting a database to perform a complex query without an index: it forces a massive, expensive full-table scan of the entire repository. The agent must search and pattern-match across the codebase just to discover what the system considers "normal."
+
+---
+
+## What Documentation Still Must Do
+
+Code is the only artifact that executes. That is a technical claim, not one about readability. But parsing this absolute truth from scratch every time is fundamentally too expensive — for humans and for agents.
+
+An agent working on module A doesn't need to read module B's 3,000 lines of implementation. It needs to know what module B exports, what invariants it maintains, what it depends on — and then decide whether to dig deeper. This is the same principle as API documentation for humans. The economics are sharper for agents: every unnecessary token costs compute and increases hallucination risk. Documentation becomes a navigation layer above the codebase, letting agents traverse it without reading it whole.[^3]
+
+Without this layer, every agent session begins the same way: reverse-engineering the system from source. Expensive in tokens, error-prone in practice, and repeated identically in every session. A small amount of targeted documentation can eliminate large amounts of repeated repository scanning.
+
+Four things specifically cannot be inferred from code.
+
+**Product context.** Code can tell you how a system works. It cannot tell you why the system exists, who the users are, which external APIs carry SLAs, or which business rules must never be violated. The agent in the opening scenario failed here. The microservice boundary rule (from the introduction example) existed nowhere in the repository because no documentation brought it in, the agent had no way to encounter it.
+
+**Decisions and rationale.** Code shows what was chosen. Architecture Decision Records capture what was rejected and why.[^4] An agent proposing a solution that was already evaluated and ruled out two years ago has no way to know that — unless the decision was recorded. In agentic systems, ADRs gain dimensions the conventional format never anticipated: base model selection, context window constraints, fallback strategies when the model declines a task, drift tolerance thresholds.
+
+**Interface contracts.** Between modules, between services, between teams. Code implements contracts; it doesn't always declare them. A module's public API is part of its implementation, but its invariants — what it guarantees it will never do, what callers must never assume — are often not. These need to be explicit, or agents will infer them from behavior they happen to observe in the current context.
+
+**Architecture boundaries.** Traditional documentation assumes deterministic components with stable interfaces. Agent-based systems have probabilistic boundaries: where LLM output is non-deterministic, where data distribution shifts change behavior without code changes, where ML model lifecycles run asynchronously to the surrounding infrastructure. An agent working across these boundaries needs to know where deterministic behavior ends and where it must account for uncertainty. Documentation is the only way to make that visible.[^5]
+
+This is documentation as precision, not compliance requirements. The difference between an agent that guesses and one that knows what it's not allowed to guess. The four categories above are the context an agent needs — what it cannot infer from code alone, and what prevents it from resolving ambiguity by guessing. The agent in the opening scenario guessed. It guessed correctly by every measure available to it. The cost wasn't from a bad guess — it was from a question the agent had no way to ask.
+
+---
+
+## What Breaks When Documentation Is Absent
+
+That question becomes structural when you consider how agents operate across time. Every agent session starts fresh. The model has no memory between calls — no residual understanding of past decisions, no accumulated context from previous sessions. Documentation is the only mechanism that bridges the gap. Without it, multi-session workflows degenerate into repeated rediscovery: the agent reconstructs the same understanding from source code, session after session, at full token cost each time.
+
+This is the root cause of agent drift. Without documentation anchoring context, agents build their own implicit model of the system. These models diverge across sessions. Deprecated code structures that persist as technical debt become de facto patterns — the agent has no way to know it should not follow them. Two agents working in parallel on the same codebase can produce conflicting architectures because they each inferred a different starting model from the same repository.[^6]
+
+Documentation that exists but isn't maintained is another failure mode, distinct from absence. An agent reads stale documentation, trusts it, and generates code against it. The codebase now carries the original drift plus the new code built on top of it. Unlike a failing test, stale documentation gives no signal. It produces confident, coherent, wrong output.
+
+These are operational failures. They also have a second-order consequence that matters in regulated industries: what can't be traced can't be audited. Undocumented decisions are unauditable decisions. Under the EU AI Act (Annex IV, enforceable August 2026), organizations must provide systematic evidence of AI system design choices, risk controls, and governance structures. Traditional architecture documentation covers roughly 36% of what that regulation requires.[^5] The rest lives in decisions made verbally and never written down. For organizations operating under regulatory scrutiny, absent documentation is not a technical debt problem — it is a legal one.
+
+Absence is one failure mode. Presence creates another. Documentation that exists but contradicts the code introduces a different kind of risk — and it is the one that surfaces when you take the previous sections seriously and actually add documentation to the repository.
+
+---
+
+## When Code and Documentation Conflict
+
+Treating documentation as essential context while maintaining that code is the source of truth creates a tension. When the two disagree, which does the agent follow?
+
+The answer depends on what kind of claim is in conflict. Code and documentation are not competing sources of truth for the same thing — they answer different questions. Code is authoritative about *behavior*: what the system actually does when it runs. Documentation is authoritative about *intent and constraints*: what the system is supposed to do, and what it must never do. These are distinct domains. When they conflict, it does not mean one outranks the other — it means one of them is wrong, and a human needs to decide which.
+
+This distinction resolves most cases cleanly. If the documentation says "no synchronous calls to CoreBanking_Legacy" and the agent finds synchronous calls in the codebase, the code is not evidence that the constraint is wrong — the code is evidence that the constraint was violated, or that the code predates the decision. The agent follows the documented constraint and flags the discrepancy. If the documentation describes a module interface that no longer matches the implementation, the documentation is stale — the code is what actually executes. The agent surfaces the mismatch.
+
+What the agent cannot do is determine *why* the conflict exists. A documentation constraint that contradicts the code could mean the code has a bug, the code reflects a decision that was never documented, or the documentation was written for a system state that no longer exists. These are epistemically indistinguishable from the agent's position. An agent that resolves this ambiguity by guessing — in either direction — is making an architectural decision it is not qualified to make. The correct behavior is to surface the conflict and stop: human-in-the-loop, not agent judgment.
+
+The practical implication is that prevention matters more than resolution. The resolution mechanism for conflicts is "human in the loop"; the mechanism for preventing conflicts is the PR. Documentation that lives in the repository ships in the same commit as the code it describes, which means divergence is a reviewable artifact, not a silent background process. The human reviewer is the synchronization check: the agent flags explicit contradictions it encounters during a session, and the reviewer catches what the agent missed at merge time. This does not eliminate the divergence problem — documentation written for a previous system state can survive many PRs undetected if nobody touches the relevant files. But it makes divergence structurally visible rather than structurally invisible, which is the most the tooling can do. I consider that correct, not a gap.
+
+---
+
+## What Good Documentation Looks Like for Agents
+
+Documentation makes code legible, prevents drift, and carries intent. The question is what form it should take. The wrong choice compounds the problem it is meant to solve. Most documentation frameworks are designed for human readers — and agents aren't human readers. Humans tolerate ambiguity, infer intent, and navigate to what's relevant. Agents parse what's present, act on what they find, and treat gaps as permission to guess. Documentation for agents needs different properties.
+
+**Machine-readable first, human-readable second.** Agents parse structure. Consistent headings, predictable file locations, and explicit cross-references matter more than prose elegance. An agent that knows documentation lives at `docs/architecture/decisions/` navigates there directly. One that must search for it will search the entire repository — or skip it entirely. Format is not an aesthetic choice, it is a navigability constraint.
+
+**Concise over comprehensive.** Every token loaded into the context window displaces other context. A 200-token index that identifies what exists and where to find it is more valuable than a 2,000-token document where critical constraints get lost in the noise. The principle is Progressive Disclosure: a lightweight summary first, with pointers to deeper files the agent loads only when the task requires it. This keeps context usage predictable and hallucination risk low.
+
+**Living, not archival.** The old criticism of documentation — it's always out of date — becomes a system failure in agentic coding. If documentation drifts from the codebase, agents generate code against stale assumptions. The fix is to make the agent the maintainer: the workflow must enforce that documentation is updated alongside the implementation — not as a parallel task, but as the same commit. The core loop is non-negotiable: read the relevant context before acting, update the architectural rules and system patterns after acting. Code and documentation ship together or not at all. I've described this workflow in detail in my [reevaluation of spec-kit](https://markus.wondrax.cloud/articles/spec-kit-reevaluation.html), including the failure modes when the update step is skipped.
+
+**Layered by function, not audience.** Effective documentation physically separates context into different files based on exactly when the agent needs them:
+
+*   **Global Constraints (Always-on):** A single root file (like `AGENT.md`) containing hard prohibitions and project-wide conventions. This is the only file the agent is required to load in every single session.
+*   **Domain-Specific Context (Task-specific):** Deep-dive architectural rules or module boundaries live in separate files (e.g., `docs/auth-service.md`). The agent is instructed to load these *only* when touching related code, keeping token consumption at zero otherwise.
+*   **Tooling Over Text (Live data):** Documentation should never harbor rapidly changing state. Instead of maintaining a stale database schema in a text file, the documentation explicitly instructs the agent which CLI command to run to fetch the live schema at runtime.
+*   **The Memory Bank (Persistent context):** To survive the amnesia between isolated sessions, projects need a structured, agent-maintained file (like `docs/active-context.md`). This acts as a persistent log where the agent records ongoing decisions and progress, bridging the gap between sessions.
+
+Each layer has a distinct function; conflating them into a single document produces an artifact that is too massive to load precisely and too diffuse to be useful. **Layered by function, not audience.**
+
+Agents will misunderstand any instruction that admits misinterpretation — consistently, at scale, across every session. Documentation must be written to survive deliberate misreading: explicit, simple, bordering on pedantic. Rules must include their rationale. "Use tabs" is a rule. "Use tabs because this is a Python project and the formatter enforces it" is a rule the agent can apply correctly even in edge cases. LLMs comply at significantly higher rates when they understand the reasoning behind a convention.[^7] Idioms, nuance, and implied exceptions are failure vectors. 
+
+Rules constrain. Examples teach. A documentation system needs both.
+
+A well-structured documentation set also includes a Gold Standard File: a single, perfectly formatted source file that serves as the absolute reference for all generation. Paired with explicit correct-versus-incorrect comparisons, it tells the agent what not to replicate. Agents learn through pattern recognition. Providing the correct patterns explicitly is faster and more reliable than expecting agents to infer them from a heterogeneous codebase.[^7]
+
+---
+
+## Architecture Documentation Must Evolve — and arc42 Already Shows You How
+
+These properties don't require a new framework. The instinct to invent one is understandable. The more useful question is which requirements are already solved and where the gap begins.
+
+Arc42 answers the first part. It is a structured, view-based documentation template that has been in production use for over a decade. Its twelve sections map to distinct concerns — context, constraints, building block structure, runtime behavior, deployment, cross-cutting concepts, decisions — and that separation of concerns is precisely what agent documentation needs: concerns separated into distinct, locatable places, not collapsed into undifferentiated prose. C4 contributes a complementary discipline: a strict four-level hierarchy (System, Container, Component, Code) that gives an agent a predictable traversal path. An agent can enter at the System level, descend exactly as far as the task requires, and stop — rather than scanning a flat, undifferentiated repository.
+
+Neither framework was designed for agentic coding. Both happen to be well-suited to it for the same reason they serve human readers: they make architecture navigable without requiring a full read.
+
+---
+
+### From Framework to Files: arc42 as Source Code Artifacts
+
+The gap between "arc42 exists" and "an agent can use it" is a question of where the documentation lives and how it is rendered. Most teams that use arc42 at all maintain it in Confluence, a shared wiki, or a PDF. All three are inaccessible to an agent working in a code repository. The adjustment is not structural — it is operational.
+
+**The documentation belongs in the repository, as Markdown files, alongside the code it describes.**
+
+External documentation systems can be made accessible to agents through MCP (Model Context Protocol) servers. This is a viable architecture if the MCP implementation provides hierarchical, precise access — semantic search, proper chunking, and scoped retrieval rather than flat document dumps. However, this introduces operational complexity: the MCP server becomes another component to maintain, configure, and keep in sync with the code.
+
+In-repo documentation sidesteps this entirely. The agent reads and updates docs using the same file operations it uses for code. The git history captures both together. The barrier to adoption is zero — no additional tooling, no server configuration, no dependency on MCP support in the agent system. It follows directly from the principle established earlier: if code is the source of truth, the context layer that makes code legible should live in the same place, maintained by the same workflow.
+
+The rendering implication matters as much as the location. Architecture diagrams embedded as PNGs or SVGs are expensive context — they require vision processing rather than text parsing, and they cannot be updated without external tooling. Mermaid.js closes this gap. Diagrams as plain text let agents parse system topology, reason about component relationships, and generate or update diagrams without any image-processing overhead. Every diagram in the documentation should be a Mermaid block, not an image embed.
+
+---
+
+### The Three-Tier Loading Model
+
+Not all arc42 sections are equally useful to an agent, and loading them indiscriminately defeats the purpose. The same progressive disclosure principle that governs documentation structure governs how documentation is loaded: a small amount of targeted context first, deeper content only when the task requires it.
+
+The twelve arc42 sections divide into three operational tiers based on two criteria: how often the agent needs them, and how expensive it is to load them unnecessarily.
+
+**Tier 1 — Always-on.** These sections are short, stable, and define what the agent must not do. They belong in `AGENTS.md` itself — not as full content, but as explicit rules with their rationale.
+
+- **§2 — Constraints** is the most directly useful section for agentic coding. Hard prohibitions — the architectural rules the agent must never violate — live here. "No synchronous calls to CoreBanking\_Legacy for new mobile reads" is a constraint. It belongs in Tier 1 because it applies universally and the cost of missing it is the scenario from the opening paragraph.
+- **§1 — Introduction & Goals** contributes the top three quality objectives: performance, compliance, availability. Not the full stakeholder analysis — just the non-negotiables.
+- **§12 — Glossary** prevents the agent from treating domain synonyms as interchangeable. In a banking system, "OverdraftLimit" and "CreditLine" are not the same concept. A misidentification here propagates into every query, every variable name, every API call.
+
+**Tier 2 — On-demand.** These sections are too large and too specific for the global context, but critical when the agent touches the relevant code area. The trigger is the code the agent is working in, not the task description.
+
+- **§3 — Context & Scope** answers: what external systems exist, what do they promise, what are the interface contracts? Load it when the agent touches an external API call, an integration layer, or an event topic.
+- **§5 — Building Block View** is the structural index of the system: modules, components, their responsibilities, their dependencies. Load it when the agent creates a new component, refactors a module boundary, or encounters an unfamiliar directory.
+- **§6 — Runtime View** contains sequence diagrams of the critical flows across module boundaries. Load it when the agent is implementing a cross-module flow or debugging an interaction problem — not for self-contained feature tickets.
+- **§7 — Deployment View** maps infrastructure to environments. Load it when the agent touches configuration, infrastructure-as-code, CI/CD, or environment-specific logic.
+- **§8 — Crosscutting Concepts** is the Golden Path section: the patterns that apply everywhere — security, logging, error handling, authentication. Load it when the agent writes a new service, implements auth, or adds observability. This is where the reference implementation lives.
+- **§9 — Architecture Decisions (ADRs)** capture what was rejected and why. An ADR index stays in the always-available context; individual records are loaded when the agent is choosing between technical options or encounters a pattern that seems inconsistent with what it has seen elsewhere.
+
+**Tier 3 — Reference only.** These sections have high value for human stakeholders and low operational value for the agent in a typical task.
+
+- **§4 — Solution Strategy** is too abstract for task-specific context. Useful for onboarding; not useful as a loaded constraint.
+- **§10 — Quality Requirements** matters only insofar as it produces concrete, testable non-functional requirements. If it does, those requirements belong in §2 (Constraints, Tier 1). Abstract quality trees do not.
+- **§11 — Risks & Technical Debt** is the exception that proves the rule. Standard arc42 has no machine-readable format for this section — it is prose, and prose technical debt registers produce no operational signal. The correct approach here is an AI Debt Register: a structured list of patterns present in the codebase that are known technical debt and must not be replicated by the next agent session. A pointer to this register belongs in Tier 1. The full content is Tier 3.
+
+What to load is half the problem. The other half is where it applies.
+
+---
+
+### Nested Inheritance: Constraints That Know Their Scope
+
+A constraint that applies to the backend service is not a constraint that should consume context in a frontend session. This is the practical problem that flat `AGENTS.md` files do not solve well — and it is solved by the nested inheritance model that the AGENTS.md specification already supports.
+
+The objection to repository-level context files is legitimate. Gloaguen et al. (2026) found that they reduce task success rates and increase inference costs by more than 20%.[^8] This is a real finding, not an edge case, and the approach this article recommends would reproduce that failure if implemented naively — a single monolithic context file dumped into every session regardless of what the agent is doing. The nested model is a direct response to this failure mode. The agent loads the `AGENTS.md` file closest to the file it is editing. In a monorepo with `packages/api/` and `packages/frontend/`, a backend ticket automatically loads the backend-specific constraint file; a frontend ticket loads the frontend-specific one. Backend constraints are not loaded for frontend work. The Gloaguen et al. finding is an argument against undiscriminated context loading — not against structured, scoped documentation.
+
+Whether nested scoping outperforms simpler alternatives in practice, I don't know yet. The logic is sound; the evidence base is the Gloaguen et al. result plus the structural argument, not a controlled trial.
+
+The structure works at two levels: a root `AGENTS.md` for universal constraints, and nested `AGENTS.md` files for domain-specific ones. Universal constraints — architectural invariants that apply regardless of where the agent is working — live at the root. Domain constraints — rules that apply only to the API layer, or only to the frontend, or only to infrastructure code — live in the corresponding subdirectory.
+
+---
+
+### The Concrete File Structure
+
+The following layout maps the three-tier model onto a repository. It is the arc42 documentation structure made agent-accessible.
+
+```
+/
+├── AGENTS.md                           # Tier 1a: Universal
+│   ├── Setup commands
+│   ├── Universal Constraints (§2)
+│   ├── Top-3 Quality Goals (§1)
+│   ├── Pointer → docs/glossary.md (§12)
+│   └── Pointer → docs/architecture/README.md
+│
+├── packages/
+│   ├── api/
+│   │   ├── AGENTS.md                   # Tier 1b: Backend constraints only
+│   │   └── src/
+│   └── frontend/
+│       ├── AGENTS.md                   # Tier 1b: Frontend constraints only
+│       └── src/
+│
+└── docs/
+    ├── architecture/
+    │   ├── README.md                   # Pointer index (~200 tokens)
+    │   ├── context-scope.md            # §3 — Context & Scope
+    │   ├── building-blocks.md          # §5 — Building Block View
+    │   ├── runtime.md                  # §6 — Runtime View
+    │   ├── deployment.md               # §7 — Deployment View
+    │   ├── patterns.md                 # §8 — Crosscutting Concepts
+    │   ├── strategy.md                 # §4 — Solution Strategy (Tier 3)
+    │   ├── quality.md                  # §10 — Quality Requirements (Tier 3)
+    │   └── risks.md                    # §11 — AI Debt Register (Tier 3)
+    ├── decisions/
+    │   ├── README.md                   # ADR index (~200 tokens)
+    │   ├── 001-async-mobile-reads.md
+    │   ├── 002-saga-pattern.md
+    │   └── ...
+    └── glossary.md                     # §12 — Glossary
+```
+
+The root `AGENTS.md` is the only file loaded in every session. It contains universal constraints as explicit rules, the top three quality objectives, and pointers — not content — to the deeper documentation. An agent working on a backend ticket also loads `packages/api/AGENTS.md`. An agent working on a frontend component loads `packages/frontend/AGENTS.md`. Neither loads the other.
+
+---
+
+### What the Files Actually Contain
+
+The content in each tier follows the same principle: explicit rules with their rationale, not prose description.
+
+The root `AGENTS.md` for the system from the opening scenario would contain:
+
+```markdown
+## Constraints (Universal)
+
+- **No synchronous calls to CoreBanking_Legacy for new mobile reads.**
+  Reason: The legacy endpoint cannot handle mobile peak traffic (ADR-001).
+  All new mobile read operations must route through the async caching layer via Kafka.
+
+- **All API endpoints require rate limiting.**
+  Reason: EU AI Act Annex IV compliance requirement (docs/quality.md).
+
+- **No cross-service direct database access.**
+  Reason: Microservice boundary invariant (docs/architecture/building-blocks.md).
+  Every service reads and writes only its own database.
+
+## Top-3 Quality Goals
+
+1. **Performance:** Response time < 200ms for all mobile endpoints (P95)
+2. **Compliance:** EU AI Act Annex IV (high-risk components documented)
+3. **Availability:** 99.9% for all customer-facing services
+
+## Documentation Index
+
+Full architecture documentation: docs/architecture/README.md
+Glossary: docs/glossary.md
+ADRs: docs/decisions/README.md
+```
+
+The architecture index (`docs/architecture/README.md`) functions as the entry point for Tier 2 content:
+
+```markdown
+# Architecture Documentation
+
+Load the relevant section when your task touches the corresponding code area.
+
+| Section | File | Load when |
+|---|---|---|
+| Context & Scope | context-scope.md | External API calls, event topics |
+| Building Blocks | building-blocks.md | New component, module refactor |
+| Runtime | runtime.md | Cross-module flows, interaction debugging |
+| Deployment | deployment.md | Config, IaC, CI/CD, env-specific logic |
+| Patterns | patterns.md | New service, auth, logging, error handling |
+| ADR Index | ../decisions/README.md | Technical choice, pattern inconsistency |
+```
+
+The context and scope file contains the system boundary diagram as a Mermaid block, not an image:
+
+```mermaid
+C4Context
+  title System Context (Fixed)
+
+  Person(customer, "Customer", "Mobile Banking App user")
+  
+  System(api_gateway, "API Gateway", "Kong")
+  
+  System_Ext(kafka, "Kafka", "Async event bus")
+  System_Ext(core_banking, "CoreBanking_Legacy", "IBM Mainframe")
+  System_Ext(payment, "Payment Provider", "Stripe")
+
+  Rel(customer, api_gateway, "HTTPS")
+  
+  %% Hierarchische Anordnung: Gateway -> Kafka -> Core Banking
+  Rel(api_gateway, kafka, "Publish (new mobile reads)")
+  Rel(kafka, core_banking, "Consume (async)")
+  
+  Rel(api_gateway, payment, "REST")
+```
+
+And a crosscutting concepts file (`patterns.md`) contains the Gold Standard implementation the agent should replicate — not describe in prose, but show in code:
+
+```typescript
+// Gold Standard: Service method with structured logging and error handling
+// This is the reference implementation. Replicate this pattern for all new service methods.
+
+async function getAccountBalance(accountId: string): Promise<AccountBalance> {
+  const log = logger.child({ accountId, operation: 'getAccountBalance' });
+  log.info('Fetching balance');
+
+  try {
+    const result = await balanceCache.get(accountId);
+    log.info({ cached: true }, 'Balance retrieved');
+    return result;
+  } catch (error) {
+    log.error({ error }, 'Balance fetch failed');
+    throw new ServiceError('BALANCE_FETCH_FAILED', { accountId });
+  }
+}
+```
+
+---
+
+### The Genuine Gap: AI-Specific Vocabulary
+
+Arc42 as described above covers what any system needs documented. The gap for AI-augmented teams is in vocabulary, not structure. Arc42 has no slot for the decisions that appear specifically in agentic systems: which base model was selected for a component and why, what the context window constraint is, what happens when the model declines a task, how much drift the surrounding system can tolerate before the component needs retraining.
+
+These decisions are being made in every team adopting agentic workflows right now. Most of them are going unrecorded. The RAD-AI framework extends arc42 with eight sections to close this gap — and does so backward-compatibly, meaning existing arc42 documentation does not need to be restructured.[^5]
+
+Section §11, in the RAD-AI extension, becomes the AI Debt Register: not prose observations about technical debt, but a structured list of patterns present in the codebase that are known debt and must not be replicated by the next agent session. The agent reads this register on every session start. It prevents the specific failure mode where an agent treats existing bad code as a precedent worth following.
+
+The ADR format gains seven new fields for AI components: base model, context window size and strategy, output format specification, fallback behavior when the model is unavailable or declines, drift tolerance thresholds, monitoring approach, and human-in-the-loop criteria. These are operational requirements for any system that relies on non-deterministic components, and any team operating without them is accruing decision debt at the same rate they are accruing code.
+
+That is the full picture. Arc42 provides the structure, the three-tier model handles loading, nested inheritance handles scoping, and RAD-AI fills the vocabulary gap for AI-specific decisions. The question is whether it works.
+
+---
+
+### What This Changes in Practice
+
+The scenario from the opening section has a different outcome if this structure is in place. The agent picks up the ticket, loads the root `AGENTS.md`, and reads the first constraint under §2: no synchronous calls to CoreBanking\_Legacy for new mobile reads. It loads the architecture index, sees that the building blocks file is relevant, and reads the async caching layer interface contract. It writes the implementation against the correct pattern, references ADR-001 in its commit message, and opens a Pull Request that passes review. (This is hypothetical — the same system, played forward with the documentation in place.)
+
+What the research does support is narrower and more specific. Gloaguen et al. (2026) found that AGENTS.md files have a measurable positive effect when they contain explicit, task-relevant constraints — and a measurable negative effect when they don't, producing context bloat that actively degrades performance.[^8] The three-tier loading model is a direct structural response to that finding: global constraints only at the root, domain context loaded only when the task touches the relevant code area, reference material never loaded automatically. Whether that structure produces the outcome described above in practice depends on how well the documentation is written and maintained — a variable the model cannot control for.
+
+The documentation didn't make the agent smarter. It gave the agent the context it needed to apply what it already knows to the specific constraints of this system. That is a different claim, and a more tractable one.
+
+---
+
+## Conclusion
+
+The instinct when facing a new problem is to reach for a new tool. Agentic coding feels new enough to justify that instinct, and the market has obliged with frameworks, specification formats, and context management systems designed for it.
+
+Most of that complexity is unnecessary. The problem is not that we lack the right documentation framework. Arc42 has been solving the structural problem for over a decade: concerns separated into distinct, locatable places, navigable without a full read. The problem is that the documentation lives in the wrong place — in Confluence, in a wiki, in a PDF that no agent will ever open. Moving it into the repository, as Markdown files, alongside the code it describes, is a habit change, not a technical challenge.
+
+The wheel does not need reinventing. It needs moving.
+
+What agents need from documentation is what human engineers need: constraints they must not violate, decisions that were already made and why, interfaces they can rely on without reading the implementation. Arc42 already has slots for all of it. The three-tier loading model reads what was already there with agent economics in mind.
+
+The gap is vocabulary. Agentic systems introduce decisions that no existing framework anticipated: base model selection, context window constraints, drift tolerance thresholds, fallback behavior when the model declines. These need to be recorded somewhere, and arc42 has no native slot for them. The RAD-AI extension closes that gap backward-compatibly. Everything else is already there.
+
+Source code remains the source of truth. Documentation remains the map that makes it navigable. Neither of those claims is new. What's changed is the cost of ignoring the second one — and the good news is that the tools to act on it have been available for years.
+
+---
+
+[^1]: Paul Preiss, "Spec-Driven Development is Better With Core Architecture," Architecture & Governance, April 2026. <https://www.architectureandgovernance.com/applications-technology/spec-driven-development-is-better-with-core-architecture/>
+[^2]: Birgitta Böckeler, "Understanding Spec-Driven-Development: Kiro, spec-kit, and Tessl," martinfowler.com, October 2025. <https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html>
+[^3]: Cline, "Memory Bank," docs.cline.bot. <https://docs.cline.bot/features/memory-bank>
+[^4]: Michael Nygard, "Documenting Architecture Decisions," Cognitect, 2011; Joel Parker Henderson, "Architecture decision record," GitHub repository. <https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions> <https://github.com/joelparkerhenderson/architecture-decision-record>
+[^5]: Oliver Aleksander Larsen and Mahyar T. Moghaddam, "RAD-AI: Rethinking Architecture Documentation for AI-Augmented Ecosystems," arXiv, 2026; companion repository. <https://arxiv.org/abs/2603.28735> <https://github.com/Oliver1703dk/RAD-AI>
+[^6]: TeamDay.ai, "The Complete Guide to Agentic Coding in 2026," 2026. <https://www.teamday.ai/blog/complete-guide-agentic-coding-2026>
+[^7]: Stack Overflow Blog, "Building shared coding guidelines for AI (and people too)," March 2026. <https://stackoverflow.blog/2026/03/26/coding-guidelines-for-ai-agents-and-people-too/>
+[^8]: Thibaud Gloaguen et al., "Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?" arXiv, February 2026. <https://arxiv.org/abs/2602.11988>
+
+---
+
+## Re-evaluating GitHub's Spec Kit: Structured SDLC Automation
+
+Source: https://markus.wondrax.cloud/articles/spec-kit-reevaluation.html
+Published: 2026-04-26
+Tags: Agentic Coding, Spec Kit, Architecture, Enterprise
+
+I haven't written a line of code by hand in months. What I do instead is describe systems — their behavior, their boundaries, their constraints — and watch agents translate that into working software. They coordinate across repositories, generate migration scripts, work through large codebases with a degree of continuity that would have been difficult to believe a few years ago. The machinery works. The harder question is what keeps it coherent when the scope expands: when sessions restart, when a sequence of agent calls is supposed to share a consistent model of what it is building, when the plan that made sense at the start silently becomes something else. That is what structural workflow tooling is meant to solve. And it is exactly where most implementations break down.
+
+What most people try first is better prompting. You describe the phases in the system message, tell the agent where it is in the workflow. It holds for short, contained tasks. Anything spanning multiple subsystems or several sessions breaks. Context doesn't survive session boundaries. Agents drift. The plan that made sense at the start becomes something else by the end, because nothing in the tooling prevents an agent from deciding planning is done and jumping straight to implementation.
+
+**GitHub's Spec Kit** is the most visible attempt to solve this with formal structure. The idea: make the development process a sequence of defined phases, each requiring a human review before moving forward, with a formal spec as the primary artifact of the whole project.
+
+I evaluated Spec Kit in November 2025. Let's have a look how it developed and if we can use it in enterprise scale.
+
+---
+
+## What Spec Kit Is
+
+**GitHub's Spec Kit** is an open-source framework for *Spec-Driven Development (SDD)*. The core idea is that specifications become the primary artifact of the development process. Before any code is written, the workflow moves through structured phases:
+
+1. **Constitution** — define the project's core principles and architectural constraints
+2. **Specify** — write a formal spec capturing intent, requirements, and scope
+3. **Plan** — decompose the spec into an implementation plan
+4. **Tasks** — break the plan into discrete, executable tasks
+5. **Implement** — execute the tasks using AI agents
+6. **PR** — validate, review, and merge
+
+Each phase gates the next. As the Spec Kit authors have described it, SDD is intended as the antidote to unstructured AI coding: a way to get agents to produce reliable, intent-aligned software rather than guessing their way toward a result.[^1]
+
+Each gate forces the workflow to pause and verify that intent was understood correctly before moving forward. In a free-form chat session, an agent can — and often will — skip from a vague requirement directly to implementation. Here, the spec is reviewed before planning begins; the plan is reviewed before tasks are assigned. These are natural stopping points that wouldn't otherwise exist, and in AI-assisted development they matter precisely because nothing else creates them.
+
+Treating the spec as the primary artifact — rather than something produced after the fact — reinforces this. It forces teams to articulate *what* the software should do and *why* before addressing *how*. For teams working across multiple sessions or onboarding new members mid-project, the spec becomes the authoritative record of what was actually decided. Code can drift; a spec written before implementation begins is the closest thing to captured intent.
+
+---
+
+## What's Improved
+
+The most significant changes since my original evaluation are the extension system and the separately introduced preset system. Together they make the framework considerably more adaptable to enterprise contexts.
+
+**Extensions** are distributed as ZIP archives with an `extension.yml` manifest. Teams can define custom slash commands for agents, hook into named lifecycle points — triggering custom logic before or after any core phase — and introduce entirely new phases that aren't part of the default workflow.[^2] A compliance review step, a Jira sync, or an autonomous documentation pass can be added as an extension without touching core files.
+
+**Presets** address a different layer: standardizing templates and commands across teams. A preset packages overrides for specs, plans, tasks, and agent instructions with explicit priority ordering. When Spec Kit resolves a template, it walks a four-layer resolution stack — project-local overrides first, then installed presets by priority, then extension-provided templates, then core templates.[^8] An organization can ship a compliance or domain-specific preset once and apply it across every project without forking the repository.
+
+These are real improvements — they extend the surface area of what teams can do with Spec Kit without modifying its core. What they do not touch is the underlying execution model. And that is where the framework's enterprise limitations live. Three of them matter.
+
+---
+
+## No State Machine
+
+Spec Kit describes a workflow, but does not enforce one. To see why that matters, look at what the specify agent is actually instructed to do.[^9] Before writing a single line of spec, it must:
+
+- check for pre-execution extension hooks and conditionally execute them
+- handle branch creation
+- generate the spec directory and file path
+- load the correct template
+- write a quality checklist to disk
+
+After completing the spec, it must run a quality validation pass and then check for post-execution hooks. The agent is not a specification writer. It is a specification writer that also happens to be responsible for infrastructure setup, lifecycle orchestration, and quality assurance.
+
+This is not a quirk of the specify command. It is a structural consequence of encoding runtime behavior in agent prompts. In a properly orchestrated system, lifecycle mechanics — hook execution, directory setup, state validation — are handled by the runtime before the agent is ever called. The agent receives its task cleanly scoped. Whether a hook ran is not up to the agent to interpret; the runtime executed it and passed the result. In Spec Kit, these responsibilities have been pushed into the agent's context. The agent reads them, decides what to do with each one, and proceeds. That is a pull model: the agent interprets events rather than receiving their effects.
+
+The same structural problem applies to phase transitions. The mechanism is Markdown files provided as context: the agent reads the current phase documentation and is expected to follow the process from there. There is no tooling that validates whether prior phases were completed, rejects invalid transitions, or signals a constraint violation.
+
+Visual Studio Magazine's September 2025 coverage noted that the framework requires agents to follow the process by convention rather than being constrained by the tooling.[^4]
+
+In my view, determinism in an agent pipeline means one specific thing: given a valid workflow state and a valid input, only valid transitions are possible, and the runtime rejects everything else. This is not a property of LLM output — it is a property of the execution environment. Spec Kit provides no such guarantee. An agent can read the spec phase, declare itself done, and proceed directly to implementation without completing planning. Nothing in the tooling prevents it.
+
+There is a cost to the convention model beyond correctness. Without enforced state, every agent call must carry enough workflow context for the agent to orient itself: current phase, completed phases, applicable rules, transition criteria. With a state machine managing transitions externally, each call receives only the instructions scoped to the current state. The system prompt gets shorter, which means cheaper and less susceptible to instruction decay toward the end of a long context window.
+
+The process documentation in Spec Kit is good. But for enterprise use — high-stakes changes, auditable execution, reproducible runs — documentation plus agent compliance is not a substitute for enforced state transitions. Convention breaks down under time pressure, at scale, or when agents encounter conflicting context. A state machine does not rely on compliance.
+
+(Side note: this enforcement gap was the primary reason I built [AgentMux](https://github.com/markuswondrak/AgentMux), an orchestration pipeline built around an explicit state machine with role-scoped agent calls.)
+
+---
+
+## No Distribution Layer
+
+Spec Kit follows the standard library model: projects adopt a version, updates are available when needed, and nothing forces a change. Extensions ship as ZIP archives into `.specify/`, and `specify extension update` is the CLI command to pull in a new version — per-project, opt-in. Core workflow commands update the same way: `specify init --here --force` refreshes the pipeline templates, with the known caveat that `--force` overwrites `constitution.md` and requires a manual backup first.[^10] That is a rough edge. It is not a broken model. Libraries don't push upgrades either.
+
+The deeper problem is where Spec Kit as a whole fits — or doesn't — in the ecosystem forming around agentic context engineering. Microsoft's APM[^7] is the closest thing to a standard dependency manager for AI agent configuration: declare dependencies in `apm.yml`, lock versions in `apm.lock.yaml`, install with one command. It distributes instructions, skills, prompts, hooks, plugins, and MCP servers following shared conventions built on AGENTS.md, the Agent Skills specification, and the Model Context Protocol. Copilot, Claude Code, Cursor, and other agent environments can all consume the same APM package. It's actively maintained, covers the major coding agents, and includes enterprise-grade governance tooling — policy enforcement, supply-chain auditing, org-wide version control.
+
+Neither Spec Kit's core framework nor its extension format maps to any of those primitives. The core framework relies on standalone CLI commands like `specify init` to pull templates, while an extension is a ZIP archive containing custom slash commands and phase-scoping logic. Commands like `apm install spec-kit` or `apm install spec-kit-extension` don't exist, and not simply because no one has built the bridge. There is no schema in APM — or anywhere else — for declaring what an "agentic workflow framework" or its extensions actually are. The tooling category is real; the standard that would describe it hasn't been defined yet.
+
+This is the actual governance gap. When an organization adopts MCP servers through APM, policy enforcement, version pinning, supply-chain auditing, and org-wide rollout come with it. When an organization adopts Spec Kit extensions, none of that infrastructure is available — not because Spec Kit made a poor choice, but because the category it belongs to sits outside what the ecosystem has standardized. Until that changes, enterprise governance of Spec Kit deployments is a bespoke engineering problem for each team.
+
+The first two gaps are structural — each has a clear engineering answer. The third is different. It goes to the question of what Spec Kit fundamentally believes a spec *is*.
+
+---
+
+## The Spec Lifecycle Problem
+
+The most significant unresolved question in the framework has been active in the community since I first evaluated the project ([Discussion #152](https://github.com/github/spec-kit/discussions/152), [Issue #1100](https://github.com/github/spec-kit/issues/1100)[^3]).
+
+The issue is not brownfield codebases per se — it is Spec Kit's implicit model for what a spec *is* over time. Currently, each spec is essentially a diff artifact: it captures the intended change from the current state of the codebase to the desired target state. A branch is created per spec, and the spec lives for the duration of that change request. Once the feature merges, the spec becomes a historical artifact.
+
+This is what Birgitta Böckeler, after reviewing multiple SDD tools at ThoughtWorks, classifies as *spec-first* — the spec is used for the task and then effectively abandoned.[^5] The article identifies two more advanced models: *spec-anchored* (the spec is retained and updated as the feature evolves) and *spec-as-source* (the spec is the primary artifact, with code generated from it). Böckeler observes that Spec Kit "is still what I would call spec-first only, not spec-anchored over time," and that Discussion #152 reflects this confusion.
+
+The problem with a pure spec-first model is that specs accumulate as a historical record without ever consolidating into a living description of what the system currently does. My own preference is to progressively integrate feature specs into a persistent product documentation layer — a maintained model of current system behavior that agents and team members can reference as a reliable source of truth. But the community has not reached consensus on this either.
+
+Spec Kit needs to make a deliberate choice here: commit to one of these models, document it clearly, or offer explicit configuration for teams to choose their own approach. The current ambiguity leaves teams without guidance on how to manage specs over the lifetime of a project.
+
+It is worth noting that the community has already started filling this gap. The [`spec-kit-archive`](https://github.com/stn1slv/spec-kit-archive) extension[^6] adds a `/speckit.archive.run` command that runs after a PR merges, consolidating feature-level specs, plans, and technical debt notes into the project's canonical memory at `.specify/memory/`. Its author describes it as the "Outer Loop" of a Double-Loop Parity model — exactly the spec-anchored direction that Discussion #152 has been asking for. That a workaround extension is needed to bridge this gap is telling in itself: it confirms both that the demand is real and that the core framework has not yet taken responsibility for it.
+
+---
+
+## Conclusion
+
+Spec Kit has matured. The extension system is a real architectural step forward, and the phase-gated workflow brings structure that free-form chat development lacks. The foundation is solid enough to build on.
+
+The question is whether Spec Kit will own these gaps or leave them to community extensions and convention. Owning them means enforced state transitions, a distribution layer with governance, and a declared lifecycle model. That is what enterprise readiness actually requires. The direction is right. The remaining work is specific.
+
+[^1]: Den Delimarsky, "What's The Deal With GitHub Spec Kit," den.dev, 2025. <https://den.dev/blog/github-spec-kit/>
+[^2]: GitHub, "Extension API Reference — github/spec-kit," github.com. <https://github.com/github/spec-kit/blob/main/extensions/EXTENSION-API-REFERENCE.md>
+[^3]: GitHub, "Feature Request: Support Module-Level Persistent Specs," github/spec-kit Issue #1100. <https://github.com/github/spec-kit/issues/1100>
+[^4]: Visual Studio Magazine, "GitHub Spec Kit Experiment: 'A Lot of Questions'," September 2025. <https://visualstudiomagazine.com/articles/2025/09/16/github-spec-kit-experiment-a-lot-of-questions.aspx>
+[^5]: Birgitta Böckeler, "Understanding Spec-Driven-Development: Kiro, spec-kit, and Tessl," martinfowler.com, October 2025. <https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html>
+[^6]: Stanislav Deviatov, "spec-kit-archive," GitHub, 2025. <https://github.com/stn1slv/spec-kit-archive>
+[^7]: Microsoft, "APM — Dependency Manager for AI Agent Configuration," GitHub, 2025. <https://github.com/microsoft/apm>
+[^8]: GitHub, "Preset System Architecture — github/spec-kit," github.com. <https://github.com/github/spec-kit/blob/main/presets/ARCHITECTURE.md>
+[^9]: GitHub, "specify command — github/spec-kit," github.com. <https://github.com/github/spec-kit/blob/main/templates/commands/specify.md>
+[^10]: GitHub, "Upgrade Guide — github/spec-kit," github.com. <https://github.com/github/spec-kit/blob/main/docs/upgrade.md>
+
+---
