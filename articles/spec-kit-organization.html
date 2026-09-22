@@ -86,7 +86,7 @@
 <li>Shared cross-cutting instructions copied into many commands drift over time.</li>
 <li>Competing preset changes need a deliberate precedence policy or resolution becomes arbitrary.</li>
 </ul>
-<h3 id="one-runtime-preamble-beats-fourteen-copies">One runtime preamble beats fourteen copies</h3>
+<h3 id="one-runtime-preamble-instead-of-multiple-copies">One runtime preamble instead of multiple copies</h3>
 <p>The first problem showed up immediately in Extended Flow. I wanted the automated commands to run unattended, stay inside the project, and not stop to ask a human question. Copying that instruction into every command would have worked for one release and then drifted.</p>
 <p>So I wrote it once instead. Spec Kit lets one preset entry compose onto many commands, so I pointed fourteen <code>type: command</code> entries at the same file - <code>commands/workflow-runtime.md</code> - each with <code>strategy: prepend</code> (see <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml"><code>preset.yml</code></a>). That keeps the policy in one place; the commands themselves stay free of duplicated boilerplate. I left <code>project-init</code> and <code>documentation-init</code> out because a human runs them before the flows start, so the preamble doesn&rsquo;t apply.</p>
 <h3 id="use-priorities-to-define-how-presets-compose">Use priorities to define how presets compose</h3>
@@ -177,7 +177,7 @@ specify<span class="w"> </span>bundle<span class="w"> </span>install<span class=
 <li><strong>Commands from a preset.</strong> A preset that registers <code>speckit.someext.cmd</code> via <code>replace</code> without <code>someext</code> installed can work technically, but it hides new behavior inside the wrong package type.</li>
 <li><strong>Everything at default priority.</strong> Five presets at priority <code>10</code> resolve alphabetically. That is a tie-breaker, not a composition policy.</li>
 <li><strong>Missing or stale bundle pins.</strong> Spec Kit expects extension, preset, and workflow entries to be pinned, and stale pins still break reproducibility by describing a different environment than the one people actually install.</li>
-<li><strong>Logic in workflow YAML.</strong> Shell steps that grow beyond one command blur the boundary between orchestration and packaged runtime behavior. The workflow should declare sequence; scripts shipped by a preset or extension should implement the logic.</li>
+<li><strong>Logic in workflow YAML.</strong> Shell steps that grow beyond one command blur the boundary between orchestration and packaged runtime behavior. The workflow should declare sequence; scripts shipped by a preset or extension should implement the logic. My own recommendation once those scripts grow past a handful of lines: extract them into a separately versioned, published package rather than letting them keep growing inside a preset or extension.</li>
 <li><strong>Committing installed components or their registries.</strong> A checked-in copy of a catalog extension, preset, or workflow drifts from the declared dependency the moment someone updates it.</li>
 </ul>
 <p>All of these failure modes blur the distinction between declared dependencies and installed artifacts.</p>

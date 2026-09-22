@@ -51,7 +51,7 @@ Two composition problems matter in practice:
 - Shared cross-cutting instructions copied into many commands drift over time.
 - Competing preset changes need a deliberate precedence policy or resolution becomes arbitrary.
 
-### One runtime preamble beats fourteen copies
+### One runtime preamble instead of multiple copies
 
 The first problem showed up immediately in Extended Flow. I wanted the automated commands to run unattended, stay inside the project, and not stop to ask a human question. Copying that instruction into every command would have worked for one release and then drifted.
 
@@ -154,7 +154,7 @@ The anti-patterns here are not disconnected style mistakes. Each one is a way of
 - **Commands from a preset.** A preset that registers `speckit.someext.cmd` via `replace` without `someext` installed can work technically, but it hides new behavior inside the wrong package type.
 - **Everything at default priority.** Five presets at priority `10` resolve alphabetically. That is a tie-breaker, not a composition policy.
 - **Missing or stale bundle pins.** Spec Kit expects extension, preset, and workflow entries to be pinned, and stale pins still break reproducibility by describing a different environment than the one people actually install.
-- **Logic in workflow YAML.** Shell steps that grow beyond one command blur the boundary between orchestration and packaged runtime behavior. The workflow should declare sequence; scripts shipped by a preset or extension should implement the logic.
+- **Logic in workflow YAML.** Shell steps that grow beyond one command blur the boundary between orchestration and packaged runtime behavior. The workflow should declare sequence; scripts shipped by a preset or extension should implement the logic. My own recommendation once those scripts grow past a handful of lines: extract them into a separately versioned, published package rather than letting them keep growing inside a preset or extension.
 - **Committing installed components or their registries.** A checked-in copy of a catalog extension, preset, or workflow drifts from the declared dependency the moment someone updates it.
 
 All of these failure modes blur the distinction between declared dependencies and installed artifacts.
