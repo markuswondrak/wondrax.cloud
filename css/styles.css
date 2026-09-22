@@ -755,7 +755,7 @@ a:focus-visible {
   display: grid;
   grid-template-columns:
     [full-start] minmax(var(--space-6), 1fr)
-    [content-start] min(65ch, 100%)
+    [content-start] min(65ch, calc(100% - 2 * var(--space-6)))
     [content-end] minmax(var(--space-6), 1fr)
     [full-end];
   padding-inline: 0;
