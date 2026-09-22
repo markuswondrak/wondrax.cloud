@@ -675,47 +675,60 @@ a:focus-visible {
 .article-body table {
   width: 100%;
   border-collapse: collapse;
-  margin: var(--space-8) 0;
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  line-height: 1.5;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  margin: var(--space-12) 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1.6;
+  background: transparent;
+  border-top: 1px solid var(--color-text);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .article-body thead {
-  background: var(--color-accent-subtle);
+  background: transparent;
 }
 
 .article-body th {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
   font-weight: 600;
   text-align: left;
-  color: var(--color-text);
-  padding: var(--space-3) var(--space-4);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  padding: var(--space-3) var(--space-4) var(--space-2);
   border-bottom: 1px solid var(--color-border);
-  letter-spacing: 0.01em;
+  letter-spacing: 0.08em;
 }
 
 .article-body td {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
   border-bottom: 1px solid var(--color-border-subtle);
-  color: var(--color-text-secondary);
+  color: var(--color-text);
   vertical-align: top;
+}
+
+.article-body th:first-child,
+.article-body td:first-child {
+  width: 8rem;
+  padding-left: 0;
+}
+
+.article-body th:last-child,
+.article-body td:last-child {
+  padding-right: 0;
+}
+
+.article-body td:first-child {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.8;
+  letter-spacing: 0.01em;
+  color: var(--color-accent-hover);
 }
 
 .article-body tbody tr:last-child td {
   border-bottom: none;
-}
-
-.article-body tbody tr {
-  transition: background-color var(--duration-fast) var(--ease-out);
-}
-
-.article-body tbody tr:hover {
-  background: var(--color-border-subtle);
 }
 
 .article-body td code,
