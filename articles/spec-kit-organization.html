@@ -44,84 +44,61 @@
 
       <div class="article-body">
         <div class="container container--narrow">
-          <p>I spent the last few days cleaning up <a href="https://github.com/markuswondrak/spec-kit-extended-flow">Extended Flow</a>, the Spec-Kit bundle I maintain for a full agentic development pipeline, so I could install a clean copy into <a href="https://github.com/markuswondrak/spec-kit-workflow-cockpit">Workflow Cockpit</a>, a terminal UI I&rsquo;m building for running and reviewing Spec-Kit workflow runs. Cockpit&rsquo;s own repository runs on Extended Flow as its Spec-Kit setup, so problems in the bundle show up directly in Cockpit&rsquo;s development loop.</p>
-<p><code>.specify/</code> is the directory a Spec-Kit project uses to hold its extensions, presets, workflows, and configuration. While trying to figure out how to set it up properly, I kept running into the same problem: it mixes things with different owners and lifecycles, yet it is easy to treat all of them as ordinary project files.</p>
-<p>That mistake creates practical uncertainty fast. What belongs in git, what should be reconstructed from catalogs, and what needs a pinned version so a fresh clone means the same thing next week?</p>
-<p>Maintainers have answered a narrower version of this before. A <a href="https://github.com/github/spec-kit/discussions/2304">GitHub discussion</a> on what to commit under <code>.specify/</code> settled on a short rule: ignore the local feature pointer and per-machine config overrides, commit everything else - constitution, specs, extension config, templates, scripts. That answer holds for a single preset or extension. It says less once a project assembles several catalog-installed bundles, presets, extensions, and workflows at once, each with its own installed copy, registry, and provenance record - the case that two still-open feature requests (<a href="https://github.com/github/spec-kit/issues/2612">#2612</a>, <a href="https://github.com/github/spec-kit/issues/2681">#2681</a>) ask Spec Kit to address by formally separating tool-managed assets from project-owned state. Neither has shipped as of this writing.</p>
-<p>This article uses the Extended Flow cleanup as a case study for how I handle that gap, but the point is broader. I think Spec-Kit extensions, presets, workflows, and bundles should be handled as packages and dependencies. Catalogs declare what is available. Bundles declare and pin what a project depends on. The repository tracks project intent and project-owned customization. Installed package copies, installation records, and runtime state are reconstructed.</p>
+          <p>I spent the last few days cleaning up <a href="https://github.com/markuswondrak/spec-kit-extended-flow">Extended Flow</a>, the Spec-Kit bundle I maintain for a full agentic development pipeline, so I could install a clean copy into <a href="https://github.com/markuswondrak/spec-kit-workflow-cockpit">Workflow Cockpit</a>, a terminal UI I&rsquo;m building for running and reviewing Spec-Kit workflow runs. Cockpit&rsquo;s own repository runs on <em>Extended Flow</em> as its Spec-Kit setup, so problems in the bundle show up directly in Cockpit&rsquo;s development loop.</p>
+<p><code>.specify/</code> is the directory a Spec-Kit project uses to hold its extensions, presets, workflows, and configuration. Setting one up, I kept asking myself the same questions: how do I manage this folder, and how do I avoid committing every file in it? The trap is treating all of it as ordinary project files. What belongs in git, what should be reconstructed from catalogs, and what needs a pinned version so a fresh clone means the same thing next week?</p>
+<p>Maintainers have answered a narrower version of this before. A <a href="https://github.com/github/spec-kit/discussions/2304">GitHub discussion</a> on what to commit under <code>.specify/</code> settled on a short rule: ignore the local feature pointer and per-machine config overrides, commit everything else - constitution, specs, extension config, templates, scripts. That answer makes perfect sense for a single preset or extension. It says less once a project assembles several catalog-installed bundles, presets, extensions, and workflows at once, each with its own installed copy, registry, and provenance record - the case that two still-open feature requests (<a href="https://github.com/github/spec-kit/issues/2612">#2612</a>, <a href="https://github.com/github/spec-kit/issues/2681">#2681</a>) ask Spec Kit to address by formally separating tool-managed assets from project-owned state. </p>
+<p>I think Spec-Kit artifacts should be handled as packages and dependencies. Catalogs declare what is available. Bundles declare and pin what a project depends on. The repository tracks project intent and project-owned customization. Installed package copies, installation records, and runtime state should be reconstructed.</p>
 <p><em>This article reflects <a href="https://github.com/github/spec-kit">Spec Kit</a> and its <a href="https://github.github.io/spec-kit/">documentation</a> as of this writing, and the Extended Flow bundle at bundle/preset/<code>extendedflow</code> extension <code>0.16.0</code> (<code>bug</code> extension <code>1.0.0</code>, Feature workflow <code>0.10.1</code>, Bugfix workflow <code>0.2.1</code>, Quick workflow <code>0.1.1</code>). Both projects evolve; re-check current behavior before relying on specifics.</em></p>
 <h2 id="treat-spec-kit-artifacts-as-packages-not-project-files">Treat Spec-Kit artifacts as packages, not project files</h2>
 <p>The core problem is that one directory tree hides three different kinds of things. If they are all treated as &ldquo;files under <code>.specify/</code>&rdquo;, repository boundaries become arbitrary and updates become harder to reason about.</p>
 <p>I have found it more useful to separate them into three categories:</p>
 <ul>
-<li><strong>Package definitions and catalog-published components.</strong> Extensions, presets, workflows, and bundles are versioned artifacts with their own manifests and release cadence. Catalogs answer one question: which packages are available to install?</li>
+<li><strong>Package definitions and catalog-published components.</strong> Extensions, presets, workflows, and bundles are versioned artifacts with their own manifests and release cadence. Catalogs declare which packages are available to install.</li>
 <li><strong>Project intent and project-owned customizations.</strong> Bundle declarations, catalog configuration, constitution, specs, extension project config, and workflow overlays describe what this project wants and which local customizations it owns.</li>
 <li><strong>Installed artifacts and runtime state.</strong> Installed copies under <code>.specify/extensions/</code>, <code>.specify/presets/</code>, and <code>.specify/workflows/</code>, plus registries, bundle records, caches, and run state, are outputs of installation and execution.</li>
 </ul>
-<p>In practice, that means keeping declarations and project-owned customizations in the repository, while installed packages and runtime state can be recreated when needed. Spec Kit does not enforce that repository policy for you. It gives you the primitives. You still need to decide which files are the declaration of a dependency and which files are only the materialized result.</p>
+<p>A catalog is a plain JSON index. Each entry names a package, pins its version, and points at where to download it. This is the <code>bugfix</code> bundle entry as published in Spec Kit&rsquo;s own <a href="https://github.com/github/spec-kit/blob/main/bundles/catalog.json">bundle catalog</a>:</p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;catalog_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://raw.githubusercontent.com/github/spec-kit/main/bundles/catalog.json&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;bundles&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;bugfix&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bugfix&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Guided Bug Fix&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.0.0&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Orchestrated bug triage: assess a bug report, review behind a human gate, apply the fix, and verify with tests.&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;author&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;GitHub&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;license&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MIT&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;download_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://raw.githubusercontent.com/github/spec-kit/main/bundles/bugfix/bundle.yml&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;repository&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://github.com/github/spec-kit&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;requires&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;speckit_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&gt;=0.9.0&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;provides&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;extensions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;presets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;workflows&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;bug&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;triage&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;workflow&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;qa&quot;</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;verified&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Extensions, presets, and workflows are listed the same way under their own top-level key in their own <code>catalog.json</code>. The download location can point at any host the project can reach, so a company can serve the same entries from an internal catalog instead of GitHub. A project points at the catalogs it trusts through its <code>.specify/*-catalogs.yml</code> files, which are project intent and stay committed.</p>
+<p>In practice, that means keeping declarations and project-owned customizations in the repository, while installed packages and runtime state can be recreated when needed. Spec Kit does not enforce that repository policy for you. It gives you the primitives. Which files declare a dependency and which are only the materialized result is still a decision for the project.</p>
 <h2 id="choose-the-package-that-owns-the-behavior">Choose the package that owns the behavior</h2>
 <p>The extension-versus-preset distinction becomes confusing when you start from file locations alone. Both can affect what the agent sees, and a preset can technically do more than it should. That is why teams need an ownership rule before they start composing packages.</p>
-<p>Spec Kit distinguishes between extensions and presets. <strong>Extensions are the conventional home for new command names. Presets modify existing commands or template content, and with <code>strategy: replace</code> they can also materialize a brand-new command on their own.</strong> That makes the boundary architectural, not hard-enforced, but the distinction still reflects the intended semantics of the package types. What Spec Kit does enforce are the composition strategies documented in the <a href="https://github.com/github/spec-kit/blob/main/docs/reference/presets.md">presets reference</a>: <code>prepend</code>, <code>append</code>, and <code>wrap</code> require an existing base layer to compose onto. When that base is missing, Spec Kit skips the command and emits a warning. You still need to choose the right package owner.</p>
-<table>
-<thead>
-<tr>
-<th>Kind</th>
-<th>Contents</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Extension</td>
-<td>Seven commands: <code>documentation</code>, <code>documentation-init</code>, <code>finish</code>, <code>project-init</code>, <code>quick-implement</code>, <code>quick-review</code>, <code>doc-check</code></td>
-</tr>
-<tr>
-<td>Preset</td>
-<td>Templates + 14 overrides: <code>review-findings.md</code>, <code>documentation.md</code>, and a runtime preamble prepended to existing commands</td>
-</tr>
-</tbody>
-</table>
+<p>Spec Kit distinguishes between extensions and presets. <strong>Extensions are the conventional home for new command names. Presets modify existing commands or template content, and with <code>strategy: replace</code> they can also materialize a brand-new command on their own.</strong> That makes the boundary architectural, not hard-enforced, but the distinction still reflects the intended semantics of the package types. What Spec Kit does enforce are the composition strategies documented in the <a href="https://github.com/github/spec-kit/blob/main/docs/reference/presets.md">presets reference</a>: <code>prepend</code>, <code>append</code>, and <code>wrap</code> require an existing base layer to compose onto. When that base is missing, Spec Kit skips the command and emits a warning. </p>
 <p>This split matches the shipped manifests: <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/extension.yml"><code>extension.yml</code></a> contributes named behavior, and <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml"><code>preset.yml</code></a> changes how existing behavior is rendered and composed. Once ownership is clear, composition stops being accidental.</p>
 <h2 id="compose-packages-deliberately">Compose packages deliberately</h2>
-<p>Choosing the right owner solves only the first half of the problem. A Spec-Kit project usually installs multiple packages, and their interaction is where drift and surprise appear.</p>
-<p>Two composition problems show up in practice:</p>
+<p>A Spec-Kit project usually installs multiple packages, and their interaction is where drift can appear. Two composition problems show up in practice:</p>
 <ul>
 <li>Shared cross-cutting instructions copied into many commands drift over time.</li>
 <li>Competing preset changes need a deliberate precedence policy or resolution becomes arbitrary.</li>
 </ul>
 <h3 id="one-runtime-preamble-instead-of-multiple-copies">One runtime preamble instead of multiple copies</h3>
-<p>The first problem showed up immediately in Extended Flow. I wanted the automated commands to run unattended, stay inside the project, and not stop to ask a human question. Copying that instruction into every command would have worked for one release and then drifted.</p>
+<p>The first problem showed up immediately in <em>Extended Flow</em>. Spec Kit workflows execute their commands in batch mode by design, so they run unattended and do not stop to ask a human question. I also wanted that behavior to stay inside the project. Copying the instruction into every command would have worked for one release and then drifted.</p>
 <p>So I wrote it once instead. Spec Kit lets one preset entry compose onto many commands, so I pointed fourteen <code>type: command</code> entries at the same file - <code>commands/workflow-runtime.md</code> - each with <code>strategy: prepend</code> (see <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml"><code>preset.yml</code></a>). That keeps the policy in one place; the commands themselves stay free of duplicated boilerplate. I left <code>project-init</code> and <code>documentation-init</code> out because a human runs them before the flows start, so the preamble doesn&rsquo;t apply.</p>
 <h3 id="use-priorities-to-define-how-presets-compose">Use priorities to define how presets compose</h3>
 <p>The second problem is less visible until two presets overlap. Every preset defaults to priority <code>10</code>, and ties break alphabetically by preset id (see the <a href="https://github.com/github/spec-kit/blob/main/docs/reference/presets.md">Spec Kit presets reference</a>). Leave everything at the default and your effective stack is technically valid but operationally arbitrary.</p>
-<p>The fix is to treat priority as policy, not as leftover metadata. I assign bands like this:</p>
-<table>
-<thead>
-<tr>
-<th>Band</th>
-<th>Priority</th>
-<th>Contents</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Base</td>
-<td>20</td>
-<td>Organizational standards, compliance</td>
-</tr>
-<tr>
-<td>Methodology</td>
-<td>10</td>
-<td>Team process. Extended Flow pins its preset here.</td>
-</tr>
-<tr>
-<td>Project</td>
-<td>5</td>
-<td>Localization, project-specific terminology</td>
-</tr>
-</tbody>
-</table>
-<p>Lower wins. When two presets both <code>replace</code> the same template, only the lower number is used; the other is ignored, not merged. If two layers should compose, the higher-precedence preset, the one with the lower number, must declare <code>append</code>, <code>prepend</code>, or <code>wrap</code> for that file. Extended Flow&rsquo;s <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/bundle.yml"><code>bundle.yml</code></a> pins its preset at priority <code>10</code>, while the actual file-level composition strategies live in <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml"><code>preset.yml</code></a>. That leaves room for project overrides above it and organizational layers below it without changing the bundle itself.</p>
-<p>Once ownership and precedence are clear, repository boundaries become a dependency-management question rather than a generic Git question.</p>
+<p>Use priority to actually control the layering these artifacts create. Lower priority wins. The strategies fall into two groups that behave differently against the layer below. <code>replace</code> overrides: when two presets both <code>replace</code> the same template, only the lower number takes effect and the other is ignored rather than merged. <code>append</code>, <code>prepend</code>, and <code>wrap</code> compose: the higher-precedence preset, the one with the lower number, adds to that layer instead of overwriting it. </p>
+<p><em>Extended Flow</em>&rsquo;s <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/bundle.yml"><code>bundle.yml</code></a> pins its preset at priority <code>10</code>, while the actual file-level composition strategies live in <a href="https://github.com/markuswondrak/spec-kit-extended-flow/blob/main/preset.yml"><code>preset.yml</code></a>. That leaves room for project overrides above it and organizational layers below it without changing the bundle itself.</p>
 <h2 id="commit-intent-reconstruct-installations">Commit intent; reconstruct installations</h2>
 <p>The practical failure mode here is ending up with two competing truths. Catalogs and bundle manifests describe which packages the project depends on and which versions it expects. The other lives in checked-in installed copies and registries. The moment those drift apart, the repository no longer tells you which truth to trust.</p>
 <p>Spec Kit&rsquo;s own default is intentionally narrow. <code>specify init</code> scaffolds a managed <code>.specify/.gitignore</code> that contains exactly two patterns (see the <a href="https://github.com/github/spec-kit/blob/main/docs/reference/core.md">Spec Kit core reference</a>):</p>
@@ -129,7 +106,7 @@
 extensions/*/local-config.yml
 </code></pre></div>
 
-<p>That excludes only machine-local state. For Extended Flow projects, I use a stricter policy: ignore anything that can be recreated by installing a declared dependency. Anything pulled from a catalog and not meant to be edited locally should not be committed. </p>
+<p>That excludes only machine-local state. For <em>Extended Flow</em> projects, I use a stricter policy: ignore anything that can be recreated by installing a declared dependency. Anything pulled from a catalog and not meant to be edited locally should not be committed. </p>
 <p>Add these rules to the managed file:</p>
 <div class="codehilite"><pre><span></span><code># Installed from catalogs. Reconstructed with `specify bundle install`.
 .specify/extensions/*/*
@@ -150,14 +127,128 @@ extensions/*/local-config.yml
 .specify/bundle-records.json
 </code></pre></div>
 
-<p>The exceptions show this is not a blanket &ldquo;ignore <code>.specify/</code>&rdquo; rule:</p>
+<p>We need to be specific here:</p>
 <ul>
 <li><strong>Extension project config</strong> (<code>&lt;ext&gt;-config.yml</code>) is project intent. It is not catalog-derived, so it stays tracked. Only the machine-local <code>local-config.yml</code> stays ignored.</li>
 <li><strong>Workflow overlays</strong> (<code>.specify/workflows/overlays/</code>) are project-owned customizations. The <a href="https://github.com/github/spec-kit/blob/main/docs/reference/workflows.md">workflows reference</a> explicitly keeps them outside installed workflow directories so they survive updates.</li>
 </ul>
 <p>The installation-state records need the same treatment as the installed package copies. The bundler resolves what is already installed primarily through these registries and records, not by inspecting the filesystem tree alone. If they are committed while the components they describe are ignored, a fresh clone can claim a component is already installed when its files are absent.</p>
 <p><code>.specify/extensions.yml</code> looks like it belongs on that list - it does record which extensions are installed - but it is not what gates a fresh install. That check reads only <code>.specify/extensions/.registry</code>; <code>extensions.yml</code> is enablement and hook configuration, which is why the <a href="https://github.com/github/spec-kit/blob/main/extensions/EXTENSION-USER-GUIDE.md#1-version-control">extension user guide</a> recommends committing it.</p>
-<p>Everything not listed above stays committed: the constitution, templates, <code>.specify/extensions.yml</code>, <code>.specify/integration.json</code>, catalog configuration such as <code>.specify/*-catalogs.yml</code>, plus specs and bug reports.</p>
+<p>The three categories map onto concrete paths as follows:</p>
+<table>
+<thead>
+<tr>
+<th>Path or pattern</th>
+<th>Category</th>
+<th>Commit</th>
+<th>Restored by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>constitution</code>, <code>templates</code></td>
+<td>Project intent</td>
+<td>✅</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>specs/</code>, bug reports</td>
+<td>Project intent</td>
+<td>✅</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Bundle declaration</td>
+<td>Project intent</td>
+<td>✅</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>.specify/*-catalogs.yml</code></td>
+<td>Project intent</td>
+<td>✅</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>.specify/integration.json</code></td>
+<td>Project intent</td>
+<td>✅</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>.specify/extensions.yml</code></td>
+<td>Project intent</td>
+<td>✅</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>.specify/extensions/&lt;ext&gt;/&lt;ext&gt;-config.yml</code></td>
+<td>Project intent</td>
+<td>✅</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>.specify/workflows/overlays/</code></td>
+<td>Project-owned customization</td>
+<td>✅</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>.specify/extensions/*/*</code></td>
+<td>Installed extension copies</td>
+<td>❌</td>
+<td><code>specify bundle install</code></td>
+</tr>
+<tr>
+<td><code>.specify/presets/*</code></td>
+<td>Installed presets</td>
+<td>❌</td>
+<td><code>specify bundle install</code></td>
+</tr>
+<tr>
+<td><code>.specify/workflows/*</code></td>
+<td>Installed workflows</td>
+<td>❌</td>
+<td><code>specify bundle install</code></td>
+</tr>
+<tr>
+<td><code>.specify/extensions/.registry</code></td>
+<td>Installation record</td>
+<td>❌</td>
+<td>rebuilt by the bundler</td>
+</tr>
+<tr>
+<td><code>.specify/bundle-records.json</code></td>
+<td>Installation record</td>
+<td>❌</td>
+<td>rebuilt by the bundler</td>
+</tr>
+<tr>
+<td><code>.specify/workflows/runs/</code></td>
+<td>Runtime state</td>
+<td>❌</td>
+<td>regenerated on run</td>
+</tr>
+<tr>
+<td><code>.specify/workflows/.cache/</code>, <code>.specify/extensions/.cache/</code>, <code>.specify/extensions/.backup/</code></td>
+<td>Runtime state</td>
+<td>❌</td>
+<td>regenerated by the tooling</td>
+</tr>
+<tr>
+<td><code>.specify/feature.json</code></td>
+<td>Machine-local pointer</td>
+<td>❌</td>
+<td>recreated locally</td>
+</tr>
+<tr>
+<td><code>.specify/extensions/*/local-config.yml</code></td>
+<td>Machine-local override</td>
+<td>❌</td>
+<td>recreated locally</td>
+</tr>
+</tbody>
+</table>
 <p>The negation syntax is part of the design. <code>.specify/extensions/*/*</code> ignores the contents of each extension directory but not the directory itself, which is what allows a top-level config file to be re-included. Ignoring <code>.specify/extensions/</code> wholesale would make that impossible.</p>
 <p>If bundle declarations are the source of truth, the next step is to prove that they are actually sufficient.</p>
 <h2 id="make-a-fresh-clone-the-acceptance-test">Make a fresh clone the acceptance test</h2>
@@ -173,11 +264,11 @@ specify<span class="w"> </span>bundle<span class="w"> </span>install<span class=
 <h2 id="pin-versions-so-reconstruction-means-the-same-thing-tomorrow">Pin versions so reconstruction means the same thing tomorrow</h2>
 <p>Package management is temporal as well as structural. It is not enough that a project can be reconstructed today. The reconstructed result needs to mean the same thing when someone repeats the install later.</p>
 <p>That is why bundles matter. The <a href="https://github.com/github/spec-kit/blob/main/docs/reference/bundles.md">Spec Kit bundles reference</a> defines a bundle as a versioned composition layer over extensions, presets, workflows, and steps, and <code>bundle info</code> expands the pinned component set. Spec Kit rejects unpinned extension, preset, and workflow entries during bundle validation. If installed components carry one version in their own manifest and a different one in the bundle pin, the bundle stops being a trustworthy description of the environment.</p>
-<p>Extended Flow keeps a hybrid release model, and this is my policy, not something Spec Kit enforces. The components the project itself publishes - the bundle manifest, the preset, and its own <code>extendedflow</code> extension - are released together and share one version number. Workflows and third-party extensions are different. They are foreign components, maintained on their own cadence, so forcing them onto the bundle&rsquo;s version would misstate ownership of that release cycle.</p>
+<p><em>Extended Flow</em> keeps a hybrid release model, and this is my policy, not something Spec Kit enforces. The components the project itself publishes - the bundle manifest, the preset, and its own <code>extendedflow</code> extension - are released together and share one version number. Workflows and third-party extensions are different. They are foreign components, maintained on their own cadence, so forcing them onto the bundle&rsquo;s version would misstate ownership of that release cycle.</p>
 <p>An alternative is to version each primitive independently and pin those versions in <code>bundle.yml</code>. That works when components genuinely evolve on different cadences. What does not work is an accidental mixture with no stated rule - some primitives share versions, others float loosely, and the bundle version no longer describes its contents. Reconstruction then becomes time-sensitive in exactly the wrong way.</p>
 <p>The easiest way to see whether the model holds is to look at what breaks when it does not.</p>
 <h2 id="failure-modes-come-from-breaking-the-package-model">Failure modes come from breaking the package model</h2>
-<p>The anti-patterns here are not disconnected style mistakes. Each one is a way of smuggling package behavior back into ad hoc project files.</p>
+<p>The anti-patterns here share one cause: each treats package behavior as ad hoc project files.</p>
 <ul>
 <li><strong>Commands from a preset.</strong> A preset that registers <code>speckit.someext.cmd</code> via <code>replace</code> without <code>someext</code> installed can work technically, but it hides new behavior inside the wrong package type.</li>
 <li><strong>Undeclared preset precedence.</strong> When two presets change the same template and both keep the default priority <code>10</code>, resolution falls back to alphabetical order by preset id.</li>
@@ -188,7 +279,7 @@ specify<span class="w"> </span>bundle<span class="w"> </span>install<span class=
 <p>All of these failure modes blur the distinction between declared dependencies and installed artifacts.</p>
 <h2 id="package-management-is-the-operating-model">Package management is the operating model</h2>
 <p>Spec Kit already gives the primitive types. The real design choice is how you operate them together. In my view, the cleanest model is to treat extensions, presets, workflows, and bundles as packages, not as a loose collection of project files under <code>.specify/</code>.</p>
-<p>Extended Flow&rsquo;s own repository reflects the split now: extensions and presets are pinned, <code>.specify/extensions/</code> and <code>.specify/presets/</code> are gitignored, and a fresh clone rebuilds them with one install command. The next test is whether it holds up in Workflow Cockpit, the project this cleanup was for.</p>
+<p><em>Extended Flow</em>&rsquo;s own repository reflects the split now: extensions and presets are pinned, <code>.specify/extensions/</code> and <code>.specify/presets/</code> are gitignored, and a fresh clone rebuilds them with one install command. The next test is whether it holds up in <em>Workflow Cockpit</em>, the project this cleanup was for.</p>
         </div>
       </div>
 
