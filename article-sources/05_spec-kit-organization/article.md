@@ -9,11 +9,15 @@ slug: "spec-kit-organization"
 image: infografik_spec-kit.png
 ---
 
-I spent the last few days cleaning up Extended Flow so I can use it in Workflow Cockpit. The hard part was not where files should sit inside `.specify/`. The hard part was that `.specify/` mixes things with different owners and lifecycles, yet it is easy to treat all of them as ordinary project files.
+I spent the last few days cleaning up [Extended Flow](https://github.com/markuswondrak/spec-kit-extended-flow), the Spec-Kit bundle I maintain for a full agentic development pipeline, so I could install a clean copy into [Workflow Cockpit](https://github.com/markuswondrak/spec-kit-workflow-cockpit), a terminal UI I'm building for running and reviewing Spec-Kit workflow runs. Cockpit's own repository runs on Extended Flow as its Spec-Kit setup, so problems in the bundle show up directly in Cockpit's development loop.
 
-That mistake creates practical uncertainty fast. What belongs in git, what should be reconstructed from catalogs, and what needs a pinned version so a fresh clone means the same thing next week? The Spec-Kit documentation describes extensions, presets, workflows, and bundles thoroughly - what each primitive is, how catalog resolution works, and which CLI flags exist. It does not necessarily answer the operating question that appears after a few installations of your own: what is package source, what is project intent, and what is only the result of an installation?
+`.specify/` is the directory a Spec-Kit project uses to hold its extensions, presets, workflows, and configuration. While trying to figure out how to set it up properly, I kept running into the same problem: it mixes things with different owners and lifecycles, yet it is easy to treat all of them as ordinary project files.
 
-This article uses the Extended Flow cleanup as a case study, but the point is broader. I think Spec-Kit extensions, presets, workflows, and bundles should be handled as packages and dependencies. Catalogs declare what is available. Bundles declare and pin what a project depends on. The repository tracks project intent and project-owned customization. Installed package copies, installation records, and runtime state are reconstructed.
+That mistake creates practical uncertainty fast. What belongs in git, what should be reconstructed from catalogs, and what needs a pinned version so a fresh clone means the same thing next week?
+
+Maintainers have answered a narrower version of this before. A [GitHub discussion](https://github.com/github/spec-kit/discussions/2304) on what to commit under `.specify/` settled on a short rule: ignore the local feature pointer and per-machine config overrides, commit everything else - constitution, specs, extension config, templates, scripts. That answer holds for a single preset or extension. It says less once a project assembles several catalog-installed bundles, presets, extensions, and workflows at once, each with its own installed copy, registry, and provenance record - the case that two still-open feature requests ([#2612](https://github.com/github/spec-kit/issues/2612), [#2681](https://github.com/github/spec-kit/issues/2681)) ask Spec Kit to address by formally separating tool-managed assets from project-owned state. Neither has shipped as of this writing.
+
+This article uses the Extended Flow cleanup as a case study for how I handle that gap, but the point is broader. I think Spec-Kit extensions, presets, workflows, and bundles should be handled as packages and dependencies. Catalogs declare what is available. Bundles declare and pin what a project depends on. The repository tracks project intent and project-owned customization. Installed package copies, installation records, and runtime state are reconstructed.
 
 *This article reflects [Spec Kit](https://github.com/github/spec-kit) and its [documentation](https://github.github.io/spec-kit/) as of this writing, and the Extended Flow bundle at bundle/preset/`extendedflow` extension `0.16.0` (`bug` extension `1.0.0`, Feature workflow `0.10.1`, Bugfix workflow `0.2.1`, Quick workflow `0.1.1`). Both projects evolve; re-check current behavior before relying on specifics.*
 
@@ -33,7 +37,7 @@ In practice, that means keeping declarations and project-owned customizations in
 
 The extension-versus-preset distinction becomes confusing when you start from file locations alone. Both can affect what the agent sees, and a preset can technically do more than it should. That is why teams need an ownership rule before they start composing packages.
 
-Spec Kit distinguishes between extensions and presets. **Extensions are the conventional home for new command names. Presets modify existing commands or template content, and with `strategy: replace` they can also materialize a brand-new command on their own.** That makes the boundary architectural, not hard-enforced, but the distinction still reflects the intended semantics of the package types. What Spec Kit does enforce are the composition strategies documented in the [presets reference](https://github.com/github/spec-kit/blob/main/docs/reference/presets.md): `prepend`, `append`, and `wrap` require an existing base layer to compose onto. When that base is missing, Spec Kit skips the command and emits a warning. What remains your responsibility is choosing the right package owner.
+Spec Kit distinguishes between extensions and presets. **Extensions are the conventional home for new command names. Presets modify existing commands or template content, and with `strategy: replace` they can also materialize a brand-new command on their own.** That makes the boundary architectural, not hard-enforced, but the distinction still reflects the intended semantics of the package types. What Spec Kit does enforce are the composition strategies documented in the [presets reference](https://github.com/github/spec-kit/blob/main/docs/reference/presets.md): `prepend`, `append`, and `wrap` require an existing base layer to compose onto. When that base is missing, Spec Kit skips the command and emits a warning. You still need to choose the right package owner.
 
 | Kind | Contents |
 |---|---|
@@ -46,7 +50,7 @@ This split matches the shipped manifests: [`extension.yml`](https://github.com/m
 
 Choosing the right owner solves only the first half of the problem. A Spec-Kit project usually installs multiple packages, and their interaction is where drift and surprise appear.
 
-Two composition problems matter in practice:
+Two composition problems show up in practice:
 
 - Shared cross-cutting instructions copied into many commands drift over time.
 - Competing preset changes need a deliberate precedence policy or resolution becomes arbitrary.
@@ -96,25 +100,30 @@ Add these rules to the managed file:
 .specify/workflows/*
 !.specify/workflows/overlays/
 
-# Runtime state and caches.
+# Runtime state, caches, and backups.
 .specify/workflows/runs/
 .specify/workflows/.cache/
+.specify/extensions/.cache/
+.specify/extensions/.backup/
 
 # Installation-state records. Rebuilt by the bundler on reconstruction,
 # and stale copies can make it believe an ignored component is present.
 .specify/extensions/.registry
 .specify/bundle-records.json
-.specify/extensions.yml
 ```
 
-The exceptions matter because they show this is not a blanket "ignore `.specify/`" rule:
+The exceptions show this is not a blanket "ignore `.specify/`" rule:
 
 - **Extension project config** (`<ext>-config.yml`) is project intent. It is not catalog-derived, so it stays tracked. Only the machine-local `local-config.yml` stays ignored.
 - **Workflow overlays** (`.specify/workflows/overlays/`) are project-owned customizations. The [workflows reference](https://github.com/github/spec-kit/blob/main/docs/reference/workflows.md) explicitly keeps them outside installed workflow directories so they survive updates.
 
-The installation-state records matter as much as the installed package copies. The bundler resolves what is already installed primarily through these registries and records, not by inspecting the filesystem tree alone. If they are committed while the components they describe are ignored, a fresh clone can claim a component is already installed when its files are absent.
+The installation-state records need the same treatment as the installed package copies. The bundler resolves what is already installed primarily through these registries and records, not by inspecting the filesystem tree alone. If they are committed while the components they describe are ignored, a fresh clone can claim a component is already installed when its files are absent.
 
-Everything not listed above stays committed: the constitution, templates, `.specify/integration.json`, catalog configuration such as `.specify/*-catalogs.yml`, plus specs and bug reports. The negation syntax is part of the design. `.specify/extensions/*/*` ignores the contents of each extension directory but not the directory itself, which is what allows a top-level config file to be re-included. Ignoring `.specify/extensions/` wholesale would make that impossible.
+`.specify/extensions.yml` looks like it belongs on that list - it does record which extensions are installed - but it is not what gates a fresh install. That check reads only `.specify/extensions/.registry`; `extensions.yml` is enablement and hook configuration, which is why the [extension user guide](https://github.com/github/spec-kit/blob/main/extensions/EXTENSION-USER-GUIDE.md#1-version-control) recommends committing it.
+
+Everything not listed above stays committed: the constitution, templates, `.specify/extensions.yml`, `.specify/integration.json`, catalog configuration such as `.specify/*-catalogs.yml`, plus specs and bug reports.
+
+The negation syntax is part of the design. `.specify/extensions/*/*` ignores the contents of each extension directory but not the directory itself, which is what allows a top-level config file to be re-included. Ignoring `.specify/extensions/` wholesale would make that impossible.
 
 If bundle declarations are the source of truth, the next step is to prove that they are actually sufficient.
 
@@ -131,7 +140,7 @@ specify bundle install spec-kit-extended-flow
 
 If restoring the project requires more than that - manual `specify extension add` calls, remembered priorities, or a wiki page that lists extra steps - the dependency declaration is incomplete. A missing step usually means one of three things is absent from the package model: a bundle dependency, a version pin, or project-owned customization that should have been committed.
 
-Run this test against a real fresh clone, not by deleting directories from an existing checkout. Deleting `.specify/extensions/`, `.specify/presets/`, and `.specify/workflows/` from a working tree also deletes tracked project intent such as extension project config, workflow overlays, and installation metadata that this article treats deliberately. Clone into a clean directory, run the install command, and confirm the resulting installed versions match what the bundle pins.
+Run this test against a real fresh clone, not by deleting directories from an existing checkout. Deleting `.specify/extensions/`, `.specify/presets/`, and `.specify/workflows/` from a working tree also deletes tracked project intent such as extension project config, workflow overlays, and installation metadata that should stay committed. Clone into a clean directory, run the install command, and confirm the resulting installed versions match what the bundle pins.
 
 That reconstruction test answers the present-tense question. Reproducibility over time depends on versioning discipline.
 
@@ -152,7 +161,7 @@ The easiest way to see whether the model holds is to look at what breaks when it
 The anti-patterns here are not disconnected style mistakes. Each one is a way of smuggling package behavior back into ad hoc project files.
 
 - **Commands from a preset.** A preset that registers `speckit.someext.cmd` via `replace` without `someext` installed can work technically, but it hides new behavior inside the wrong package type.
-- **Everything at default priority.** Five presets at priority `10` resolve alphabetically. That is a tie-breaker, not a composition policy.
+- **Undeclared preset precedence.** When two presets change the same template and both keep the default priority `10`, resolution falls back to alphabetical order by preset id.
 - **Missing or stale bundle pins.** Spec Kit expects extension, preset, and workflow entries to be pinned, and stale pins still break reproducibility by describing a different environment than the one people actually install.
 - **Logic in workflow YAML.** Shell steps that grow beyond one command blur the boundary between orchestration and packaged runtime behavior. The workflow should declare sequence; scripts shipped by a preset or extension should implement the logic. My own recommendation once those scripts grow past a handful of lines: extract them into a separately versioned, published package rather than letting them keep growing inside a preset or extension.
 - **Committing installed components or their registries.** A checked-in copy of a catalog extension, preset, or workflow drifts from the declared dependency the moment someone updates it.
