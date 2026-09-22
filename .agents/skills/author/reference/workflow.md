@@ -1,235 +1,183 @@
 # Writing Workflow
 
-Multi-pass workflow for producing technical articles. Each phase has an explicit gate — no skipping phases. The outline must be validated before drafting. The draft must be complete before revising.
+Use the phases required by the selected workflow in their defined order. Complete a phase's gate before moving to the next required phase.
+
+---
+
+## Workflow selection
+
+| Command | Phases |
+|---|---|
+| `draft` | Research, outline, draft, revise, polish |
+| `outline` | Research, outline |
+| `revise` | Revise, polish as needed |
+| `source` | Research for the specified claim |
+| `critique` | Complete coverage review without changing files |
 
 ---
 
 ## Phase 1: Research
 
-Before writing a single word, gather and verify sources.
+Identify and verify the evidence the argument depends on before drafting the article.
 
 ### Steps
 
-1. **Identify the central claim.** What is the one thing this article argues? Write it in one sentence. If you cannot, the topic is not ready.
-
-2. **Collect sources.** For every factual claim the article will make, find a source that supports it. Use web search, academic papers, documentation, primary sources. Record each source with:
-   - Full URL
-   - Author and publication
-   - The specific claim it supports
-   - A direct quote if relevant
-
-3. **Mark assertions.** If no source can be found for a claim, mark it explicitly as an assertion, not a fact. The article can still make the claim — but it must be framed as the author's position, not as established truth.
-
-4. **Identify gaps.** Claims that need sources but don't have them yet are research gaps. Either fill them or restructure the argument to avoid relying on unsupported claims.
+1. **Define the central argument.** State in one sentence what the article will establish, examine, or recommend.
+2. **Create a claim inventory.** List the assumptions and externally verifiable claims the article relies on.
+3. **Research those claims.** Follow the evidence, link, and citation rules in [style.md](style.md). Record the source, the exact claim it supports, and the relevant passage or result.
+4. **Resolve evidence gaps.** Research, narrow, or remove unsupported factual claims. Keep an interpretation or hypothesis only when it is clearly identified as such.
 
 ### Output
 
-A structured source list:
-
-```
-[^1]: Author, "Title," Publication, Date. <URL>
-Claim supported: [specific claim]
-Quote: "[relevant excerpt]"
-```
+Research notes that map each load-bearing claim to its evidence or documented treatment.
 
 ### Gate
 
-All claims have either a verified source or are explicitly marked as assertions. No claim presents an assertion as sourced fact.
+Every assumption and externally verifiable claim that the argument depends on has evidence or has been handled according to the rules in [style.md](style.md).
 
 ---
 
 ## Phase 2: Outline
 
-Structure the argument before writing any prose.
+Define the article's argument and reading path before drafting prose.
 
 ### Steps
 
-1. **Write the opening promise.** One sentence: what will the reader get from this article? This becomes the hook.
-
-2. **Map the argument chain.** Each section makes one claim. List them in order:
-   - Section heading (stating the claim, not labeling the topic)
-   - Key claim the section proves
-   - Sources it draws on
-   - How it connects to the next section
-
-3. **Identify tension points.** Where does the article build pressure before releasing it? Mark these explicitly. An article without tension is a reference document, not an argument.
-
-4. **Write the conclusion claim.** One sentence: what does the article land on? If the conclusion is a vague summary ("in conclusion, there are many considerations"), the argument is not finished.
-
-5. **Check the structural checklist:**
-   - [ ] Opening: concrete observation or problem, not context
-   - [ ] Promise: clear what the article delivers
-   - [ ] Flow: each section follows logically from the previous one
-   - [ ] Tension: a clear problem/gap/question that the article resolves
-   - [ ] Conclusion: specific claim, not vague summary
-   - [ ] Consistency: terms used the same way throughout
-   - [ ] Audience fit: depth is right — not over-explained, not assumed
+1. **Write the opening promise.** State what the reader should understand or be able to decide after reading.
+2. **Map the argument.** List the sections in order, with each section's purpose, supporting evidence, and dependency on earlier sections.
+3. **Test the sequence.** Check that each section is necessary and appears where the reader has enough context for it.
+4. **Plan supporting elements.** Note where a list, table, code example, or visual would clarify the argument. Follow the visual guidance in [style.md](style.md).
+5. **Define the landing point.** State what the conclusion should establish after the evidence has been presented.
 
 ### Output
 
-A structured outline with section headings, claims, source mappings, and transition notes.
+An outline with section purposes, evidence mappings, structural dependencies, and proposed supporting elements.
 
 ### Gate
 
-The outline passes the structural checklist. The author (user) reviews and approves before drafting begins.
+The outline has a coherent argument, no unsupported structural jumps, and enough evidence to begin drafting. Present it for approval when the user requested an outline, asked to review the structure first, or when unresolved structural choices require a decision.
 
 ---
 
 ## Phase 3: Draft
 
-Write the article section by section. No single-prompt full-article generation.
+Turn the validated outline into a complete article.
 
 ### Steps
 
-1. **Write one section at a time.** Provide the full outline and style reference as context for each section. Each section makes exactly one claim. The heading states the claim.
-
-2. **Follow the style rules.** Load and apply [style.md](style.md) for every section:
-   - Sachlich tone — factual, direct, no hedging
-   - Claim-first paragraphs
-   - Short to medium sentences, one idea per sentence
-   - 2–4 sentence paragraphs
-   - No anti-patterns (see style.md for the full list)
-
-3. **Cite as you write.** Every factual claim that is not common knowledge gets a numbered footnote inline. Do not add footnotes after the fact — cite in the moment.
-
-4. **Connect sections explicitly.** The last sentence of each section should signal what comes next, not by saying "in the next section" but by naming the remaining tension or the next claim.
-
-5. **Write the opening last.** The opening makes a promise to the reader. You cannot make that promise precisely until you know what the article delivers. Write the body first, then write the opening that hooks the reader into the argument you actually built.
+1. **Draft from the outline.** Write in manageable sections while keeping the full argument available as context.
+2. **Apply the style reference.** Follow [style.md](style.md) without restating its rules here.
+3. **Attach evidence while drafting.** Add citations and links when the supporting claim is written rather than reconstructing evidence afterward.
+4. **Maintain article-level coherence.** Recheck dependencies when a drafted section changes the planned argument.
+5. **Write or revise the opening after the body.** Make sure it introduces the article that was actually written rather than the article originally imagined.
+6. **Add proposed visuals.** Include Mermaid directly where appropriate and provide production prompts for external visuals.
 
 ### Output
 
-A complete draft in Markdown with frontmatter, footnotes, and sources section.
+A complete Markdown draft with repository-required frontmatter, citations, sources, and any visual proposals.
 
 ### Gate
 
-The draft is complete — all sections written, all footnotes in place, frontmatter filled per AGENTS.md convention. No placeholder sections.
+The article is complete enough to review end to end. It contains no placeholder sections, unresolved structural gaps, or untracked evidence dependencies.
 
 ---
 
 ## Phase 4: Revise
 
-Evaluate the complete draft against explicit criteria.
+Review the complete draft as one argument rather than as isolated sections.
 
 ### Steps
 
-1. **Voice consistency check.** Does every section sound like the same author? Compare against the voice examples in [style.md](style.md). Flag any section that drifts into generic AI prose.
-
-2. **Anti-pattern sweep.** Search the full draft for every item on the anti-pattern list in [style.md](style.md). Flag and rewrite each instance:
-   - Typographic/smart characters (curly quotes, em dashes, en dashes, ellipsis)
-   - Generic transitions ("Furthermore", "Moreover", "Additionally")
-   - Excessive hedging
-   - Passive voice where active works
-   - Bullet summaries at section ends
-   - Rhetorical questions as transitions
-   - Unearned summary paragraphs
-   - Listification where prose is better
-   - "It is worth noting that..."
-   - False specificity without sources
-
-3. **Factual accuracy check.** Verify every footnote references a real source that actually supports the claim it is attached to. Remove or reframe any claim where the source does not directly support it.
-
-4. **Structural checklist.** Re-run the checklist from Phase 2:
-   - [ ] Opening: concrete observation or problem, not context
-   - [ ] Promise: clear what the article delivers
-   - [ ] Flow: each section follows logically
-   - [ ] Tension: a clear problem/gap/question that resolves
-   - [ ] Conclusion: specific claim, not vague summary
-   - [ ] Consistency: terms used the same way throughout
-   - [ ] Audience fit: depth is right
-
-5. **Cross-reference check.** After any edit, verify that:
-   - The opening hook still matches what the article delivers
-   - The conclusion still lands after the change
-   - No section references something that was removed or changed
-   - The argument chain holds end-to-end
+1. **Check the argument.** Verify that the opening, section sequence, evidence, and conclusion still support the same central argument.
+2. **Check dependencies.** Find references, assumptions, or transitions that no longer work after drafting changes.
+3. **Apply the style reference.** Review the article against [style.md](style.md), including voice, rhythm, visual structure, repetition, terminology, links, citations, and anti-patterns.
+4. **Verify evidence.** Confirm that each evidentiary source supports the exact claim and scope attached to it.
+5. **Review visual proposals.** Confirm that each visual adds understanding, matches the article, and contains enough information to produce without inventing details.
 
 ### Output
 
-A revised draft with all anti-patterns removed, all sources verified, and the structural checklist passing.
+A coherent revised draft with verified evidence and resolved structural issues.
+
+### Gate
+
+The opening matches what the article delivers, the argument holds end to end, and no edit has left broken references or unsupported dependencies.
+
+### Critique protocol
+
+For `critique`, do not stop after finding representative examples. Review the complete article with this protocol:
+
+1. **Inventory the article.** Record every heading and the line range or paragraph range it covers. Include the opening and conclusion as separate review units.
+2. **Review structure first.** Check the central claim, opening promise, section order, transitions, repetition across sections, terminology, conclusion, and visual structure. Record each finding before reviewing sentences.
+3. **Review every unit locally.** For each review unit, check every paragraph against the applicable rules in [style.md](style.md). Record either its findings or `No local finding`. Do not use spot checks, sampling, or a fixed number of examples.
+4. **Separate detection from rewriting.** Finish the complete finding inventory before drafting any replacement text. Do not silently edit the article during critique.
+5. **Validate every proposed replacement.** Re-read the original passage, its surrounding paragraph, and the applicable style rules. Reject or revise a proposal if it introduces another violation, changes the claim or confidence level, removes evidence, changes terminology, or uses unsupported detail.
+6. **Check coverage.** Account for every review unit and every applicable style category before declaring the critique complete. If context or tool limits prevent complete coverage, state exactly what remains unchecked instead of claiming completion.
+
+Use this finding format:
+
+| Field | Required content |
+|---|---|
+| Location | Heading and exact line or paragraph range |
+| Severity | Hard failure, strong default, warning sign, or structural |
+| Rule | The specific `style.md` rule, not a generic label such as "style" |
+| Problem | Why the passage violates or weakens that rule in this context |
+| Proposed treatment | Keep, delete, move, split, or a complete replacement in context |
+| Validation | Confirm claim, evidence, terminology, transition, ASCII punctuation, and absence of newly introduced style violations |
+
+The critique output must contain:
+
+1. The article's central claim and argument outline.
+2. Findings ordered by severity and then article position.
+3. A coverage table listing every review unit, its range, and `finding IDs` or `No local finding`.
+4. A style-category checklist covering claims and uncertainty, narrative and voice, rhythm and paragraphs, sections and transitions, visual structure, examples and evidence, links and citations, terminology, formatting, repetition, and anti-patterns.
+5. Any residual uncertainty or unchecked scope.
+
+`No local finding` means only that the unit has no paragraph-level defect. It does not exempt the unit from article-level structural findings.
 
 ---
 
 ## Phase 5: Polish
 
-Final pass before the article is considered complete.
+Perform the final publication check without reopening settled arguments unless a real defect appears.
 
 ### Steps
 
-1. **Source verification.** Independently verify that every URL in the sources section resolves and contains the claimed information. Remove or replace any dead links.
-
-2. **Read-aloud rhythm check.** Read the article aloud (or simulate this). Flag any sentence that requires re-reading to parse. Rewrite for clarity.
-
-3. **Frontmatter generation.** Ensure the YAML frontmatter follows the AGENTS.md convention:
-   ```yaml
-   ---
-   title: "Article Title"
-   author: "Markus Wondrak"
-   date: "YYYY-MM-DD"
-   excerpt: "One-liner for listings"
-   tags: ["Tag1", "Tag2"]
-   reading_time: "N min read"
-   slug: "article-slug"
-   ---
-   ```
-
-4. **Final anti-pattern pass.** One last sweep for any remaining anti-patterns from [style.md](style.md).
-
-5. **Consistency check.** Verify terminology is used consistently throughout. No synonym-switching for the same concept.
+1. **Read for friction.** Read the article end to end and revise sentences that require a second pass to understand.
+2. **Validate references.** Confirm that evidentiary links resolve and that internal links, footnotes, code blocks, tables, and diagrams render correctly.
+3. **Check repository requirements.** Validate the article location and frontmatter against `AGENTS.md`.
+4. **Confirm completeness.** Remove placeholders, temporary notes, and unresolved visual instructions that are not intended for publication.
 
 ### Output
 
 A publication-ready article.
 
----
+### Gate
 
-## Draft Approval Gate
-
-Before any change is written to disk, the author must present the complete draft to the user and receive explicit approval.
-
-This gate applies to all commands, not just `draft`. Whether revising an existing article, adding a source, or polishing a final version: draft first, present, wait for approval, then apply.
-
-The draft must include:
-- The full text of the proposed change (not a summary or diff description)
-- Frontmatter if the article has it
-- All footnotes and sources
-
-Partial drafts are acceptable only if the user explicitly requests incremental delivery.
+The article renders correctly, satisfies repository conventions, and has no known editorial or evidentiary defects.
 
 ---
 
-## Self-Check Gate
+## Pre-delivery check
 
-Applies to full articles, single-section revisions, and single-sentence rewrites alike. Size is not an exemption.
+Before presenting or applying article text:
 
-Before presenting any proposed text to the user:
+1. Read the changed text in its surrounding context.
+2. Check the changed passages against [style.md](style.md) according to each rule's stated severity.
+3. Confirm that the change does not introduce factual, structural, citation, or formatting regressions.
 
-1. Check the text against the anti-pattern list in style.md one bullet at a time. This is a pass/fail check per item, not a gut-feel read.
-2. A close variant of a banned pattern still fails. "X is simple: ..." has the same shape as "The pattern is consistent: ..." - both are colonated framing; different wording does not exempt it.
-3. When offering multiple options, each one must pass independently. Do not include an option in the list just because another option in the same list passes.
-4. If a proposed fix paraphrases a claim already made earlier in the article, check it against "No unearned summary paragraphs" before presenting it, even if the claim is factually correct and the wording is new.
-
-Skipping this gate and presenting text that violates style.md is a process failure, not a matter of taste.
+Scale the check to the change, but include the complete article when coherence or terminology may be affected.
 
 ---
 
-## Command-specific workflows
+## Approval gate
 
-### `draft [topic]`
+Before changing an article file, present the proposed text and wait for approval unless the user explicitly asked for immediate edits.
 
-Runs all five phases sequentially. Start with research, end with polish. Each phase gate must pass before proceeding.
+Show enough context to evaluate the change:
 
-### `outline [topic]`
+- For a new article, present the complete draft.
+- For a section revision, present the complete revised section.
+- For a local edit, present the affected passage.
+- For research or critique without article changes, return the findings directly.
 
-Runs Phase 1 (Research) and Phase 2 (Outline). Stops before drafting. Returns the structured outline for review.
-
-### `revise [target]`
-
-Skips to Phase 4 (Revise). Reads the full article first (Setup step 1), then applies the revision criteria. Presents the revised draft to the user for approval before writing any changes to disk. Use when an article exists but needs improvement.
-
-### `source [claim]`
-
-Runs the source-gathering portion of Phase 1 for a specific claim. Finds and verifies sources, or marks the claim as an assertion if no source exists.
-
-### `critique [target]`
-
-Runs the structural checklist and anti-pattern sweep without making changes. Returns a report of issues found, organized by category (structural, prose, sourcing, consistency). Use when you want feedback before revising. If the user asks for edits based on the critique, the draft-first rule applies: draft the changes, present them, wait for approval.
+After approval, apply only the reviewed change. If the requested scope changes materially, present the revised proposal again.
